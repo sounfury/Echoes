@@ -107,8 +107,8 @@ def get_post_url(filepath, site_url, content_dir):
     relative = filepath.replace(f"{content_dir}/", "", 1)
     parts = relative.split("/")
     category = parts[0]
-    slug = re.sub(r"\.(md|mdx)$", "", parts[-1])
-    return f"{site_url}/blog/{category}/{urllib.parse.quote(slug)}"
+    slug = re.sub(r"\.(md|mdx)$", "", parts[-1]).lower()
+    return f"{site_url}/posts/{category}/{urllib.parse.quote(slug)}/"
 
 
 # ==================== Main ====================
@@ -184,7 +184,7 @@ def main():
         f"https://api.day.app/{bark_key}/{encoded_title}/{encoded_body}"
         f"?icon={icon_param}"
     )
-
+    print(f"\nBark URL: {bark_url}")
     print(f"\n📌 Title: {title}")
     print(f"📝 Body:\n{body}")
     print(f"\nSending Bark notification...")
