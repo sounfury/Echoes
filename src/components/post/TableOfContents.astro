@@ -1,0 +1,195 @@
+---
+interface Heading {
+    depth: number;
+    slug: string;
+    text: string;
+}
+
+interface Props {
+    headings: Heading[];
+    charCount: number;
+}
+
+const { headings, charCount } = Astro.props;
+
+// 默认仅渲染 H2；长文(>3k字) 且结构简单(H2≤8) 时自动开启 H3；忽略 H4+
+const isLongArticle = charCount > 3000;
+const h2Count = headings.filter((h) => h.depth === 2).length;
+const showH3 = isLongArticle && h2Count <= 8;
+
+const tocItems = headings.filter((h) => {
+    if (h.depth === 2) return true;
+    if (h.depth === 3 && showH3) return true;
+    return false;
+});
+---
+
+{
+    tocItems.length > 0 && (
+        <nav id="toc-nav" class="toc-container" aria-label="Table of Contents">
+            {tocItems.map((item) => (
+                <a
+                    href={`#${item.slug}`}
+                    class:list={[
+                        "toc-link",
+                        item.depth === 3 && "toc-link--h3",
+                    ]}
+                    data-heading-slug={item.slug}
+                >
+                    {item.text}
+                </a>
+            ))}
+        </nav>
+    )
+}
+
+<script>
+    function initToc() {
+        const tocNav = document.getElementById("toc-nav");
+        if (!tocNav) return;
+
+        const tocLinks = tocNav.querySelectorAll(
+            ".toc-link",
+        ) as NodeListOf<HTMLAnchorElement>;
+        if (!tocLinks.length) return;
+
+        const headingSlugs: (string | undefined)[] = Array.from(tocLinks).map(
+            (link) => link.dataset.headingSlug,
+        );
+        const headingElements = headingSlugs
+            .map((slug) => (slug ? document.getElementById(slug) : null))
+            .filter(Boolean) as HTMLElement[];
+
+        if (!headingElements.length) return;
+
+        let currentActive: string | null = null;
+
+        function setActive(slug: string | null) {
+            if (slug === currentActive) return;
+            currentActive = slug;
+            tocLinks.forEach((link) => {
+                link.classList.toggle(
+                    "active",
+                    link.dataset.headingSlug === slug,
+                );
+            });
+        }
+
+        // 基于 scroll 位置追踪当前激活标题
+        let ticking = false;
+        function onScroll() {
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(() => {
+                const scrollY = window.scrollY;
+                const offset = 120;
+
+                let activeSlug = headingSlugs[0] ?? null;
+                for (let i = headingElements.length - 1; i >= 0; i--) {
+                    if (headingElements[i].offsetTop <= scrollY + offset) {
+                        activeSlug = headingSlugs[i] ?? null;
+                        break;
+                    }
+                }
+                setActive(activeSlug);
+                ticking = false;
+            });
+        }
+
+        window.addEventListener("scroll", onScroll, { passive: true });
+
+        // 点击平滑滚动（预留 header 高度）
+        tocLinks.forEach((link) => {
+            link.addEventListener("click", (e) => {
+                e.preventDefault();
+                const slug = link.dataset.headingSlug;
+                const target = slug ? document.getElementById(slug) : null;
+                if (target) {
+                    window.scrollTo({
+                        top: target.offsetTop - 80,
+                        behavior: "smooth",
+                    });
+                }
+            });
+        });
+
+        // 页面切换时清理 scroll 监听，避免内存泄漏
+        document.addEventListener(
+            "astro:before-swap",
+            () => window.removeEventListener("scroll", onScroll),
+            { once: true },
+        );
+
+        onScroll();
+    }
+
+    initToc();
+    document.addEventListener("astro:after-swap", initToc);
+</script>
+
+<style>
+    /* ===== 容器：fixed 定位在正文右侧，不影响居中 ===== */
+    .toc-container {
+        display: none;
+        position: fixed;
+        top: 20vh;
+        /* max-w-4xl = 56rem, half = 28rem, + 1rem gap */
+        left: calc(50% + 29rem);
+        right: 1rem;
+        max-width: 14rem;
+        z-index: 30;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    @media (min-width: 1280px) {
+        .toc-container {
+            display: flex;
+        }
+    }
+
+    /* ===== 链接默认：隐形（opacity 0），仅 active 可见 ===== */
+    .toc-link {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.65rem;
+        line-height: 1.6;
+        color: var(--c-text-secondary);
+        text-decoration: none;
+        padding: 0.15rem 0 0.15rem 0.75rem;
+        border-left: 2px solid transparent;
+        opacity: 0;
+        transform: translateX(6px);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .toc-link--h3 {
+        padding-left: 1.5rem;
+        font-size: 0.6rem;
+    }
+
+    /* ===== 激活态：accent 高亮 + 左侧指示线 ===== */
+    .toc-link.active {
+        opacity: 1;
+        color: var(--c-accent);
+        border-left-color: var(--c-accent);
+        transform: translateX(0);
+    }
+
+    /* ===== Hover 容器区域：所有标题动画浮现 ===== */
+    .toc-container:hover .toc-link {
+        opacity: 0.4;
+        transform: translateX(0);
+    }
+
+    .toc-container:hover .toc-link.active {
+        opacity: 1;
+    }
+
+    .toc-container:hover .toc-link:hover {
+        opacity: 0.85;
+        color: var(--c-accent);
+    }
+</style>

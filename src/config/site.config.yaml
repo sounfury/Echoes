@@ -6,20 +6,31 @@
 site:
   title: "Echoes"
   subtitle: "Automated & Stylized Digital Garden"
-  url: https://example.com
-  author: 余弦
+  url: https://blog.sounfury.top
+  author: sounfury
   logoText: "ECHOES"
   timezone: Asia/Shanghai
 
 # 2. 视觉与主题
 theme:
-  defaultMode: "system" # system | light | dark
+  defaultMode: "light" # light | dark
   colors:
-    primary: "#FFFFFF"
-    background: "#121212"
     accent: "#6528F7"
     terminal: "#00FF00"
     warning: "#FF0000"
+    defaultCategory: "#777777"
+    light:
+      bg: "#f0f0f2"
+      bgSecondary: "#e8e8ea"
+      text: "#111111"
+      textSecondary: "#6B7280"
+      border: "#E5E7EB"
+    dark:
+      bg: "#0a0a0c"
+      bgSecondary: "#1E1E1E"
+      text: "lab(84.92% 0 -.0000119209)"
+      textSecondary: "#9CA3AF"
+      border: "#2D2D2D"
 
 # 3. 导航
 navigation:
@@ -35,17 +46,17 @@ navigation:
 
 # 4. 归档分类
 category:
-  Tech:
-    slug: tech
+  tech:
     label: "[TECH]"
+    color: "#6528F7"
     desc: "技术与编程"
-  Review:
-    slug: review
+  review:
     label: "[REVIEW]"
+    color: "#39ff14"
     desc: "书/影/音/游"
-  Life:
-    slug: life
+  life:
     label: "[LIFE]"
+    color: "#F90000"
     desc: "随笔与生活"
 
 # 5. 全局播放器
@@ -54,14 +65,7 @@ bgm:
   defaultPlaylist:
     - https://music.163.com/playlist?id=8882890045
 
-# 6. 自动化封面
-content:
-  autoCover:
-    enabled: true
-    path: "/covers/"
-    total: 50
-
-# 7. 运维通知
+# 6. 运维通知
 ops:
   bark:
     enabled: true

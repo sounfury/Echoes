@@ -2,6 +2,7 @@
 import { ClientRouter } from "astro:transitions";
 import { SEO } from "astro-seo";
 import { getSiteConfig } from "../lib/config";
+import Header from "../components/common/Header.astro";
 import "../styles/global.css";
 
 interface Props {
@@ -13,10 +14,17 @@ const config = getSiteConfig();
 const { title = config.site.title, description = config.site.subtitle } =
     Astro.props;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+
+const { colors, defaultMode: defaultThemeMode } = config.theme;
+const { accent, terminal, warning, light, dark: darkColors } = colors;
 ---
 
 <!doctype html>
-<html lang="zh-CN">
+<html
+    lang="zh-CN"
+    class="scroll-smooth"
+    style={`--c-accent:${accent};--c-terminal:${terminal};--c-warning:${warning};--c-bg-light:${light.bg};--c-bg-secondary-light:${light.bgSecondary};--c-text-light:${light.text};--c-text-secondary-light:${light.textSecondary};--c-border-light:${light.border};--c-bg-dark:${darkColors.bg};--c-bg-secondary-dark:${darkColors.bgSecondary};--c-text-dark:${darkColors.text};--c-text-secondary-dark:${darkColors.textSecondary};--c-border-dark:${darkColors.border}`}
+>
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -27,7 +35,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;700&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Noto+Serif+SC:wght@400;700;900&display=swap"
             rel="stylesheet"
         />
 
@@ -47,21 +55,40 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
         <ClientRouter />
 
-        <!-- Theme Init (避免 FOUC) -->
-        <script is:inline>
+        <!-- Theme Init (FOUC prevention) -->
+        <script is:inline define:vars={{ defaultThemeMode }}>
             (function () {
-                const stored = localStorage.getItem("theme-mode");
-                const mode = stored || "system";
-                const dark =
-                    mode === "dark" ||
-                    (mode === "system" &&
-                        window.matchMedia("(prefers-color-scheme: dark)")
-                            .matches);
-                document.documentElement.classList.toggle("dark", dark);
+                var stored = localStorage.getItem("theme-mode");
+                var isDark = (stored || defaultThemeMode) === "dark";
+                document.documentElement.classList.toggle("dark", isDark);
             })();
         </script>
     </head>
-    <body>
+    <body
+        class="transition-colors duration-500 min-h-screen relative overflow-x-hidden font-sans"
+    >
+        <!-- Background Layers -->
+        <div
+            id="dynamic-bg"
+            class="fixed inset-0 -z-20 transition-colors duration-1000 "
+        >
+        </div>
+        <div
+            class="fixed inset-0 -z-10 bg-grid-pattern opacity-50 pointer-events-none"
+        >
+        </div>
+
+        <!-- Decorative EVA Side Text -->
+        <div
+            class="fixed top-20 left-4 text-[10px] font-mono opacity-30 rotate-90 hidden lg:block tracking-widest"
+        >
+            SYSTEM_STATUS: NORMAL // SYNC_RATE: 100%
+        </div>
+
+        <!-- Global Navigation -->
+        <Header />
+
+        <!-- Page Content -->
         <slot />
     </body>
 </html>

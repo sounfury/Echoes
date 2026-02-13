@@ -1,56 +1,105 @@
 ---
 import BaseLayout from "./BaseLayout.astro";
 import type { CollectionEntry } from "astro:content";
-import { getReadingTime } from "../lib/utils";
-import dayjs from "dayjs";
+import type { MarkdownHeading } from "astro";
+import TableOfContents from "../components/post/TableOfContents.astro";
+import {
+    getReadingTime,
+    getCategoryFromId,
+    getTitleFromId,
+    formatDateFull,
+    getCategoryColor,
+    getCategoryLabel,
+} from "../lib/utils";
 
 interface Props {
     post: CollectionEntry<"blog">;
     content: string;
+    headings: MarkdownHeading[];
 }
 
-const { post, content } = Astro.props;
-const { title, date, tags, category } = post.data;
+const { post, content, headings } = Astro.props;
+const title = getTitleFromId(post.id);
+const category = getCategoryFromId(post.id);
+const color = getCategoryColor(category);
+const tags = post.data.tags;
 const readingMinutes = getReadingTime(content);
-const formattedDate = dayjs(date).format("YYYY.MM.DD");
+
+const createdDate = post.data.创建时间
+    ? formatDateFull(post.data.创建时间)
+    : "";
+const updatedDate = post.data.更新时间
+    ? formatDateFull(post.data.更新时间)
+    : "";
 ---
 
 <BaseLayout title={`${title} | Echoes`} description={title}>
-    <main class="max-w-[65ch] mx-auto px-4 py-12">
+    <TableOfContents headings={headings} charCount={content.length} />
+    <main class="pt-24 pb-20 max-w-4xl mx-auto px-4">
         <article>
             <!-- Dossier Header -->
-            <header class="mb-8 border-b border-[var(--c-border)] pb-6">
+            <header
+                class="mb-12 relative border-t-4 border-eva-ink dark:border-white pt-6"
+            >
+                <div
+                    class="absolute top-0 right-0 bg-eva-ink dark:bg-white text-white dark:text-eva-dark px-2 py-1 text-xs font-mono font-bold"
+                >
+                    CONFIDENTIAL
+                </div>
+
                 <h1
-                    class="text-3xl font-bold mb-4"
-                    style="font-family: 'Noto Serif SC', serif;"
+                    class="text-3xl md:text-5xl font-serif font-black mb-6 leading-tight"
                 >
                     {title}
                 </h1>
+
+                <!-- Meta Grid -->
                 <div
-                    class="flex items-center gap-4 text-sm text-[var(--c-text-secondary)]"
-                    style="font-family: 'JetBrains Mono', monospace;"
+                    class="grid grid-cols-2 md:grid-cols-5 gap-4 border-y border-dashed border-gray-400 py-4 font-mono text-xs opacity-80"
                 >
-                    <time datetime={date.toISOString()}>{formattedDate}</time>
-                    <span>·</span>
-                    <span>{readingMinutes} min read</span>
-                    <span>·</span>
-                    <span class="uppercase">{category}</span>
-                </div>
-                {
-                    tags.length > 0 && (
-                        <div class="flex gap-2 mt-3 flex-wrap">
-                            {tags.map((tag: string) => (
-                                <span class="text-xs px-2 py-0.5 rounded bg-[var(--c-bg-secondary)] text-[var(--c-text-secondary)]">
-                                    #{tag}
-                                </span>
-                            ))}
+                    <div>
+                        <span class="block opacity-50 mb-1">CATEGORY</span>
+                        <a
+                            href={`/archive?category=${category.toLowerCase()}`}
+                            class="no-underline text-eva-ink/80 dark:text-white/80 hover:text-[var(--cat-color)] transition-colors font-bold"
+                            style={`--cat-color: ${color}`}
+                        >
+                            {getCategoryLabel(category)}
+                        </a>
+                    </div>
+                    <div>
+                        <span class="block opacity-50 mb-1">CREATED</span>
+                        {createdDate || "—"}
+                    </div>
+                    <div>
+                        <span class="block opacity-50 mb-1">UPDATED</span>
+                        {updatedDate || "—"}
+                    </div>
+                    <div>
+                        <span class="block opacity-50 mb-1">READ_TIME</span>
+                        {readingMinutes} MIN
+                    </div>
+                    <div>
+                        <span class="block opacity-50 mb-1">TAGS</span>
+                        <div class="flex flex-wrap gap-2">
+                            {
+                                tags.map((t: string) => (
+                                    <a
+                                        href={`/archive?tag=${t.toLowerCase()}`}
+                                        class="no-underline text-eva-ink/60 dark:text-white/60 hover:text-[var(--tag-hover)] hover:scale-105 transition-all duration-200 inline-block"
+                                        style={`--tag-hover: ${color}`}
+                                    >
+                                        #{t.toUpperCase()}
+                                    </a>
+                                ))
+                            }
                         </div>
-                    )
-                }
+                    </div>
+                </div>
             </header>
 
             <!-- Article Content -->
-            <div class="prose prose-lg max-w-none">
+            <div class="prose-eva max-w-none text-lg">
                 <slot />
             </div>
         </article>
