@@ -164,10 +164,10 @@ const currentPath = Astro.url.pathname;
     <!-- Mobile Menu Overlay -->
     <div
         id="mobile-menu"
-        class="hidden fixed inset-0 top-16 backdrop-blur-lg z-40 md:hidden"
+        class="hidden fixed inset-0 top-16 backdrop-blur-lg z-40 md:hidden overflow-y-auto overflow-x-hidden"
     >
         <div
-            class="flex flex-col items-center justify-center h-full gap-8 font-mono text-lg tracking-widest font-bold"
+            class="flex flex-col items-center justify-center h-full gap-8 font-mono text-lg tracking-widest font-bold w-full px-6"
         >
             {
                 navItems.map((item) => {
@@ -175,7 +175,7 @@ const currentPath = Astro.url.pathname;
                     return (
                         <a
                             href={item.path}
-                            class="hover:text-eva-purple transition-colors"
+                            class="hover:text-eva-purple transition-colors text-center break-words w-full"
                             target={isExternal ? "_blank" : undefined}
                             rel={isExternal ? "noopener noreferrer" : undefined}
                         >
