@@ -69,5 +69,18 @@ bgm:
 ops:
   bark:
     enabled: true
-    deviceKeyEnv: "BARK_KEY"
-    iconUrl: ""
+    iconUrl: "https://sounfury-blog.oss-cn-beijing.aliyuncs.com/favicon.ico"
+    # 推送模板 — 占位符由 CI 脚本替换
+    templates:
+      # 模板 1: 无文章变更，仅代码/样式部署
+      deployOnly:
+        title: "🚀 Echoes 部署成功"
+        body: "站点已更新部署，本次无新文章变动。"
+      # 模板 2: 批量文章发布 (≥2 篇)
+      batchPublish:
+        title: "📚 Echoes 发布了 {count} 篇文章"
+        body: "新增: {added}  |  修改: {modified}\n{fileList}"
+      # 模板 3: 单篇文章发布
+      singlePublish:
+        title: "✏️ 新文章发布"
+        body: "{postTitle}\n{postUrl}"

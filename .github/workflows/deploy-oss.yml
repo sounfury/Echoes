@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 完整历史，确保多 commit push 时 before SHA 可达
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -37,3 +39,10 @@ jobs:
           bucket: ${{ secrets.OSS_BUCKET }}
           endpoint: ${{ secrets.OSS_ENDPOINT }}
           folder: dist
+
+      - name: Send Bark notification
+        env:
+          BARK_KEY: ${{ secrets.BARK_KEY }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        run: python3 scripts/notify.py
