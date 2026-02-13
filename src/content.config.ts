@@ -1,19 +1,20 @@
 import { defineCollection, z } from 'astro:content';
 import { glob } from 'astro/loaders';
 
+const CategoryEnum = z.enum(['Tech', 'Review', 'Life']);
+
 const blog = defineCollection({
-	// Load Markdown and MDX files in the `src/content/blog/` directory.
 	loader: glob({ base: './src/content/blog', pattern: '**/*.{md,mdx}' }),
-	// Type-check frontmatter using a schema
-	schema: ({ image }) =>
-		z.object({
-			title: z.string(),
-			description: z.string(),
-			// Transform string to Date object
-			pubDate: z.coerce.date(),
-			updatedDate: z.coerce.date().optional(),
-			heroImage: image().optional(),
-		}),
+	schema: z.object({
+		title: z.string(),
+		date: z.coerce.date(),
+		tags: z.array(z.string()).default([]),
+		category: CategoryEnum,
+		cover: z.string().optional(),
+		music: z.string().optional(),
+		published: z.boolean().default(true),
+	}),
 });
 
+export type Category = z.infer<typeof CategoryEnum>;
 export const collections = { blog };

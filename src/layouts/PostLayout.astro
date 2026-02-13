@@ -1,0 +1,58 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import type { CollectionEntry } from "astro:content";
+import { getReadingTime } from "../lib/utils";
+import dayjs from "dayjs";
+
+interface Props {
+    post: CollectionEntry<"blog">;
+    content: string;
+}
+
+const { post, content } = Astro.props;
+const { title, date, tags, category } = post.data;
+const readingMinutes = getReadingTime(content);
+const formattedDate = dayjs(date).format("YYYY.MM.DD");
+---
+
+<BaseLayout title={`${title} | Echoes`} description={title}>
+    <main class="max-w-[65ch] mx-auto px-4 py-12">
+        <article>
+            <!-- Dossier Header -->
+            <header class="mb-8 border-b border-[var(--c-border)] pb-6">
+                <h1
+                    class="text-3xl font-bold mb-4"
+                    style="font-family: 'Noto Serif SC', serif;"
+                >
+                    {title}
+                </h1>
+                <div
+                    class="flex items-center gap-4 text-sm text-[var(--c-text-secondary)]"
+                    style="font-family: 'JetBrains Mono', monospace;"
+                >
+                    <time datetime={date.toISOString()}>{formattedDate}</time>
+                    <span>·</span>
+                    <span>{readingMinutes} min read</span>
+                    <span>·</span>
+                    <span class="uppercase">{category}</span>
+                </div>
+                {
+                    tags.length > 0 && (
+                        <div class="flex gap-2 mt-3 flex-wrap">
+                            {tags.map((tag: string) => (
+                                <span class="text-xs px-2 py-0.5 rounded bg-[var(--c-bg-secondary)] text-[var(--c-text-secondary)]">
+                                    #{tag}
+                                </span>
+                            ))}
+                        </div>
+                    )
+                }
+            </header>
+
+            <!-- Article Content -->
+            <div class="prose prose-lg max-w-none">
+                <slot />
+            </div>
+        </article>
+    </main>
+</BaseLayout>

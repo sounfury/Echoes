@@ -1,0 +1,37 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getSiteConfig } from "../lib/config";
+
+const config = getSiteConfig();
+const categories = Object.entries(config.category);
+---
+
+<BaseLayout title="Archive | Echoes">
+    <main class="max-w-4xl mx-auto px-4 py-12">
+        <h1
+            class="text-3xl font-bold mb-8"
+            style="font-family: 'JetBrains Mono', monospace;"
+        >
+            THE DATABASE
+        </h1>
+
+        <!-- Category Tabs -->
+        <div class="flex gap-4 mb-8">
+            {
+                categories.map(([key, cat]) => (
+                    <button
+                        class="px-4 py-2 text-sm font-mono border border-[var(--c-border)] rounded hover:border-[var(--c-accent)] transition-colors"
+                        data-category={cat.slug}
+                    >
+                        {cat.label}
+                    </button>
+                ))
+            }
+        </div>
+
+        <!-- Archive List Placeholder -->
+        <div class="text-[var(--c-text-secondary)]">
+            <p>归档列表将在后续开发中实现</p>
+        </div>
+    </main>
+</BaseLayout>

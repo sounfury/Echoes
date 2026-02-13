@@ -1,0 +1,69 @@
+# =============================================================================
+# Echoes - Site Configuration (Phase 1)
+# =============================================================================
+
+# 1. 站点基础信息
+site:
+  title: "Echoes"
+  subtitle: "Automated & Stylized Digital Garden"
+  url: https://example.com
+  author: 余弦
+  logoText: "ECHOES"
+  timezone: Asia/Shanghai
+
+# 2. 视觉与主题
+theme:
+  defaultMode: "system" # system | light | dark
+  colors:
+    primary: "#FFFFFF"
+    background: "#121212"
+    accent: "#6528F7"
+    terminal: "#00FF00"
+    warning: "#FF0000"
+
+# 3. 导航
+navigation:
+  - name: Timeline
+    path: /
+    icon: lucide:git-commit
+  - name: Archive
+    path: /archive
+    icon: lucide:database
+  - name: Universe
+    path: https://github.com
+    external: true
+
+# 4. 归档分类
+category:
+  Tech:
+    slug: tech
+    label: "[TECH]"
+    desc: "技术与编程"
+  Review:
+    slug: review
+    label: "[REVIEW]"
+    desc: "书/影/音/游"
+  Life:
+    slug: life
+    label: "[LIFE]"
+    desc: "随笔与生活"
+
+# 5. 全局播放器
+bgm:
+  enabled: true
+  defaultPlaylist:
+    - https://music.163.com/playlist?id=8882890045
+
+# 6. 自动化封面
+content:
+  autoCover:
+    enabled: true
+    path: "/covers/"
+    total: 50
+
+# 7. 运维通知
+ops:
+  bark:
+    enabled: true
+    deviceKeyEnv: "BARK_KEY"
+    iconUrl: ""
