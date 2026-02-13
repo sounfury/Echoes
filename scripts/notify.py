@@ -6,6 +6,7 @@ between BEFORE_SHA and AFTER_SHA, sends scenario-based notifications.
 
 Zero external dependencies — Python stdlib only.
 """
+import json
 import os
 import re
 import subprocess
@@ -183,23 +184,29 @@ def main():
             .replace("{fileList}", file_list)
         )
 
-    # ---- 调用 Bark API ----
-    encoded_title = urllib.parse.quote(title)
-    encoded_body = urllib.parse.quote(body)
-    icon_param = urllib.parse.quote(icon_url, safe=":/")
-    params = f"icon={icon_param}"
+    # ---- 调用 Bark API (POST JSON) ----
+    payload = {
+        "title": title,
+        "body": body,
+        "icon": icon_url,
+    }
     if click_url:
-        params += f"&url={urllib.parse.quote(click_url, safe='/:')}"
-    bark_url = (
-        f"https://api.day.app/{bark_key}/{encoded_title}/{encoded_body}"
-        f"?{params}"
-    )
+        payload["url"] = click_url
+
     print(f"\n📌 Title: {title}")
     print(f"📝 Body:\n{body}")
+    if click_url:
+        print(f"🔗 URL: {click_url}")
     print(f"\nSending Bark notification...")
 
     try:
-        req = urllib.request.Request(bark_url)
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            f"https://api.day.app/{bark_key}",
+            data=data,
+            headers={"Content-Type": "application/json; charset=utf-8"},
+            method="POST",
+        )
         with urllib.request.urlopen(req, timeout=10) as resp:
             print(f"✅ HTTP {resp.status}")
     except Exception as e:
