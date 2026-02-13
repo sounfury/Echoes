@@ -71,7 +71,8 @@ ZERO_SHA = "0" * 40
 def git_diff_files(diff_filter, before, after, content_dir):
     result = subprocess.run(
         [
-            "git", "diff", "--name-only",
+            "git", "-c", "core.quotePath=false",
+            "diff", "--name-only",
             f"--diff-filter={diff_filter}",
             before, after, "--", content_dir,
         ],
@@ -88,7 +89,10 @@ def git_diff_files(diff_filter, before, after, content_dir):
 def get_all_content_files(sha, content_dir):
     """首次推送时列出该 commit 中所有 markdown 文件。"""
     result = subprocess.run(
-        ["git", "ls-tree", "-r", "--name-only", sha, "--", content_dir],
+        [
+            "git", "-c", "core.quotePath=false",
+            "ls-tree", "-r", "--name-only", sha, "--", content_dir,
+        ],
         capture_output=True,
         text=True,
     )
@@ -151,6 +155,8 @@ def main():
     print(f"Added: {len(added)}, Modified: {len(modified)}, Total: {total}")
 
     # ---- 选择模板并替换占位符 ----
+    click_url = ""  # 点击通知跳转的 URL
+
     if total == 0:
         tpl = templates["deployOnly"]
         title = tpl["title"]
@@ -164,6 +170,7 @@ def main():
         body = tpl["body"].replace("{postTitle}", post_title).replace(
             "{postUrl}", post_url
         )
+        click_url = post_url
 
     else:
         tpl = templates["batchPublish"]
@@ -180,11 +187,13 @@ def main():
     encoded_title = urllib.parse.quote(title)
     encoded_body = urllib.parse.quote(body)
     icon_param = urllib.parse.quote(icon_url, safe=":/")
+    params = f"icon={icon_param}"
+    if click_url:
+        params += f"&url={urllib.parse.quote(click_url, safe='/:')}"
     bark_url = (
         f"https://api.day.app/{bark_key}/{encoded_title}/{encoded_body}"
-        f"?icon={icon_param}"
+        f"?{params}"
     )
-    print(f"\nBark URL: {bark_url}")
     print(f"\n📌 Title: {title}")
     print(f"📝 Body:\n{body}")
     print(f"\nSending Bark notification...")
