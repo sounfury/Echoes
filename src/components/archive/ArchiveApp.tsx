@@ -45,7 +45,7 @@ export default function ArchiveApp({
     const searchRef = useRef<HTMLInputElement>(null);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
-    // 从 URL 参数同步筛选状态（支持 View Transitions 和直接导航）
+    // 从 URL 参数同步筛选状态（直接导航 / 浏览器前进后退）
     useEffect(() => {
         function syncFromUrl() {
             const { category, tags } = readFiltersFromSearch(window.location.search);
@@ -54,12 +54,12 @@ export default function ArchiveApp({
         }
 
         syncFromUrl();
-        document.addEventListener('astro:page-load', syncFromUrl);
         window.addEventListener('popstate', syncFromUrl);
+        window.addEventListener('pageshow', syncFromUrl);
 
         return () => {
-            document.removeEventListener('astro:page-load', syncFromUrl);
             window.removeEventListener('popstate', syncFromUrl);
+            window.removeEventListener('pageshow', syncFromUrl);
         };
     }, []);
 
