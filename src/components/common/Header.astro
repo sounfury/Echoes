@@ -11,8 +11,15 @@ const currentPath = Astro.url.pathname;
 <style>
     #site-subtitle::after {
         content: "|";
-        @apply ml-0.5 text-eva-purple dark:text-white/80 font-bold;
+        margin-left: 0.125rem;
+        color: var(--c-accent);
+        font-weight: 700;
         animation: cursor-blink 1s step-end infinite;
+    }
+
+
+    .dark #site-subtitle::after {
+        color: rgb(255 255 255 / 0.8);
     }
 
     @keyframes cursor-blink {
