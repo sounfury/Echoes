@@ -87,11 +87,6 @@
 	--c-border: var(--c-border-dark);
 }
 
-html {
-	background-color: var(--c-bg);
-	color: var(--c-text);
-	transition: background-color 0.5s ease, color 0.3s ease;
-}
 
 /* ================================================
    Base Styles

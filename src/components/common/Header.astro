@@ -17,14 +17,18 @@ const currentPath = Astro.url.pathname;
         animation: cursor-blink 1s step-end infinite;
     }
 
-
     .dark #site-subtitle::after {
         color: rgb(255 255 255 / 0.8);
     }
 
     @keyframes cursor-blink {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0; }
+        0%,
+        100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0;
+        }
     }
 </style>
 
@@ -214,36 +218,33 @@ const currentPath = Astro.url.pathname;
 
 <script>
     import { initTheme, toggleTheme } from "../../stores/theme";
+    import { typeWriter } from "../../lib/effects";
 
-    let subtitleTimer: ReturnType<typeof setInterval> | null = null;
-    let subtitleTimeout: ReturnType<typeof setTimeout> | null = null;
+    let cleanupTypewriter: (() => void) | null = null;
+    let hasPlayedIntro = false;
 
     function initSubtitleTypewriter() {
         const subtitle = document.getElementById("site-subtitle");
-        if (!(subtitle instanceof HTMLElement)) return;
+        if (!subtitle) return;
 
         const fullText = subtitle.dataset.text ?? "";
-        
-        if (subtitleTimer) clearInterval(subtitleTimer);
-        if (subtitleTimeout) clearTimeout(subtitleTimeout);
+        // 兼容带 trailing slash 的情况
+        const isHomePage =
+            window.location.pathname === "/" || window.location.pathname === "";
 
-        subtitle.textContent = "";
-        let currentIndex = 0;
-        
-        // Initial delay for a more natural start
-        subtitleTimeout = setTimeout(() => {
-            subtitleTimer = setInterval(() => {
-                if (currentIndex < fullText.length) {
-                    subtitle.textContent += fullText[currentIndex];
-                    currentIndex++;
-                } else {
-                    if (subtitleTimer) {
-                        clearInterval(subtitleTimer);
-                        subtitleTimer = null;
-                    }
-                }
-            }, 80); // Snappier typewriter effect
-        }, 300);
+        if (cleanupTypewriter) cleanupTypewriter();
+
+        // 仅在首次访问首页时播放动画
+        if (isHomePage && !hasPlayedIntro) {
+            cleanupTypewriter = typeWriter(subtitle, fullText, {
+                speed: 600,
+                initialDelay: 300,
+            });
+            hasPlayedIntro = true;
+        } else {
+            // 其他页面或已播放过，直接显示完整文本
+            subtitle.textContent = fullText;
+        }
     }
 
     function initHeader() {
@@ -254,10 +255,6 @@ const currentPath = Astro.url.pathname;
         const toggle = document.getElementById("theme-toggle");
         const mobileToggle = document.getElementById("mobile-menu-toggle");
         const mobileMenu = document.getElementById("mobile-menu");
-
-        // 移除旧的事件监听器（如果是 View Transitions 导致的重新执行，防止重复绑定）
-        // 但 Astro 的 ClientRouter 通常会处理好清理，或者我们用 cloneNode 方法
-        // 这里简单处理，直接绑定新逻辑，toggleTheme 内部只操作 store 和 class
 
         toggle?.addEventListener("click", () => {
             toggleTheme();
