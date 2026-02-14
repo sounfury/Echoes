@@ -1,6 +1,22 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import type { ArchiveAppProps, ArchivePost } from './types';
 
+type ArchiveFilters = {
+    category: string;
+    tags: string[];
+};
+
+function readFiltersFromSearch(search: string): ArchiveFilters {
+    const params = new URLSearchParams(search);
+    const category = params.get('category')?.toLowerCase() ?? 'all';
+    const tag = params.get('tag')?.toLowerCase();
+
+    return {
+        category,
+        tags: tag ? [tag] : [],
+    };
+}
+
 // ─── Main Component ───────────────────────────────────────────────────
 
 export default function ArchiveApp({
@@ -11,10 +27,18 @@ export default function ArchiveApp({
     initialCategory = 'all',
     initialTag,
 }: ArchiveAppProps) {
-    const [activeCategory, setActiveCategory] = useState(initialCategory);
-    const [activeTags, setActiveTags] = useState<string[]>(
-        initialTag ? [initialTag.toLowerCase()] : [],
-    );
+    const [activeCategory, setActiveCategory] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return readFiltersFromSearch(window.location.search).category;
+        }
+        return initialCategory;
+    });
+    const [activeTags, setActiveTags] = useState<string[]>(() => {
+        if (typeof window !== 'undefined') {
+            return readFiltersFromSearch(window.location.search).tags;
+        }
+        return initialTag ? [initialTag.toLowerCase()] : [];
+    });
     const [searchKeyword, setSearchKeyword] = useState('');
     const [showTagWall, setShowTagWall] = useState(false);
 
@@ -24,17 +48,19 @@ export default function ArchiveApp({
     // 从 URL 参数同步筛选状态（支持 View Transitions 和直接导航）
     useEffect(() => {
         function syncFromUrl() {
-            const params = new URLSearchParams(window.location.search);
-            const cat = params.get('category')?.toLowerCase();
-            const tag = params.get('tag');
-
-            if (cat) setActiveCategory(cat);
-            if (tag) setActiveTags([tag.toLowerCase()]);
+            const { category, tags } = readFiltersFromSearch(window.location.search);
+            setActiveCategory(category);
+            setActiveTags(tags);
         }
 
         syncFromUrl();
         document.addEventListener('astro:page-load', syncFromUrl);
-        return () => document.removeEventListener('astro:page-load', syncFromUrl);
+        window.addEventListener('popstate', syncFromUrl);
+
+        return () => {
+            document.removeEventListener('astro:page-load', syncFromUrl);
+            window.removeEventListener('popstate', syncFromUrl);
+        };
     }, []);
 
     // 点击外部关闭 tag wall
