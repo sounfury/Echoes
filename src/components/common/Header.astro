@@ -8,6 +8,19 @@ const navItems = config.navigation;
 const currentPath = Astro.url.pathname;
 ---
 
+<style>
+    #site-subtitle::after {
+        content: "|";
+        @apply ml-0.5 text-eva-purple dark:text-white/80 font-bold;
+        animation: cursor-blink 1s step-end infinite;
+    }
+
+    @keyframes cursor-blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0; }
+    }
+</style>
+
 <nav
     class="fixed top-0 w-full z-50 border-b-2 border-eva-ink/10 dark:border-white/10 backdrop-blur-md /70 transition-all duration-300"
 >
@@ -34,7 +47,7 @@ const currentPath = Astro.url.pathname;
                 </span>
                 <span
                     id="site-subtitle"
-                    class="text-[9px] font-mono tracking-[0.2em] opacity-60"
+                    class="text-[9px] font-mono tracking-[0.2em] opacity-60 inline-flex items-center"
                     data-text={config.site.subtitle}
                 >
                     {config.site.subtitle}
@@ -196,28 +209,34 @@ const currentPath = Astro.url.pathname;
     import { initTheme, toggleTheme } from "../../stores/theme";
 
     let subtitleTimer: ReturnType<typeof setInterval> | null = null;
+    let subtitleTimeout: ReturnType<typeof setTimeout> | null = null;
 
     function initSubtitleTypewriter() {
         const subtitle = document.getElementById("site-subtitle");
         if (!(subtitle instanceof HTMLElement)) return;
 
         const fullText = subtitle.dataset.text ?? "";
+        
+        if (subtitleTimer) clearInterval(subtitleTimer);
+        if (subtitleTimeout) clearTimeout(subtitleTimeout);
+
         subtitle.textContent = "";
-
-        if (subtitleTimer) {
-            clearInterval(subtitleTimer);
-        }
-
         let currentIndex = 0;
-        subtitleTimer = setInterval(() => {
-            currentIndex += 1;
-            subtitle.textContent = fullText.slice(0, currentIndex);
-
-            if (currentIndex >= fullText.length && subtitleTimer) {
-                clearInterval(subtitleTimer);
-                subtitleTimer = null;
-            }
-        }, 120);
+        
+        // Initial delay for a more natural start
+        subtitleTimeout = setTimeout(() => {
+            subtitleTimer = setInterval(() => {
+                if (currentIndex < fullText.length) {
+                    subtitle.textContent += fullText[currentIndex];
+                    currentIndex++;
+                } else {
+                    if (subtitleTimer) {
+                        clearInterval(subtitleTimer);
+                        subtitleTimer = null;
+                    }
+                }
+            }, 80); // Snappier typewriter effect
+        }, 300);
     }
 
     function initHeader() {
