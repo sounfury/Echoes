@@ -9,10 +9,11 @@ export interface NavItem {
     external?: boolean;
 }
 
+// Category 映射到配置键，slug 由键名决定
 export interface CategoryConfig {
-    slug: string;
     label: string;
     desc: string;
+    color: string;
 }
 
 export interface SiteConfig {
@@ -25,27 +26,34 @@ export interface SiteConfig {
         timezone: string;
     };
     theme: {
-        defaultMode: 'system' | 'light' | 'dark';
+        defaultMode: 'light' | 'dark';
         colors: {
-            primary: string;
-            background: string;
             accent: string;
             terminal: string;
             warning: string;
+            defaultCategory: string;
+            light: {
+                bg: string;
+                bgSecondary: string;
+                text: string;
+                textSecondary: string;
+                border: string;
+            };
+            dark: {
+                bg: string;
+                bgSecondary: string;
+                text: string;
+                textSecondary: string;
+                border: string;
+            };
         };
     };
     navigation: NavItem[];
     category: Record<string, CategoryConfig>;
+    // Phase 2
     bgm: {
         enabled: boolean;
         defaultPlaylist: string[];
-    };
-    content: {
-        autoCover: {
-            enabled: boolean;
-            path: string;
-            total: number;
-        };
     };
     ops: {
         bark: {
@@ -56,14 +64,11 @@ export interface SiteConfig {
     };
 }
 
-let cachedConfig: SiteConfig | null = null;
-
+/**
+ * 每次调用都重新读取文件，确保 dev 模式下配置变更能即时生效
+ */
 export function getSiteConfig(): SiteConfig {
-    if (cachedConfig) return cachedConfig;
-
     const configPath = path.resolve(process.cwd(), 'src/config/site.config.yaml');
     const raw = fs.readFileSync(configPath, 'utf-8');
-    cachedConfig = yaml.load(raw) as SiteConfig;
-
-    return cachedConfig;
+    return yaml.load(raw) as SiteConfig;
 }

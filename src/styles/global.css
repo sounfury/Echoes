@@ -2,46 +2,148 @@
 @plugin "@tailwindcss/typography";
 
 /* ================================================
-   Echoes - Design System CSS Variables
+   Tailwind v4 Theme Extensions
+   ================================================ */
+
+@theme {
+	/* EVA Brand Colors — 固定品牌色，引用配置源变量 */
+	--color-eva-purple: var(--c-accent);
+	--color-eva-green: #39ff14;
+	--color-eva-red: #F90000;
+	--color-eva-orange: #FF9900;
+	--color-eva-dark: var(--c-bg-dark);
+	--color-eva-paper: var(--c-bg-light);
+	--color-eva-ink: var(--c-text-light);
+
+	/* Font Families */
+	--font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+	--font-serif: 'Noto Serif SC', 'Georgia', serif;
+	--font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+	/* Custom Animations */
+	--animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+	--animate-sound-wave: wave 1.2s ease-in-out infinite;
+	--animate-fade-in: fadeIn 0.5s ease-out forwards;
+	--animate-spin-slow: spin 8s linear infinite;
+
+	@keyframes wave {
+
+		0%,
+		100% {
+			height: 20%;
+		}
+
+		50% {
+			height: 80%;
+		}
+	}
+
+	@keyframes fadeIn {
+		0% {
+			opacity: 0;
+			transform: translateY(10px);
+		}
+
+		100% {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+}
+
+/* ================================================
+   Dark Mode Variant
    ================================================ */
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-:root {
-	/* Brand Colors */
-	--c-accent: #6528F7;
-	--c-terminal: #00FF00;
-	--c-warning: #FF0000;
+/* ================================================
+   CSS Variables (Semantic Tokens)
+   ================================================ */
 
-	/* Light Mode */
-	--c-bg: #FFFFFF;
-	--c-bg-secondary: #F5F5F5;
-	--c-text: #1A1A1A;
-	--c-text-secondary: #6B7280;
-	--c-border: #E5E7EB;
+/*
+ * 配置源变量由 BaseLayout inline style 注入到 <html>:
+ *   --c-accent, --c-terminal, --c-warning       → 全局功能色（不分明暗）
+ *   --c-bg-light, --c-text-light, ...            → 亮色配置值
+ *   --c-bg-dark, --c-text-dark, ...              → 暗色配置值
+ *
+ * :root 将 -light 源映射为语义变量 --c-bg, --c-text 等
+ * .dark 将其重定向到 -dark 源
+ */
+
+:root {
+	--c-bg: var(--c-bg-light);
+	--c-bg-secondary: var(--c-bg-secondary-light);
+	--c-text: var(--c-text-light);
+	--c-text-secondary: var(--c-text-secondary-light);
+	--c-border: var(--c-border-light);
 }
 
 .dark {
-	--c-bg: #121212;
-	--c-bg-secondary: #1E1E1E;
-	--c-text: #E5E7EB;
-	--c-text-secondary: #9CA3AF;
-	--c-border: #2D2D2D;
+	--c-bg: var(--c-bg-dark);
+	--c-bg-secondary: var(--c-bg-secondary-dark);
+	--c-text: var(--c-text-dark);
+	--c-text-secondary: var(--c-text-secondary-dark);
+	--c-border: var(--c-border-dark);
 }
+
 
 /* ================================================
    Base Styles
    ================================================ */
 
 body {
-	font-family: 'Inter', system-ui, -apple-system, sans-serif;
+	font-family: var(--font-sans);
 	background-color: var(--c-bg);
 	color: var(--c-text);
-	transition: background-color 0.3s ease, color 0.3s ease;
+	transition: background-color 0.5s ease, color 0.3s ease;
+	overflow-x: hidden;
+}
+
+::selection {
+	background-color: var(--c-accent);
+	color: white;
 }
 
 /* ================================================
-   Prose / Typography Overrides (Article Content)
+   Custom Scrollbar
+   ================================================ */
+
+::-webkit-scrollbar {
+	width: 6px;
+}
+
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+	background: #333;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+	background: var(--c-accent);
+}
+
+/* ================================================
+   网格背景
+   ================================================ */
+
+.bg-grid-pattern {
+	background-image:
+		linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+		linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+	background-size: 40px 40px;
+}
+
+.dark .bg-grid-pattern {
+	background-image:
+		linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+		linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+}
+
+/* ================================================
+   Prose / Typography (Article Content)
    ================================================ */
 
 .prose {
@@ -51,6 +153,53 @@ body {
 	--tw-prose-code: var(--c-accent);
 	--tw-prose-quotes: var(--c-text-secondary);
 	--tw-prose-quote-borders: var(--c-accent);
+}
+
+.prose-eva h2 {
+	font-family: 'Noto Serif SC', serif;
+	border-left: 4px solid var(--c-accent);
+	padding-left: 1rem;
+	margin-top: 2rem;
+	margin-bottom: 1rem;
+}
+
+.prose-eva p {
+	margin-bottom: 1.5rem;
+	line-height: 1.8;
+	color: inherit;
+}
+
+.prose-eva code {
+	font-family: 'JetBrains Mono', monospace;
+	background: color-mix(in srgb, var(--c-accent) 10%, transparent);
+	color: var(--c-accent);
+	padding: 0.2rem 0.4rem;
+	border-radius: 2px;
+}
+
+/* Drop Cap (首字下沉) */
+.prose-eva>p:first-of-type::first-letter {
+	float: left;
+	font-family: 'Noto Serif SC', serif;
+	font-size: 2.25rem;
+	line-height: 2.5rem;
+	font-weight: 700;
+	margin-right: 0.5rem;
+	margin-top: 0.1em;
+	color: var(--c-text);
+}
+
+/* ================================================
+   Hide Scrollbar Utility
+   ================================================ */
+
+.no-scrollbar::-webkit-scrollbar {
+	display: none;
+}
+
+.no-scrollbar {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
 }
 
 /* ================================================

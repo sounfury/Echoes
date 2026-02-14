@@ -1,37 +1,128 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { getSiteConfig } from "../lib/config";
+import { getCollection } from "astro:content";
+import {
+    getCategoryFromId,
+    getTitleFromId,
+    formatDateShort,
+    getCategoryColor,
+    getCategoryLabel,
+} from "../lib/utils";
+import ArchiveApp from "../components/archive/ArchiveApp";
+import type {
+    ArchivePost,
+    CategoryMeta,
+    TagEntry,
+} from "../components/archive/types";
 
-const config = getSiteConfig();
-const categories = Object.entries(config.category);
+// 获取所有已发布的文章
+const allPosts = await getCollection("blog", ({ data }) => data.published);
+
+// 按创建时间降序排列
+const sortedPosts = allPosts.sort((a, b) => {
+    const dateA = a.data.创建时间?.valueOf() ?? 0;
+    const dateB = b.data.创建时间?.valueOf() ?? 0;
+    return dateB - dateA;
+});
+
+// 序列化 posts 为可传递给 React 的纯数据
+const posts: ArchivePost[] = sortedPosts.map((post) => {
+    const category = getCategoryFromId(post.id);
+    const date = post.data.创建时间;
+    return {
+        slug: post.id,
+        title: getTitleFromId(post.id),
+        category,
+        categoryLabel: getCategoryLabel(category),
+        categoryColor: getCategoryColor(category),
+        date: date ? formatDateShort(date) : "",
+        year: date ? date.getFullYear() : 0,
+        tags: post.data.tags,
+    };
+});
+
+// 统计分类
+const categoryCount: Record<string, number> = {};
+posts.forEach((p) => {
+    categoryCount[p.category] = (categoryCount[p.category] ?? 0) + 1;
+});
+const categories: CategoryMeta[] = Object.entries(categoryCount)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([slug, count]) => ({
+        slug,
+        label: getCategoryLabel(slug),
+        color: getCategoryColor(slug),
+        count,
+    }));
+
+// 统计标签频次
+const tagFrequency = new Map<string, number>();
+posts.forEach((p) => {
+    p.tags.forEach((tag) => {
+        tagFrequency.set(tag, (tagFrequency.get(tag) ?? 0) + 1);
+    });
+});
+const tags: TagEntry[] = [...tagFrequency.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([tag, count]) => ({ tag, count }));
+
+// 从 URL params 中读取初始值 (SSR 阶段)
+const url = new URL(Astro.request.url);
+const initialCategory =
+    url.searchParams.get("category")?.toLowerCase() ?? "all";
+const initialTag = url.searchParams.get("tag") ?? undefined;
 ---
 
 <BaseLayout title="Archive | Echoes">
-    <main class="max-w-4xl mx-auto px-4 py-12">
-        <h1
-            class="text-3xl font-bold mb-8"
-            style="font-family: 'JetBrains Mono', monospace;"
-        >
-            THE DATABASE
-        </h1>
-
-        <!-- Category Tabs -->
-        <div class="flex gap-4 mb-8">
-            {
-                categories.map(([key, cat]) => (
-                    <button
-                        class="px-4 py-2 text-sm font-mono border border-[var(--c-border)] rounded hover:border-[var(--c-accent)] transition-colors"
-                        data-category={cat.slug}
-                    >
-                        {cat.label}
-                    </button>
-                ))
-            }
-        </div>
-
-        <!-- Archive List Placeholder -->
-        <div class="text-[var(--c-text-secondary)]">
-            <p>归档列表将在后续开发中实现</p>
-        </div>
-    </main>
+    <ArchiveApp
+        client:load
+        posts={posts}
+        categories={categories}
+        tags={tags}
+        totalCount={posts.length}
+        initialCategory={initialCategory}
+        initialTag={initialTag}
+    />
 </BaseLayout>
+
+<style>
+    /* 活跃 Tab 样式 */
+    :global(.archive-tab.active) {
+        border-color: var(--c-text, #111) !important;
+        background-color: var(--c-text, #111) !important;
+        color: var(--c-bg, #fff) !important;
+        font-weight: 700;
+        box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 0.15);
+    }
+
+    :global(.dark .archive-tab.active) {
+        border-color: #fff !important;
+        background-color: #fff !important;
+        color: #0a0a0c !important;
+    }
+
+    /* 行触控友好 (Mobile) */
+    @media (max-width: 480px) {
+        :global(.archive-item) {
+            min-height: 44px;
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+    }
+
+    /* fadeIn animation for tag wall */
+    :global(.animate-fadeIn) {
+        animation: fadeIn 0.15s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-4px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>

@@ -1,39 +1,72 @@
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 import readingTime from 'reading-time';
 
-/**
- * 合并 Tailwind 类名，自动解决冲突
- */
-export function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
-}
-
-/**
- * 计算文章阅读时间（分钟）
- */
 export function getReadingTime(content: string): number {
     const result = readingTime(content);
     return Math.ceil(result.minutes);
 }
 
+import { getSiteConfig } from './config';
+
+export type Category = string;
+
 /**
- * 根据字符串生成简单 hash，用于封面图映射
+ * 从文章 id 路径中提取分类 (返回文件夹名，小写)
+ * glob loader 生成的 id 格式: "tech/xxx" / "review/xxx" / "life/xxx"
  */
-export function simpleHash(str: string): number {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash |= 0;
-    }
-    return Math.abs(hash);
+export function getCategoryFromId(id: string): string {
+    const folder = id.split('/')[0]?.toLowerCase();
+    return folder ?? 'default';
 }
 
 /**
- * 获取自动封面路径
+ * 获取分类颜色
+ * 优先从 config.category[cat].color 获取，否则使用 theme.colors.defaultCategory 或 accent
  */
-export function getAutoCover(filename: string, coverPath: string, total: number): string {
-    const index = simpleHash(filename) % total;
-    return `${coverPath}${index}.webp`;
+export function getCategoryColor(category: string): string {
+    const config = getSiteConfig();
+    const catConfig = config.category[category.toLowerCase()];
+    if (catConfig && catConfig.color) {
+        return catConfig.color;
+    }
+    return config.theme.colors.defaultCategory || config.theme.colors.accent;
+}
+
+/**
+ * 获取分类显示标签 (e.g. "[TECH]")
+ */
+export function getCategoryLabel(category: string): string {
+    const config = getSiteConfig();
+    const catConfig = config.category[category.toLowerCase()];
+    if (catConfig && catConfig.label) {
+        return catConfig.label;
+    }
+    return `[${category.toUpperCase()}]`;
+}
+
+/**
+ * 从文章 id 中提取可读标题
+ * "tech/重构Obsidian发布流" -> "重构Obsidian发布流"
+ */
+export function getTitleFromId(id: string): string {
+    const parts = id.split('/');
+    return parts[parts.length - 1] ?? id;
+}
+
+/**
+ * 格式化日期为 MM.DD
+ */
+export function formatDateShort(date: Date): string {
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${m}.${d}`;
+}
+
+/**
+ * 格式化日期为 YYYY.MM.DD
+ */
+export function formatDateFull(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}.${m}.${d}`;
 }

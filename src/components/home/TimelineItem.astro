@@ -1,0 +1,111 @@
+---
+import type { CollectionEntry } from "astro:content";
+import {
+    getCategoryFromId,
+    getCategoryColor,
+    getTitleFromId,
+    formatDateShort,
+    getCategoryLabel,
+} from "../../lib/utils";
+
+interface Props {
+    post: CollectionEntry<"blog">;
+}
+
+const { post } = Astro.props;
+const category = getCategoryFromId(post.id);
+const title = getTitleFromId(post.id);
+const color = getCategoryColor(category);
+
+const createDate = post.data.创建时间;
+const updateDate = post.data.更新时间;
+const displayDate = updateDate ?? createDate;
+const isUpdated = !!(
+    updateDate &&
+    createDate &&
+    updateDate.getTime() !== createDate.getTime()
+);
+const fullDate = displayDate
+    ? `${displayDate.getFullYear()}.${formatDateShort(displayDate)}`
+    : "";
+const tags = post.data.tags;
+
+// 从 markdown body 中提取摘要（取第一个非空非标题段落）
+const body = post.body ?? "";
+const lines = body
+    .split("\n")
+    .filter((l) => l.trim() && !l.startsWith("#") && !l.startsWith("---"));
+const excerpt = lines[0]?.trim().slice(0, 120) ?? "";
+---
+
+<article
+    class="timeline-item relative pl-8 md:pl-12 group cursor-pointer"
+    style={`--item-color: ${color};`}
+>
+    <a href={`/posts/${post.id}`} class="no-underline block">
+        <!-- Node Circle -->
+        <span
+            class="absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 transition-colors z-10 bg-eva-paper dark:bg-eva-dark"
+            style={`border-color: ${color};`}
+            data-node></span>
+
+        <!-- Date Label (desktop: absolute left, mobile: inline) -->
+        <div
+            class="md:absolute md:-left-32 md:top-1 md:text-right w-24 mb-1 md:mb-0"
+        >
+            <span
+                class="font-mono text-sm opacity-60 group-hover:opacity-100 group-hover:text-[var(--item-color)] transition-all"
+            >
+                {fullDate}{isUpdated && " \u21BB"}
+            </span>
+        </div>
+
+        <!-- Content -->
+        <div>
+            <!-- Category & ID Badge -->
+            <div class="flex items-center gap-2 mb-2">
+                <span
+                    class="text-[10px] font-mono px-1 py-0.5 text-white"
+                    style={`background-color: ${color};`}
+                >
+                    {getCategoryLabel(category)}
+                </span>
+            </div>
+
+            <!-- Title -->
+            <h2
+                class="text-2xl md:text-3xl font-serif font-bold mb-3 transition-colors group-hover:text-[var(--item-color)]"
+            >
+                {title}
+            </h2>
+
+            <!-- Excerpt -->
+            {
+                excerpt && (
+                    <p class="text-sm md:text-base opacity-70 leading-relaxed font-sans line-clamp-2">
+                        {excerpt}
+                    </p>
+                )
+            }
+
+            <!-- Tags -->
+            {
+                tags.length > 0 && (
+                    <div class="flex gap-2 mt-3">
+                        {tags.map((tag: string) => (
+                            <span class="text-[10px] font-mono opacity-40 uppercase">
+                                #{tag}
+                            </span>
+                        ))}
+                    </div>
+                )
+            }
+        </div>
+    </a>
+</article>
+
+<style>
+    .timeline-item:hover [data-node] {
+        background-color: var(--item-color) !important;
+    }
+</style>

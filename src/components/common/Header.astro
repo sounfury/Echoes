@@ -1,0 +1,277 @@
+---
+import { getSiteConfig } from "../../lib/config";
+import { Image } from "astro:assets";
+import siteIcon from "../../assets/icon/icon.jpg";
+
+const config = getSiteConfig();
+const navItems = config.navigation;
+const currentPath = Astro.url.pathname;
+---
+
+<style>
+    #site-subtitle::after {
+        content: "|";
+        margin-left: 0.125rem;
+        color: var(--c-accent);
+        font-weight: 700;
+        animation: cursor-blink 1s step-end infinite;
+    }
+
+    .dark #site-subtitle::after {
+        color: rgb(255 255 255 / 0.8);
+    }
+
+    @keyframes cursor-blink {
+        0%,
+        100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0;
+        }
+    }
+</style>
+
+<nav
+    class="fixed top-0 w-full z-50 border-b-2 border-eva-ink/10 dark:border-white/10 backdrop-blur-md /70 transition-all duration-300"
+>
+    <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+        <!-- Logo -->
+        <a
+            href="/"
+            class="flex items-center gap-3 cursor-pointer group no-underline"
+        >
+            <div
+                class="w-8 h-8 bg-eva-ink dark:bg-white text-white dark:text-eva-dark flex items-center justify-center font-bold font-mono text-xs group-hover:bg-eva-purple group-hover:text-white transition-colors overflow-hidden rounded-sm"
+            >
+                <Image
+                    src={siteIcon}
+                    alt="Logo"
+                    class="w-full h-full object-cover"
+                />
+            </div>
+            <div class="flex flex-col">
+                <span
+                    class="font-black tracking-tighter text-lg leading-none font-sans uppercase"
+                >
+                    {config.site.logoText}
+                </span>
+                <span
+                    id="site-subtitle"
+                    class="text-[9px] font-mono tracking-[0.2em] opacity-60 inline-flex items-center"
+                    data-text={config.site.subtitle}
+                >
+                    {config.site.subtitle}
+                </span>
+            </div>
+        </a>
+
+        <!-- Menu -->
+        <div class="flex items-center gap-6">
+            <!-- Desktop Nav Links -->
+            <div
+                class="hidden md:flex gap-6 font-mono text-xs tracking-widest font-bold"
+            >
+                {
+                    navItems.map((item) => {
+                        const isActive =
+                            item.path === currentPath ||
+                            (item.path === "/" && currentPath === "/");
+                        const isExternal = item.external;
+                        return (
+                            <a
+                                href={item.path}
+                                class:list={[
+                                    "transition-colors relative group",
+                                    isActive
+                                        ? "text-eva-purple"
+                                        : "hover:text-eva-purple",
+                                ]}
+                                target={isExternal ? "_blank" : undefined}
+                                rel={
+                                    isExternal
+                                        ? "noopener noreferrer"
+                                        : undefined
+                                }
+                            >
+                                {item.name.toUpperCase()}
+                                <span
+                                    class:list={[
+                                        "absolute -bottom-1 left-0 h-[2px] bg-eva-purple transition-all",
+                                        isActive
+                                            ? "w-full"
+                                            : "w-0 group-hover:w-full",
+                                    ]}
+                                />
+                            </a>
+                        );
+                    })
+                }
+            </div>
+
+            <!-- Search Icon -->
+            <a
+                href="/archive"
+                class="hover:text-eva-purple transition-colors"
+                aria-label="Search"
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                >
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </a>
+
+            <!-- Theme Toggle -->
+            <button
+                id="theme-toggle"
+                class="w-8 h-8 flex items-center justify-center border border-current hover:bg-eva-ink hover:text-white dark:hover:bg-white dark:hover:text-eva-dark transition-all rounded-sm cursor-pointer"
+                aria-label="Toggle theme"
+            >
+                <!-- Sun (visible in light mode) -->
+                <svg
+                    class="w-4 h-4 block dark:hidden"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                >
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <!-- Moon (visible in dark mode) -->
+                <svg
+                    class="w-4 h-4 hidden dark:block"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                >
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+                    ></path>
+                </svg>
+            </button>
+
+            <!-- Mobile Hamburger -->
+            <button
+                id="mobile-menu-toggle"
+                class="md:hidden w-8 h-8 flex items-center justify-center cursor-pointer"
+                aria-label="Toggle menu"
+            >
+                <svg
+                    class="w-5 h-5"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                >
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Mobile Menu Overlay -->
+    <div
+        id="mobile-menu"
+        class="hidden fixed inset-0 top-16 backdrop-blur-lg z-40 md:hidden overflow-y-auto overflow-x-hidden"
+    >
+        <div
+            class="flex flex-col items-center justify-center h-full gap-8 font-mono text-lg tracking-widest font-bold w-full px-6"
+        >
+            {
+                navItems.map((item) => {
+                    const isExternal = item.external;
+                    return (
+                        <a
+                            href={item.path}
+                            class="hover:text-eva-purple transition-colors text-center break-words w-full"
+                            target={isExternal ? "_blank" : undefined}
+                            rel={isExternal ? "noopener noreferrer" : undefined}
+                        >
+                            {item.name.toUpperCase()}
+                        </a>
+                    );
+                })
+            }
+        </div>
+    </div>
+</nav>
+
+<script>
+    import { initTheme, toggleTheme } from "../../stores/theme";
+    import { typeWriter } from "../../lib/effects";
+
+    let cleanupTypewriter: (() => void) | null = null;
+    let hasPlayedIntro = false;
+
+    function initSubtitleTypewriter() {
+        const subtitle = document.getElementById("site-subtitle");
+        if (!subtitle) return;
+
+        const fullText = subtitle.dataset.text ?? "";
+        // 兼容带 trailing slash 的情况
+        const isHomePage =
+            window.location.pathname === "/" || window.location.pathname === "";
+
+        if (cleanupTypewriter) cleanupTypewriter();
+
+        // 仅在首次访问首页时播放动画
+        if (isHomePage && !hasPlayedIntro) {
+            cleanupTypewriter = typeWriter(subtitle, fullText, {
+                speed: 600,
+                initialDelay: 300,
+            });
+            hasPlayedIntro = true;
+        } else {
+            // 其他页面或已播放过，直接显示完整文本
+            subtitle.textContent = fullText;
+        }
+    }
+
+    function initHeader() {
+        // 同步主题状态
+        initTheme();
+        initSubtitleTypewriter();
+
+        const toggle = document.getElementById("theme-toggle");
+        const mobileToggle = document.getElementById("mobile-menu-toggle");
+        const mobileMenu = document.getElementById("mobile-menu");
+
+        toggle?.addEventListener("click", () => {
+            toggleTheme();
+        });
+
+        mobileToggle?.addEventListener("click", () => {
+            mobileMenu?.classList.toggle("hidden");
+        });
+
+        // Close mobile menu on link click
+        mobileMenu?.querySelectorAll("a").forEach((link) => {
+            link.addEventListener("click", () => {
+                mobileMenu?.classList.add("hidden");
+            });
+        });
+    }
+
+    // Utilize astro:page-load for View Transitions support (runs on initial load + after swap)
+    document.addEventListener("astro:page-load", initHeader);
+</script>
