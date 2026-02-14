@@ -83,6 +83,7 @@ const currentPath = Astro.url.pathname;
 
             <!-- Search Icon -->
             <a
+                id="archive-search-link"
                 href="/archive"
                 class="hover:text-eva-purple transition-colors"
                 aria-label="Search"
@@ -198,6 +199,17 @@ const currentPath = Astro.url.pathname;
         const toggle = document.getElementById("theme-toggle");
         const mobileToggle = document.getElementById("mobile-menu-toggle");
         const mobileMenu = document.getElementById("mobile-menu");
+        const searchLink = document.getElementById(
+            "archive-search-link",
+        ) as HTMLAnchorElement | null;
+
+        if (
+            searchLink &&
+            window.location.pathname === "/archive" &&
+            window.location.search
+        ) {
+            searchLink.href = `/archive${window.location.search}`;
+        }
 
         // 移除旧的事件监听器（如果是 View Transitions 导致的重新执行，防止重复绑定）
         // 但 Astro 的 ClientRouter 通常会处理好清理，或者我们用 cloneNode 方法
