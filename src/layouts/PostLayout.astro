@@ -60,7 +60,7 @@ const updatedDate = post.data.更新时间
                     <div>
                         <span class="block opacity-50 mb-1">CATEGORY</span>
                         <a
-                            href={`/archive?category=${category.toLowerCase()}`}
+                            href={`/archive/?category=${encodeURIComponent(category.toLowerCase())}`}
                             data-astro-reload
                             class="no-underline text-eva-ink/80 dark:text-white/80 hover:text-[var(--cat-color)] transition-colors font-bold"
                             style={`--cat-color: ${color}`}
@@ -86,7 +86,7 @@ const updatedDate = post.data.更新时间
                             {
                                 tags.map((t: string) => (
                                     <a
-                                        href={`/archive?tag=${t.toLowerCase()}`}
+                                        href={`/archive/?tag=${encodeURIComponent(t.toLowerCase())}`}
                                         data-astro-reload
                                         class="no-underline text-eva-ink/60 dark:text-white/60 hover:text-[var(--tag-hover)] hover:scale-105 transition-all duration-200 inline-block"
                                         style={`--tag-hover: ${color}`}
