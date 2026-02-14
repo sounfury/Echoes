@@ -1,0 +1,882 @@
+<!-- 注意，该文件只是在快速验证主题样式时使用，若为功能开发请忽略该文件 -->
+
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYNC-STREAM // V3.0</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&family=Noto+Serif+SC:wght@400;700;900&display=swap"
+        rel="stylesheet">
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        eva: {
+                            purple: '#6528F7',
+                            green: '#39ff14',
+                            red: '#F90000',
+                            orange: '#FF9900',
+                            dark: '#0a0a0c',
+                            paper: '#f0f0f2',
+                            ink: '#111111'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['"Noto Serif SC"', 'serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'sound-wave': 'wave 1.2s ease-in-out infinite',
+                        'fade-in': 'fadeIn 0.5s ease-out forwards',
+                    },
+                    keyframes: {
+                        wave: {
+                            '0%, 100%': { height: '20%' },
+                            '50%': { height: '80%' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+        }
+
+        .dark ::-webkit-scrollbar-thumb {
+            background: #6528F7;
+        }
+
+        /* Background Noise/Grid Pattern */
+        .bg-grid-pattern {
+            background-image: linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .dark .bg-grid-pattern {
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+        }
+
+        /* EVA Style Decorations */
+        .corner-bracket {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border: 2px solid currentColor;
+            transition: all 0.3s ease;
+        }
+
+        .top-left {
+            top: -2px;
+            left: -2px;
+            border-right: 0;
+            border-bottom: 0;
+        }
+
+        .top-right {
+            top: -2px;
+            right: -2px;
+            border-left: 0;
+            border-bottom: 0;
+        }
+
+        .bottom-left {
+            bottom: -2px;
+            left: -2px;
+            border-right: 0;
+            border-top: 0;
+        }
+
+        .bottom-right {
+            bottom: -2px;
+            right: -2px;
+            border-left: 0;
+            border-top: 0;
+        }
+
+        /* Hide Scrollbar for specific elements */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Typography Override */
+        .prose-eva h2 {
+            font-family: 'Noto Serif SC', serif;
+            border-left: 4px solid #6528F7;
+            padding-left: 1rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .prose-eva p {
+            margin-bottom: 1.5rem;
+            line-height: 1.8;
+            color: inherit;
+        }
+
+        .prose-eva code {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(101, 40, 247, 0.1);
+            color: #6528F7;
+            padding: 0.2rem 0.4rem;
+            border-radius: 2px;
+        }
+
+        /* F-TOC-01 Data Stream Reader */
+        .toc-item {
+            opacity: 0.3;
+            /* Base visibility - ghost mode */
+            transform: translateX(-10px);
+            filter: blur(0px);
+            /* Remove blur for clarity */
+            transition: all 0.3s ease-out;
+            color: #888;
+            text-align: right;
+            display: block;
+        }
+
+        .dark .toc-item {
+            color: #666;
+        }
+
+        /* Active State */
+        .toc-item.active {
+            opacity: 1 !important;
+            transform: translateX(0);
+            color: #6528F7;
+            font-weight: bold;
+            border-right-color: #6528F7;
+        }
+
+        /* Hover Container */
+        #toc-container:hover .toc-item {
+            opacity: 0.6;
+            transform: translateX(0);
+        }
+
+        /* Hover Item */
+        #toc-container:hover .toc-item:hover {
+            opacity: 1;
+            color: #6528F7;
+            transform: translateX(-5px);
+        }
+    </style>
+</head>
+
+<body
+    class="bg-eva-paper text-eva-ink dark:bg-eva-dark dark:text-gray-200 transition-colors duration-500 min-h-screen relative overflow-x-hidden selection:bg-eva-purple selection:text-white font-sans">
+
+    <!-- 2.2 Background Layer (Dynamic) -->
+    <!-- This simulates the background changing based on scroll position -->
+    <div id="dynamic-bg" class="fixed inset-0 -z-20 transition-colors duration-1000 bg-white dark:bg-[#0a0a0c]"></div>
+    <div class="fixed inset-0 -z-10 bg-grid-pattern opacity-50 pointer-events-none"></div>
+
+    <!-- Decorative EVA Elements -->
+    <div class="fixed top-20 left-4 text-[10px] font-mono opacity-30 rotate-90 hidden lg:block tracking-widest">
+        SYSTEM_STATUS: NORMAL // SYNC_RATE: 100%
+    </div>
+
+    <!-- 2.1 Global Navigation -->
+    <nav
+        class="fixed top-0 w-full z-50 border-b-2 border-eva-ink/10 dark:border-white/10 backdrop-blur-md bg-white/70 dark:bg-eva-dark/70 transition-all duration-300">
+        <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+            <!-- Logo -->
+            <div class="flex items-center gap-3 cursor-pointer group" onclick="showHome()">
+                <div
+                    class="w-8 h-8 bg-eva-ink dark:bg-white text-white dark:text-eva-dark flex items-center justify-center font-bold font-mono text-xs group-hover:bg-eva-purple transition-colors">
+                    S/S
+                </div>
+                <div class="flex flex-col">
+                    <span
+                        class="font-black tracking-tighter text-lg leading-none font-sans uppercase">Sync-Stream</span>
+                    <span class="text-[9px] font-mono tracking-[0.2em] opacity-60">DIGITAL GARDEN V3.0</span>
+                </div>
+            </div>
+
+            <!-- Menu -->
+            <div class="flex items-center gap-6">
+                <div class="hidden md:flex gap-6 font-mono text-xs tracking-widest font-bold">
+                    <a href="#" onclick="showHome()" id="nav-home"
+                        class="text-eva-purple transition-colors relative group">
+                        TIMELINE
+                        <span class="absolute -bottom-1 left-0 w-full h-[2px] bg-eva-purple transition-all"></span>
+                    </a>
+                    <a href="#" onclick="showArchive()" id="nav-archive"
+                        class="hover:text-eva-purple transition-colors relative group">
+                        ARCHIVE
+                        <span
+                            class="absolute -bottom-1 left-0 w-0 h-[2px] bg-eva-purple group-hover:w-full transition-all"></span>
+                    </a>
+                    <a href="#" class="hover:text-eva-purple transition-colors">UNIVERSE</a>
+                </div>
+
+                <!-- Search -->
+                <button onclick="showArchive()" class="hover:text-eva-purple transition-colors">
+                    <i class="ph ph-magnifying-glass text-xl"></i>
+                </button>
+
+                <!-- Theme Toggle -->
+                <button onclick="toggleTheme()"
+                    class="w-8 h-8 flex items-center justify-center border border-current hover:bg-eva-ink hover:text-white dark:hover:bg-white dark:hover:text-eva-dark transition-all rounded-sm">
+                    <i class="ph ph-moon hidden dark:block"></i>
+                    <i class="ph ph-sun block dark:hidden"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="pt-24 pb-20 max-w-4xl mx-auto px-4 min-h-screen">
+
+        <!-- VIEW: HOME / TIMELINE -->
+        <div id="view-home" class="animate-fade-in">
+
+            <!-- System Status Header (v3 style) -->
+            <header class="mb-12 border-b-2 border-eva-ink/10 dark:border-white/10 pb-4">
+                <h1 class="text-xs font-mono tracking-widest opacity-60 uppercase">System Status: Online</h1>
+                <p class="text-4xl font-serif font-bold mt-2">Transmissions</p>
+            </header>
+
+            <!-- Vertical Timeline Container (v3 style) -->
+            <div class="relative border-l border-eva-ink/20 dark:border-white/20 ml-3 md:ml-6 space-y-12">
+
+                <!-- Timeline Item 1 -->
+                <article class="timeline-item relative pl-8 md:pl-12 group cursor-pointer" onclick="showPost(1)">
+                    <!-- Node Icon -->
+                    <span
+                        class="absolute -left-[9px] top-1 bg-eva-paper dark:bg-eva-dark w-4 h-4 rounded-full border-2 border-eva-purple group-hover:bg-eva-purple transition-colors z-10"></span>
+
+                    <!-- Date -->
+                    <div class="md:absolute md:-left-32 md:top-1 md:text-right w-24 mb-1 md:mb-0">
+                        <span
+                            class="font-mono text-sm opacity-60 group-hover:opacity-100 group-hover:text-eva-purple transition-all">2026.02.13</span>
+                    </div>
+
+                    <!-- Content -->
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-eva-purple text-white text-[10px] font-mono px-1 py-0.5">TECH</span>
+                            <span class="text-[10px] font-mono border border-current px-1 opacity-50">CODE-01</span>
+                        </div>
+                        <h2
+                            class="text-2xl md:text-3xl font-serif font-bold mb-3 group-hover:text-eva-purple transition-colors">
+                            重构 Obsidian 发布流：从手动到全自动
+                        </h2>
+                        <p class="text-sm md:text-base opacity-70 leading-relaxed font-sans line-clamp-2">
+                            利用 GitHub Actions 和 Next.js 构建的全新静态博客工作流。告别繁琐的 Git 命令行，实现写完即发的流畅体验。包含对于 Vercel 部署策略的深度优化。
+                        </p>
+                    </div>
+                </article>
+
+                <!-- Timeline Item 2 -->
+                <article class="timeline-item relative pl-8 md:pl-12 group cursor-pointer" onclick="showPost(2)">
+                    <span
+                        class="absolute -left-[9px] top-1 bg-eva-paper dark:bg-eva-dark w-4 h-4 rounded-full border-2 border-eva-green group-hover:bg-eva-green transition-colors z-10"></span>
+
+                    <div class="md:absolute md:-left-32 md:top-1 md:text-right w-24 mb-1 md:mb-0">
+                        <span
+                            class="font-mono text-sm opacity-60 group-hover:opacity-100 group-hover:text-eva-green transition-all">2026.02.08</span>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-eva-green text-black text-[10px] font-mono px-1 py-0.5">REVIEW</span>
+                            <span class="text-[10px] font-mono border border-current px-1 opacity-50">EVA-02</span>
+                        </div>
+                        <h2
+                            class="text-2xl md:text-3xl font-serif font-bold mb-3 group-hover:text-eva-green transition-colors">
+                            终末的极简主义：Disco Elysium 视觉分析
+                        </h2>
+                        <p class="text-sm md:text-base opacity-70 leading-relaxed font-sans line-clamp-2">
+                            在那片苍白的背后，隐藏着怎样的设计语言？从 UI 的油画质感到对话框的排版逻辑，解构《极乐迪斯科》的美学系统。
+                        </p>
+                    </div>
+                </article>
+
+                <!-- Timeline Item 3 -->
+                <article class="timeline-item relative pl-8 md:pl-12 group cursor-pointer" onclick="showPost(3)">
+                    <span
+                        class="absolute -left-[9px] top-1 bg-eva-paper dark:bg-eva-dark w-4 h-4 rounded-full border-2 border-eva-red group-hover:bg-eva-red transition-colors z-10"></span>
+
+                    <div class="md:absolute md:-left-32 md:top-1 md:text-right w-24 mb-1 md:mb-0">
+                        <span
+                            class="font-mono text-sm opacity-60 group-hover:opacity-100 group-hover:text-eva-red transition-all">2026.01.24</span>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-eva-red text-white text-[10px] font-mono px-1 py-0.5">LIFE</span>
+                            <span class="text-[10px] font-mono border border-current px-1 opacity-50">LOG-99</span>
+                        </div>
+                        <h2
+                            class="text-2xl md:text-3xl font-serif font-bold mb-3 group-hover:text-eva-red transition-colors">
+                            2025 年度总结：在混乱中寻找秩序
+                        </h2>
+                        <p class="text-sm md:text-base opacity-70 leading-relaxed font-sans line-clamp-2">
+                            关于技术焦虑、生活平衡以及如何在信息洪流中保持独立的思考。
+                        </p>
+                    </div>
+                </article>
+
+            </div>
+
+            <!-- Load More -->
+            <div class="mt-12 ml-3 md:ml-6 pl-8 md:pl-12 border-l border-dashed border-eva-ink/20 dark:border-white/20">
+                <button
+                    class="text-sm font-mono opacity-50 hover:text-eva-purple hover:opacity-100 transition-all uppercase tracking-wider">
+                    [ Load More Data ]
+                </button>
+            </div>
+        </div>
+
+        <!-- VIEW: ARCHIVE (New) -->
+        <div id="view-archive" class="hidden animate-fade-in pl-0 md:pl-2">
+            <!-- Header & Search -->
+            <header class="mb-10 border-b-2 border-eva-ink dark:border-white pb-6">
+                <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div>
+                        <h1 class="text-4xl md:text-5xl font-serif font-black mb-2 tracking-tight">ARCHIVE_DB</h1>
+                        <p class="font-mono text-xs opacity-60 tracking-widest">ACCESS_LEVEL: PUBLIC // TOTAL_RECORDS:
+                            142</p>
+                    </div>
+
+                    <!-- F-ARCH-02 Advanced Search Visual -->
+                    <div class="w-full md:w-[280px]">
+                        <!-- Simulated Input with Chips -->
+                        <div
+                            class="flex items-center gap-2 bg-gray-100 dark:bg-white/5 border border-gray-400 focus-within:border-eva-purple px-2 py-2 rounded-sm transition-colors cursor-text group">
+                            <i class="ph ph-magnifying-glass opacity-50 group-focus-within:text-eva-purple"></i>
+
+                            <!-- Search Chips (Simulated Composite Logic) -->
+                            <div class="flex gap-1">
+                                <span
+                                    class="bg-eva-ink text-white dark:bg-white dark:text-eva-dark text-[10px] font-mono px-1 py-0.5 whitespace-nowrap hidden sm:block">TAG:TECH</span>
+                            </div>
+
+                            <input type="text" placeholder="Start typing..."
+                                class="bg-transparent outline-none w-full font-mono text-xs placeholder-gray-500">
+                        </div>
+                        <div class="text-[9px] font-mono opacity-40 mt-1 text-right">SUPPORT: TAG + KEYWORD LOGIC</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- F-ARCH-01 Tab Navigation -->
+            <div
+                class="flex gap-2 mb-8 overflow-x-auto no-scrollbar border-b border-gray-200 dark:border-white/10 pb-4">
+                <button
+                    class="flex items-center gap-2 border border-eva-ink dark:border-white bg-eva-ink text-white dark:bg-white dark:text-eva-dark px-4 py-1.5 font-mono text-xs font-bold transition-all shadow-md whitespace-nowrap">
+                    <span>ALL_DOCS</span>
+                    <span class="opacity-60 text-[10px]">[142]</span>
+                </button>
+                <button
+                    class="flex items-center gap-2 border border-gray-400 text-gray-500 hover:border-eva-purple hover:text-eva-purple px-4 py-1.5 font-mono text-xs transition-all whitespace-nowrap group">
+                    <div class="w-2 h-2 bg-gray-400 group-hover:bg-eva-purple rounded-none"></div>
+                    <span>[TECH]</span>
+                </button>
+                <button
+                    class="flex items-center gap-2 border border-gray-400 text-gray-500 hover:border-eva-green hover:text-eva-green px-4 py-1.5 font-mono text-xs transition-all whitespace-nowrap group">
+                    <div class="w-2 h-2 bg-gray-400 group-hover:bg-eva-green rounded-none"></div>
+                    <span>[REVIEW]</span>
+                </button>
+                <button
+                    class="flex items-center gap-2 border border-gray-400 text-gray-500 hover:border-eva-red hover:text-eva-red px-4 py-1.5 font-mono text-xs transition-all whitespace-nowrap group">
+                    <div class="w-2 h-2 bg-gray-400 group-hover:bg-eva-red rounded-none"></div>
+                    <span>[LIFE]</span>
+                </button>
+            </div>
+
+            <!-- F-ARCH-01 High Density List (v3-style year aggregation) -->
+            <div class="space-y-10">
+
+                <!-- Year Group: 2026 -->
+                <div class="relative">
+                    <h3
+                        class="text-6xl font-black text-eva-ink/10 dark:text-white/10 absolute -z-10 select-none transform -translate-y-6 font-mono tracking-tighter">
+                        2026</h3>
+                    <div class="relative z-0 pl-2">
+                        <!-- Header Row -->
+                        <div
+                            class="hidden md:flex py-2 border-b border-eva-ink/10 dark:border-white/10 text-xs font-mono opacity-40 uppercase tracking-wider">
+                            <div class="w-20">Date</div>
+                            <div class="w-24">Type</div>
+                            <div class="flex-1">Subject</div>
+                            <div class="w-48 text-right">Tags</div>
+                        </div>
+
+                        <div class="divide-y divide-gray-100 dark:divide-gray-800/50">
+                            <!-- Item 1 -->
+                            <div class="group flex flex-col md:flex-row md:items-center py-3 hover:bg-white dark:hover:bg-white/5 cursor-pointer transition-all px-2 -mx-2 relative overflow-hidden"
+                                onclick="showPost(1)">
+                                <div
+                                    class="absolute left-0 top-0 bottom-0 w-[2px] bg-eva-purple opacity-0 group-hover:opacity-100 transition-opacity">
+                                </div>
+                                <div
+                                    class="w-20 font-mono text-xs opacity-50 group-hover:text-eva-purple transition-colors">
+                                    02.13</div>
+                                <div class="w-24 hidden md:block">
+                                    <span
+                                        class="text-[10px] font-mono border border-eva-purple text-eva-purple px-1.5 py-0.5">TECH</span>
+                                </div>
+                                <div
+                                    class="flex-1 font-serif font-bold text-lg md:text-base group-hover:text-eva-purple transition-colors truncate">
+                                    重构 Obsidian 发布流：从手动到全自动
+                                </div>
+                                <div class="w-full md:w-48 mt-2 md:mt-0 flex gap-2 md:justify-end overflow-hidden">
+                                    <span class="text-[10px] font-mono opacity-40 uppercase">#NextJS</span>
+                                    <span class="text-[10px] font-mono opacity-40 uppercase">#DevOps</span>
+                                    <span class="text-[10px] font-mono opacity-40 uppercase">#Vercel</span>
+                                </div>
+                            </div>
+
+                            <!-- Item 2 -->
+                            <div class="group flex flex-col md:flex-row md:items-center py-3 hover:bg-white dark:hover:bg-white/5 cursor-pointer transition-all px-2 -mx-2 relative overflow-hidden"
+                                onclick="showPost(2)">
+                                <div
+                                    class="absolute left-0 top-0 bottom-0 w-[2px] bg-eva-green opacity-0 group-hover:opacity-100 transition-opacity">
+                                </div>
+                                <div
+                                    class="w-20 font-mono text-xs opacity-50 group-hover:text-eva-green transition-colors">
+                                    02.08</div>
+                                <div class="w-24 hidden md:block">
+                                    <span
+                                        class="text-[10px] font-mono border border-eva-green text-eva-green px-1.5 py-0.5">REVIEW</span>
+                                </div>
+                                <div
+                                    class="flex-1 font-serif font-bold text-lg md:text-base group-hover:text-eva-green transition-colors truncate">
+                                    终末的极简主义：Disco Elysium 视觉分析
+                                </div>
+                                <div class="w-full md:w-48 mt-2 md:mt-0 flex gap-2 md:justify-end overflow-hidden">
+                                    <span class="text-[10px] font-mono opacity-40 uppercase">#Design</span>
+                                    <span class="text-[10px] font-mono opacity-40 uppercase">#GameArt</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Year Group: 2025 -->
+                <div class="relative pt-4">
+                    <h3
+                        class="text-6xl font-black text-eva-ink/10 dark:text-white/10 absolute -z-10 select-none transform -translate-y-6 font-mono tracking-tighter">
+                        2025</h3>
+                    <div class="relative z-0 pl-2">
+                        <div class="divide-y divide-gray-100 dark:divide-gray-800/50">
+                            <!-- Item 3 -->
+                            <div class="group flex flex-col md:flex-row md:items-center py-3 hover:bg-white dark:hover:bg-white/5 cursor-pointer transition-all px-2 -mx-2 relative overflow-hidden"
+                                onclick="showPost(3)">
+                                <div
+                                    class="absolute left-0 top-0 bottom-0 w-[2px] bg-eva-red opacity-0 group-hover:opacity-100 transition-opacity">
+                                </div>
+                                <div
+                                    class="w-20 font-mono text-xs opacity-50 group-hover:text-eva-red transition-colors">
+                                    01.24</div>
+                                <div class="w-24 hidden md:block">
+                                    <span
+                                        class="text-[10px] font-mono border border-eva-red text-eva-red px-1.5 py-0.5">LIFE</span>
+                                </div>
+                                <div
+                                    class="flex-1 font-serif font-bold text-lg md:text-base group-hover:text-eva-red transition-colors truncate">
+                                    2025 年度总结：在混乱中寻找秩序
+                                </div>
+                                <div class="w-full md:w-48 mt-2 md:mt-0 flex gap-2 md:justify-end overflow-hidden">
+                                    <span class="text-[10px] font-mono opacity-40 uppercase">#Journal</span>
+                                    <span class="text-[10px] font-mono opacity-40 uppercase">#2025</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- VIEW: POST DETAIL (Hidden by default) -->
+        <div id="view-post" class="hidden animate-fade-in relative">
+
+            <!-- F-TOC-01 Data Stream Sidebar -->
+            <!-- F-TOC-01 Data Stream Sidebar -->
+            <!-- Adjusted breakpoints and positioning for better visibility -->
+            <aside id="toc-container"
+                class="hidden lg:flex fixed right-[calc(50vw+460px)] top-1/3 flex-col gap-3 z-40 w-56 pr-4 text-right transition-colors duration-300 pointer-events-auto">
+                <div
+                    class="absolute right-0 top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-gray-300 dark:via-white/20 to-transparent opacity-50">
+                </div>
+                <!-- Pre-render debug text to confirm visibility -->
+                <div class="text-[9px] font-mono opacity-20 mb-2 tracking-[0.2em] uppercase">Reading_Stream //</div>
+            </aside>
+
+            <!-- Back Button -->
+            <button onclick="showHome()"
+                class="mb-8 flex items-center gap-2 text-xs font-mono tracking-widest hover:text-eva-purple transition-colors">
+                <i class="ph ph-arrow-left"></i> RETURN
+            </button>
+
+            <!-- F-POST-02 Dossier Header -->
+            <header class="mb-12 relative border-t-4 border-black dark:border-white pt-6">
+                <!-- Decorations -->
+                <div
+                    class="absolute top-0 right-0 bg-black dark:bg-white text-white dark:text-black px-2 py-1 text-xs font-mono font-bold">
+                    CONFIDENTIAL
+                </div>
+
+                <h1 class="text-3xl md:text-5xl font-serif font-black mb-6 leading-tight">
+                    重构 Obsidian 发布流：<br>从手动到全自动
+                </h1>
+
+                <!-- Meta Grid -->
+                <div
+                    class="grid grid-cols-2 md:grid-cols-4 gap-4 border-y border-dashed border-gray-400 py-4 font-mono text-xs opacity-80">
+                    <div>
+                        <span class="block opacity-50 mb-1">AUTHOR</span>
+                        SYNC_ADMIN
+                    </div>
+                    <div>
+                        <span class="block opacity-50 mb-1">DATE</span>
+                        2026.02.13
+                    </div>
+                    <div>
+                        <span class="block opacity-50 mb-1">READ_TIME</span>
+                        05 MIN 32 SEC
+                    </div>
+                    <div>
+                        <span class="block opacity-50 mb-1">TAGS</span>
+                        #NEXTJS #DEVOPS
+                    </div>
+                </div>
+            </header>
+
+            <!-- F-POST-01 Content -->
+            <article class="prose-eva max-w-none text-lg">
+                <p>
+                    <span class="text-4xl float-left mr-2 font-serif font-bold">自</span>从三年前开始使用 Obsidian
+                    作为主力知识库以来，内容发布的割裂感一直是我最大的痛点。每次写完文章，都需要手动复制到 Hugo 目录，处理图片路径，然后 Push 到 GitHub。
+                </p>
+                <p>
+                    这个过程繁琐且容易出错，导致我逐渐失去了更新博客的动力。为了解决这个问题，我决定基于 Vercel 和 Next.js 重构整套发布系统。
+                </p>
+
+                <h2>1. 系统架构设计</h2>
+                <p>
+                    核心思路非常简单：<strong>Obsidian Vault 即数据库</strong>。
+                </p>
+                <div class="my-8 border-l-2 border-eva-purple bg-eva-purple/5 p-4 font-mono text-sm">
+                    TARGET: AUTOMATION<br>
+                    STATUS: ACTIVE<br>
+                    > Git Push Event -> GitHub Actions -> Build -> Deploy
+                </div>
+                <p>
+                    我们不需要复杂的 CMS，只需要一个能够解析 Markdown Frontmatter 并将其转化为静态页面的渲染引擎。这里我选择了 Next.js 的 SSG (Static Site
+                    Generation) 模式。
+                </p>
+
+                <h2>2. 核心代码实现</h2>
+                <p>
+                    为了处理 Obsidian 特有的 <code>[[WikiLink]]</code>，我们需要编写一个自定义的 Remark 插件。代码如下：
+                </p>
+                <pre
+                    class="bg-gray-100 dark:bg-gray-900 p-4 rounded-sm overflow-x-auto text-sm border border-gray-200 dark:border-gray-800"><code>export function remarkObsidian() {
+  return (tree) => {
+    visit(tree, 'text', (node) => {
+      // Regex logic here...
+    })
+  }
+}</code></pre>
+
+                <p class="mt-8">
+                    经过这番改造，现在我只需要在 Obsidian 中按下 <code>Ctrl+P</code> 唤起 Git 插件，一切就会自动完成。这才是真正的数字花园——只需要耕耘，不需要关心灌溉系统的管道铺设。
+                </p>
+            </article>
+
+            <!-- Comments Placeholder -->
+            <div class="mt-20 pt-10 border-t border-gray-200 dark:border-gray-800">
+                <button
+                    class="w-full py-4 border border-dashed border-gray-400 hover:border-eva-purple hover:text-eva-purple transition-all font-mono text-sm">
+                    > LOAD_COMMENTS_FROM_GITHUB_ISSUES
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 2.5 Global Media Player -->
+    <div
+        class="fixed bottom-6 right-6 z-40 flex items-center gap-0 bg-white dark:bg-zinc-900 border border-eva-ink dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] transition-all rounded-full pr-4 pl-1 py-1 max-w-[200px] md:max-w-none">
+        <!-- Cover Art (Spinning) -->
+        <div
+            class="w-10 h-10 rounded-full bg-eva-purple flex items-center justify-center text-white animate-spin-slow overflow-hidden border border-black relative">
+            <div
+                class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200')] bg-cover opacity-80">
+            </div>
+            <i class="ph-fill ph-music-note relative z-10"></i>
+        </div>
+
+        <!-- Info -->
+        <div class="flex flex-col mx-3 w-24 md:w-32 overflow-hidden">
+            <span class="text-[10px] font-bold font-serif truncate">Fly Me To The Moon</span>
+            <span class="text-[8px] font-mono opacity-60 truncate">Evangelion OST</span>
+        </div>
+
+        <!-- Visualizer -->
+        <div class="flex items-end gap-[2px] h-4 mr-2">
+            <div class="w-1 bg-eva-purple animate-sound-wave" style="animation-delay: 0s"></div>
+            <div class="w-1 bg-eva-green animate-sound-wave" style="animation-delay: 0.2s"></div>
+            <div class="w-1 bg-eva-red animate-sound-wave" style="animation-delay: 0.4s"></div>
+            <div class="w-1 bg-eva-orange animate-sound-wave" style="animation-delay: 0.1s"></div>
+        </div>
+
+        <!-- Controls -->
+        <button class="hover:text-eva-purple transition-colors">
+            <i class="ph-fill ph-pause"></i>
+        </button>
+    </div>
+
+    <!-- JS Logic -->
+    <script>
+        // --- 1. View Switching Logic ---
+        function showPost(id) {
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'instant' });
+
+            // Hide Home & Archive, Show Post
+            document.getElementById('view-home').classList.add('hidden');
+            document.getElementById('view-archive').classList.add('hidden');
+
+            const postView = document.getElementById('view-post');
+            postView.classList.remove('hidden');
+
+            // Trigger animation
+            postView.style.opacity = '0';
+            postView.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                postView.style.transition = 'all 0.5s ease-out';
+                postView.style.opacity = '1';
+                postView.style.transform = 'translateY(0)';
+            }, 50);
+
+            // Init TOC
+            setTimeout(generateTOC, 100);
+
+            // Change Title context
+            document.title = '重构 Obsidian 发布流 // SYNC-STREAM';
+        }
+
+        function showHome() {
+            document.getElementById('view-post').classList.add('hidden');
+            document.getElementById('view-archive').classList.add('hidden');
+            document.getElementById('view-home').classList.remove('hidden');
+
+            // Reset Nav Active States
+            updateNavState('home');
+
+            document.title = 'SYNC-STREAM // V3.0';
+        }
+
+        function showArchive() {
+            window.scrollTo({ top: 0, behavior: 'instant' });
+
+            document.getElementById('view-home').classList.add('hidden');
+            document.getElementById('view-post').classList.add('hidden');
+            const archiveView = document.getElementById('view-archive');
+            archiveView.classList.remove('hidden');
+
+            // Reset Nav Active States
+            updateNavState('archive');
+
+            document.title = 'ARCHIVE // DATABASE';
+        }
+
+        function updateNavState(active) {
+            const homeLink = document.getElementById('nav-home');
+            const archLink = document.getElementById('nav-archive');
+
+            // Reset styles
+            homeLink.classList.remove('text-eva-purple');
+            homeLink.querySelector('span').style.width = '0';
+            archLink.classList.remove('text-eva-purple');
+            archLink.querySelector('span').style.width = '0';
+
+            // Set active
+            if (active === 'home') {
+                homeLink.classList.add('text-eva-purple');
+                homeLink.querySelector('span').style.width = '100%';
+            } else if (active === 'archive') {
+                archLink.classList.add('text-eva-purple');
+                archLink.querySelector('span').style.width = '100%';
+            }
+        }
+
+        // --- 2. Theme Toggling ---
+        function toggleTheme() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                html.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+        }
+
+        // Check system preference on load
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        // --- 3. Dynamic Background Observer (F-HOME-02) ---
+        // Change background tint based on which article is in view
+        const observerOptions = {
+            root: null,
+            rootMargin: '-50% 0px -50% 0px', // Trigger when item is in center of screen
+            threshold: 0
+        };
+
+        const bgElement = document.getElementById('dynamic-bg');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    // Logic to simulate color extraction from "Cover Image"
+                    // In a real app, this would pull the color from frontmatter
+                    // Safety check to ensure we have an h2
+                    const h2 = entry.target.querySelector('h2');
+                    if (!h2) return;
+
+                    const title = h2.innerText;
+
+                    if (title.includes('Obsidian')) {
+                        // Purple Tint for Tech
+                        bgElement.style.backgroundColor = document.documentElement.classList.contains('dark') ? '#1a102e' : '#fffff';
+                    } else if (title.includes('Disco')) {
+                        // Green/Grey Tint for Review
+                        bgElement.style.backgroundColor = document.documentElement.classList.contains('dark') ? '#0f1f12' : '#fffff';
+                    } else if (title.includes('2025')) {
+                        // Red Tint for Life
+                        bgElement.style.backgroundColor = document.documentElement.classList.contains('dark') ? '#260a0a' : '#fffff';
+                    }
+                }
+            });
+        }, observerOptions);
+
+        // Observe timeline items
+        document.querySelectorAll('.timeline-item').forEach(item => {
+            observer.observe(item);
+        });
+
+        // --- 4. TOC Generator (Data Stream) ---
+        let tocObserver;
+
+        function generateTOC() {
+            const article = document.querySelector('.prose-eva');
+            console.log("TOC Init: Article found?", !!article);
+
+            if (!article) return;
+
+            const headings = article.querySelectorAll('h2');
+            console.log("TOC Init: Headings found:", headings.length);
+
+            const tocContainer = document.getElementById('toc-container');
+            if (!tocContainer) return;
+
+            // Clear existing items but keep header
+            // We rebuild it clean every time
+            tocContainer.innerHTML = `
+                <div class="absolute right-0 top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-gray-300 dark:via-white/20 to-transparent opacity-50"></div>
+                <div class="text-[9px] font-mono opacity-20 mb-2 tracking-[0.2em] uppercase">Reading_Stream //</div>
+            `;
+
+            headings.forEach((h2, index) => {
+                if (!h2.id) h2.id = `section-${index}`;
+
+                const link = document.createElement('a');
+                link.href = `#${h2.id}`;
+                // Apply base classes
+                link.className = 'toc-item text-xs font-mono cursor-pointer py-1 border-r-2 border-transparent pr-4 hover:border-r-2 hover:border-eva-purple transition-all truncate';
+                link.innerHTML = `<span class="opacity-30 mr-2">0${index + 1}</span>${h2.innerText}`;
+
+                link.onclick = (e) => {
+                    e.preventDefault();
+                    document.getElementById(h2.id).scrollIntoView({ behavior: 'smooth' });
+                };
+
+                tocContainer.appendChild(link);
+            });
+
+            console.log("TOC Items generated");
+
+            // Re-init Observer
+            if (tocObserver) tocObserver.disconnect();
+
+            const tocOptions = {
+                root: null,
+                rootMargin: '-10% 0px -60% 0px',
+                threshold: 0
+            };
+            
+            tocObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const id = entry.target.id;
+                        document.querySelectorAll('.toc-item').forEach(el => el.classList.remove('active'));
+                        const activeLink = document.querySelector(`#toc-container a[href="#${id}"]`);
+                        if (activeLink) activeLink.classList.add('active');
+                    }
+                });
+            }, tocOptions);
+
+            headings.forEach(h2 => tocObserver.observe(h2));
+
+            // Auto-activate first item if nothing is intersected yet
+            if (headings.length > 0) {
+                const firstLink = document.querySelector(`#toc-container a[href="#${headings[0].id}"]`);
+                if (firstLink && !document.querySelector('.toc-item.active')) {
+                    // specific logic can be added here, but observer usually catches it quickly
+                }
+            }
+        }
+
+    </script>
+</body>
+
+</html>
