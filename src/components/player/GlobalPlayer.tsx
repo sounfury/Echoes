@@ -1,4 +1,3 @@
-import { useStore } from '@nanostores/react';
 import { useEffect, useRef, useState } from 'react';
 import {
     $currentTrack,
@@ -32,14 +31,16 @@ type Props = {
 };
 
 export default function GlobalPlayer({ source }: Props) {
-    const playerStatus = useStore($playerStatus);
-    const playerError = useStore($playerError);
-    const currentTrack = useStore($currentTrack);
-    const isPlaying = useStore($isPlaying);
-    const isPlayerVisible = useStore($isPlayerVisible);
-    const isLyricsOpen = useStore($lyricsOpen);
+    const [playerStatus, setPlayerStatusState] = useState($playerStatus.get());
+    const [playerError, setPlayerErrorState] = useState($playerError.get());
+    const [currentTrack, setCurrentTrackState] = useState($currentTrack.get());
+    const [isPlaying, setIsPlayingState] = useState($isPlaying.get());
+    const [isPlayerVisible, setIsPlayerVisibleState] = useState($isPlayerVisible.get());
+    const [isLyricsOpen, setIsLyricsOpenState] = useState($lyricsOpen.get());
 
     const controlsRef = useRef<PlayerBridgeControls | null>(null);
+    const playerRef = useRef<HTMLDivElement | null>(null);
+    const lyricsPanelRef = useRef<HTMLDivElement | null>(null);
     const swipeStartRef = useRef<SwipePoint | null>(null);
     const feedbackTimerRef = useRef<number | null>(null);
 
@@ -49,6 +50,25 @@ export default function GlobalPlayer({ source }: Props) {
         next: '',
     });
     const [gestureFeedback, setGestureFeedback] = useState<'PREV' | 'NEXT' | null>(null);
+    const [trackTransitioning, setTrackTransitioning] = useState(false);
+
+    useEffect(() => {
+        const unbindStatus = $playerStatus.listen(setPlayerStatusState);
+        const unbindError = $playerError.listen(setPlayerErrorState);
+        const unbindTrack = $currentTrack.listen(setCurrentTrackState);
+        const unbindPlaying = $isPlaying.listen(setIsPlayingState);
+        const unbindVisible = $isPlayerVisible.listen(setIsPlayerVisibleState);
+        const unbindLyricsOpen = $lyricsOpen.listen(setIsLyricsOpenState);
+
+        return () => {
+            unbindStatus();
+            unbindError();
+            unbindTrack();
+            unbindPlaying();
+            unbindVisible();
+            unbindLyricsOpen();
+        };
+    }, []);
 
     useEffect(() => {
         let disposed = false;
@@ -89,7 +109,44 @@ export default function GlobalPlayer({ source }: Props) {
         };
     }, [source.playlistApi]);
 
-    const animationPlayState = isPlaying ? 'running' : 'paused';
+    useEffect(() => {
+        if (!isLyricsOpen) return;
+
+        const onPointerDown = (event: PointerEvent) => {
+            const target = event.target as Node | null;
+            if (!target) return;
+            if (playerRef.current?.contains(target)) return;
+            if (lyricsPanelRef.current?.contains(target)) return;
+            closeLyrics();
+        };
+
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                closeLyrics();
+            }
+        };
+
+        document.addEventListener('pointerdown', onPointerDown);
+        document.addEventListener('keydown', onKeyDown);
+        return () => {
+            document.removeEventListener('pointerdown', onPointerDown);
+            document.removeEventListener('keydown', onKeyDown);
+        };
+    }, [isLyricsOpen]);
+
+    useEffect(() => {
+        if (!currentTrack) return;
+        setTrackTransitioning(true);
+        const timer = window.setTimeout(() => {
+            setTrackTransitioning(false);
+        }, 260);
+        return () => {
+            window.clearTimeout(timer);
+        };
+    }, [currentTrack?.title, currentTrack?.artist, currentTrack?.cover]);
+
+    const isTrackBootLoading = playerStatus === 'loading' && !currentTrack;
+    const animationPlayState = isPlaying || isTrackBootLoading ? 'running' : 'paused';
 
     const showGestureFeedback = (text: 'PREV' | 'NEXT') => {
         setGestureFeedback(text);
@@ -135,6 +192,7 @@ export default function GlobalPlayer({ source }: Props) {
         <>
             <div
                 id="global-player"
+                ref={playerRef}
                 className="fixed bottom-6 right-6 z-40 flex items-center gap-0 bg-white dark:bg-zinc-900 border border-eva-ink dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] transition-all rounded-full pr-4 pl-1 py-1 max-w-[220px] md:max-w-none touch-none select-none"
                 onTouchStart={(e) => {
                     const point = e.touches[0];
@@ -160,12 +218,14 @@ export default function GlobalPlayer({ source }: Props) {
                     style={{ animationPlayState }}
                 >
                     <div
-                        className="absolute inset-0 bg-cover opacity-80 transition-all duration-500"
+                        className={`absolute inset-0 bg-cover transition-all duration-300 ${isTrackBootLoading
+                            ? 'opacity-75 scale-100 blur-0 bg-gradient-to-br from-eva-purple/50 to-eva-green/35 animate-pulse'
+                            : trackTransitioning
+                                ? 'opacity-45 scale-95 blur-[1px]'
+                                : 'opacity-80 scale-100 blur-0'
+                            }`}
                         style={coverStyle}
                     />
-                    <span className="relative z-10 text-[10px] font-bold group-hover/cover:hidden">
-                        NOTE
-                    </span>
 
                     <div className="absolute inset-0 z-20 hidden group-hover/cover:flex">
                         <button
@@ -196,12 +256,23 @@ export default function GlobalPlayer({ source }: Props) {
                     onClick={() => toggleLyrics()}
                     aria-label="Toggle lyrics panel"
                 >
-                    <span className="text-[10px] font-bold font-serif truncate">
-                        {currentTrack?.title ?? 'Loading Stream...'}
-                    </span>
-                    <span className="text-[8px] font-mono opacity-60 truncate">
-                        {currentTrack?.artist ?? 'NETEASE // CLOUD'}
-                    </span>
+                    {isTrackBootLoading ? (
+                        <>
+                            <span className="block h-[10px] w-20 rounded bg-eva-ink/20 dark:bg-white/20 animate-pulse" />
+                            <span className="block h-[8px] w-14 rounded mt-1 bg-eva-ink/15 dark:bg-white/15 animate-pulse" />
+                        </>
+                    ) : (
+                        <>
+                            <span className={`text-[10px] font-bold font-serif truncate transition-all duration-300 ${trackTransitioning ? 'opacity-30 translate-y-1' : 'opacity-100 translate-y-0'
+                                }`}>
+                                {currentTrack?.title ?? 'Loading Stream...'}
+                            </span>
+                            <span className={`text-[8px] font-mono truncate transition-all duration-300 ${trackTransitioning ? 'opacity-25 translate-y-1' : 'opacity-60 translate-y-0'
+                                }`}>
+                                {currentTrack?.artist ?? 'NETEASE // CLOUD'}
+                            </span>
+                        </>
+                    )}
                 </button>
 
                 <button
@@ -228,11 +299,33 @@ export default function GlobalPlayer({ source }: Props) {
                 </button>
 
                 <button
-                    className="hover:text-eva-purple transition-colors cursor-pointer font-mono text-sm"
+                    className="hover:text-eva-purple transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-wait"
                     onClick={() => controlsRef.current?.toggleMusic()}
                     aria-label={isPlaying ? 'Pause' : 'Play'}
+                    disabled={isTrackBootLoading}
                 >
-                    {isPlaying ? '||' : '>'}
+                    {isPlaying ? (
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            className="w-4 h-4"
+                            aria-hidden="true"
+                        >
+                            <rect x="6" y="5" width="4" height="14" rx="1"></rect>
+                            <rect x="14" y="5" width="4" height="14" rx="1"></rect>
+                        </svg>
+                    ) : (
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            className="w-4 h-4"
+                            aria-hidden="true"
+                        >
+                            <path d="M8 5.14v13.72c0 .77.83 1.25 1.5.86l10-6.86a1 1 0 0 0 0-1.72l-10-6.86A1 1 0 0 0 8 5.14z"></path>
+                        </svg>
+                    )}
                 </button>
 
                 {gestureFeedback && (
@@ -244,25 +337,17 @@ export default function GlobalPlayer({ source }: Props) {
 
             <div
                 id="lyrics-panel"
+                ref={lyricsPanelRef}
                 className={`fixed bottom-24 right-6 w-64 bg-white dark:bg-zinc-900 border-2 border-eva-ink dark:border-white p-4 shadow-[4px_4px_0px_0px_currentColor] z-30 origin-bottom-right ${isLyricsOpen ? 'animate-fade-in' : 'hidden'
                     }`}
             >
                 <div className="absolute -bottom-2 right-8 w-4 h-4 bg-white dark:bg-zinc-900 border-r-2 border-b-2 border-eva-ink dark:border-white transform rotate-45" />
-                <div className="text-right mb-2">
-                    <button
-                        className="text-[10px] font-mono opacity-50 hover:opacity-100 cursor-pointer"
-                        onClick={() => closeLyrics()}
-                        aria-label="Close lyrics panel"
-                    >
-                        CLOSE
-                    </button>
-                </div>
-                <div className="text-center font-serif text-sm leading-relaxed h-32 overflow-hidden flex flex-col justify-center items-center">
-                    <p className="font-bold text-eva-purple transition-all duration-300 transform scale-105 origin-center">
+                <div className="text-center font-serif text-sm leading-relaxed h-28 overflow-hidden flex flex-col justify-center items-center">
+                    <p key={`lyrics-current-${lyrics.current}`} className="font-bold text-eva-purple transform scale-105 origin-center animate-fade-in">
                         {lyrics.current}
                     </p>
                     {lyrics.next && (
-                        <p className="text-xs opacity-40 mt-2">{lyrics.next}</p>
+                        <p key={`lyrics-next-${lyrics.next}`} className="text-xs mt-2 opacity-40 animate-fade-in">{lyrics.next}</p>
                     )}
                     {lyricsStatus === 'loading' && (
                         <p className="text-xs opacity-50 font-mono mt-2">SYNCING...</p>

@@ -27,11 +27,12 @@ const tocItems = headings.filter((h) => {
 {
     tocItems.length > 0 && (
         <nav id="toc-nav" class="toc-container" aria-label="Table of Contents">
-            {tocItems.map((item) => (
+            {tocItems.map((item, index) => (
                 <a
                     href={`#${item.slug}`}
                     class:list={[
                         "toc-link",
+                        index === 0 && "active",
                         item.depth === 3 && "toc-link--h3",
                     ]}
                     data-heading-slug={item.slug}
@@ -53,15 +54,32 @@ const tocItems = headings.filter((h) => {
         destroyToc = initToc();
     };
 
-    const onAfterSwap = () => mountToc();
+    const mountTocWithRetry = () => {
+        mountToc();
+        const nav = document.getElementById("toc-nav");
+        if (!nav) return;
+
+        let retryCount = 0;
+        const retry = () => {
+            if (nav.querySelector(".toc-link.active")) return;
+            retryCount += 1;
+            mountToc();
+            if (retryCount < 6) {
+                window.setTimeout(retry, 80);
+            }
+        };
+
+        window.setTimeout(retry, 0);
+    };
+
+    const onPageLoad = () => mountTocWithRetry();
     const onBeforeSwap = () => {
         destroyToc();
         destroyToc = () => {};
-        document.removeEventListener("astro:after-swap", onAfterSwap);
     };
 
-    mountToc();
-    document.addEventListener("astro:after-swap", onAfterSwap);
+    mountTocWithRetry();
+    document.addEventListener("astro:page-load", onPageLoad);
     document.addEventListener("astro:before-swap", onBeforeSwap, {
         once: true,
     });

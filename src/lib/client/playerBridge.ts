@@ -199,9 +199,17 @@ export async function initPlayerBridge({
     onLyricFrame,
     onLyricsStatus,
 }: PlayerBridgeOptions): Promise<PlayerBridgeControls> {
+    let lastLyricFrameKey = '';
+    const emitLyricFrame = (frame: LyricsFrame, force = false) => {
+        const key = `${frame.current}\n${frame.next}`;
+        if (!force && key === lastLyricFrameKey) return;
+        lastLyricFrameKey = key;
+        onLyricFrame?.(frame);
+    };
+
     setPlayerSource(source);
     setPlayerLoading();
-    onLyricFrame?.({ current: WAITING_TEXT, next: '' });
+    emitLyricFrame({ current: WAITING_TEXT, next: '' }, true);
     onLyricsStatus?.('loading');
 
     const player = getEngine();
@@ -216,7 +224,7 @@ export async function initPlayerBridge({
 
     const syncLyricByTime = () => {
         if (disposed) return;
-        onLyricFrame?.(findLyricFrame(currentLyrics, player.audio.currentTime || 0));
+        emitLyricFrame(findLyricFrame(currentLyrics, player.audio.currentTime || 0));
     };
 
     const loadCurrentLyrics = async () => {
@@ -225,18 +233,18 @@ export async function initPlayerBridge({
         if (!track?.lrc) {
             currentLyrics = [];
             onLyricsStatus?.('empty');
-            onLyricFrame?.({ current: NO_LYRICS_TEXT, next: '' });
+            emitLyricFrame({ current: NO_LYRICS_TEXT, next: '' }, true);
             return;
         }
 
         onLyricsStatus?.('loading');
-        onLyricFrame?.({ current: WAITING_TEXT, next: '' });
+        emitLyricFrame({ current: WAITING_TEXT, next: '' }, true);
 
         try {
             currentLyrics = await resolveLyrics(track.lrc);
             if (!currentLyrics.length) {
                 onLyricsStatus?.('empty');
-                onLyricFrame?.({ current: NO_LYRICS_TEXT, next: '' });
+                emitLyricFrame({ current: NO_LYRICS_TEXT, next: '' }, true);
                 return;
             }
             onLyricsStatus?.('ready');
@@ -244,7 +252,7 @@ export async function initPlayerBridge({
         } catch {
             currentLyrics = [];
             onLyricsStatus?.('error');
-            onLyricFrame?.({ current: LYRICS_ERROR_TEXT, next: '' });
+            emitLyricFrame({ current: LYRICS_ERROR_TEXT, next: '' }, true);
         }
     };
 
@@ -290,7 +298,7 @@ export async function initPlayerBridge({
         const message = error instanceof Error ? error.message : '播放器初始化失败';
         setPlayerError(message);
         onLyricsStatus?.('error');
-        onLyricFrame?.({ current: LYRICS_ERROR_TEXT, next: '' });
+        emitLyricFrame({ current: LYRICS_ERROR_TEXT, next: '' }, true);
         throw error;
     }
 

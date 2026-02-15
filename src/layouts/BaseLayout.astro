@@ -100,7 +100,7 @@ const { accent, terminal, warning, light, dark: darkColors } = colors;
                     <div id="global-player-shell" transition:persist>
                         <GlobalPlayer
                             source={playerSource}
-                            client:load
+                            client:only="react"
                         />
                     </div>
                 )
