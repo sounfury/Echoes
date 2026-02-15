@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { z } from 'zod';
+import type { PlayerSource } from '../stores/player';
 
 const navItemSchema = z.object({
     name: z.string(),
@@ -57,7 +58,8 @@ const siteConfigSchema = z.object({
     category: z.record(categoryConfigSchema),
     bgm: z.object({
         enabled: z.boolean(),
-        defaultPlaylist: z.array(z.string()),
+        playlistApi: z.string().url().optional(),
+        defaultPlaylist: z.array(z.string()).default([]),
     }),
     ops: z.object({
         bark: z.object({
@@ -77,9 +79,6 @@ export type NavItem = z.infer<typeof navItemSchema>;
 export type CategoryConfig = z.infer<typeof categoryConfigSchema>;
 export type SiteConfig = z.infer<typeof siteConfigSchema>;
 
-/**
- * 模块级缓存：默认复用内存配置；当文件 mtime 变化时自动失效重载
- */
 const configPath = path.resolve(process.cwd(), 'src/config/site.config.yaml');
 let cachedConfig: SiteConfig | null = null;
 let cachedConfigMtime = -1;
@@ -102,4 +101,88 @@ export function getSiteConfig(): SiteConfig {
         cachedConfigMtime = currentMtime;
     }
     return cachedConfig;
+}
+
+const DEFAULT_METING_API_ORIGIN = 'https://api.injahow.cn/meting/';
+
+function buildPlaylistApiById(id: string): string {
+    const api = new URL(DEFAULT_METING_API_ORIGIN);
+    api.searchParams.set('type', 'playlist');
+    api.searchParams.set('id', id);
+    return api.toString();
+}
+
+function parseIdFromMusic163(url: URL): string | null {
+    const directId = url.searchParams.get('id')?.trim();
+    if (directId) return directId;
+
+    const cleanHash = url.hash.replace(/^#\/?/, '');
+    if (!cleanHash) return null;
+
+    const [route, queryString = ''] = cleanHash.split('?');
+    if (!route.includes('playlist')) return null;
+
+    const query = new URLSearchParams(queryString);
+    return query.get('id')?.trim() ?? null;
+}
+
+/**
+ * 兼容三种配置输入：
+ * 1) meting playlist API URL
+ * 2) 网易 playlist URL
+ * 3) 纯数字歌单 ID
+ */
+export function parsePlayerSource(rawValue: string): PlayerSource | null {
+    const raw = rawValue.trim();
+    if (!raw) return null;
+
+    if (/^\d+$/.test(raw)) {
+        return {
+            playlistApi: buildPlaylistApiById(raw),
+            raw,
+        };
+    }
+
+    let url: URL;
+    try {
+        url = new URL(raw);
+    } catch {
+        return null;
+    }
+
+    const isMetingApi = /(^|\.)api\.injahow\.cn$/i.test(url.hostname)
+        && url.pathname.startsWith('/meting/')
+        && url.searchParams.get('type') === 'playlist'
+        && Boolean(url.searchParams.get('id'));
+    if (isMetingApi) {
+        return {
+            playlistApi: url.toString(),
+            raw,
+        };
+    }
+
+    const isMusic163 = /(^|\.)music\.163\.com$/i.test(url.hostname);
+    if (!isMusic163) return null;
+
+    const id = parseIdFromMusic163(url);
+    if (!id) return null;
+
+    return {
+        playlistApi: buildPlaylistApiById(id),
+        raw,
+    };
+}
+
+export function getDefaultPlayerSource(config = getSiteConfig()): PlayerSource | null {
+    if (config.bgm.playlistApi) {
+        const parsed = parsePlayerSource(config.bgm.playlistApi);
+        if (parsed) return parsed;
+    }
+
+    for (const entry of config.bgm.defaultPlaylist) {
+        const parsed = parsePlayerSource(entry);
+        if (parsed) return parsed;
+    }
+
+    return null;
 }

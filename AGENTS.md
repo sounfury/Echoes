@@ -11,7 +11,7 @@ Content is managed in `src/content/blog` (Markdown/MDX) with schema rules in `sr
 - `pnpm build`: produce a production build in `dist/`.
 - `pnpm preview`: serve the built site locally.
 - `pnpm astro check`: run Astro/TypeScript/content validation checks.
-- For development server runs (for example `pnpm run dev` or `pnpm dev`), always bind to IPv6 and ensure the startup logs print a reachable IPv6 dev URL.
+- For development server runs (for example `pnpm run dev` or `pnpm dev`), ensure startup logs print a reachable dev URL for manual testing.
 
 ## Environment Verification
 - For system-level availability checks (for example `node -v`, `npm -v`, `pnpm -v`), use sandbox command output directly as the default verification source.
@@ -25,7 +25,7 @@ Use TypeScript, Astro, and React functional components. Match the existing forma
 Keep design tokens and global rules in `src/styles/global.css`; keep component-specific behavior in component files.
 
 ## Testing Guidelines
-There is no dedicated unit test framework configured yet. Treat `pnpm astro check` and `pnpm build` as required pre-PR validation. For UI or content logic changes, manually verify `index`, `/archive`, and post detail routes in both desktop and mobile views.
+There is no dedicated unit test framework configured yet. Use `pnpm astro check` as the required automated validation step, then run `pnpm run dev` for manual verification. For UI or content logic changes, ask the user to test `index`, `/archive`, and post detail routes in both desktop and mobile views, then wait for user feedback before continuing.
 
 ## Commit & Pull Request Guidelines
 Recent commits follow Conventional Commit style (`feat:`, `fix:`, `style:`, `chore:`), sometimes with scope (`fix(archive): ...`). Keep commits focused and descriptive.
