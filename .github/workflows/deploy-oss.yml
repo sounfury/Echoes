@@ -40,6 +40,9 @@ jobs:
           endpoint: ${{ secrets.OSS_ENDPOINT }}
           folder: dist
 
+      - name: Install notification dependencies
+        run: python3 -m pip install --disable-pip-version-check --quiet pyyaml
+
       - name: Send Bark notification
         env:
           BARK_KEY: ${{ secrets.BARK_KEY }}

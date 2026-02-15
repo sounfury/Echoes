@@ -29,6 +29,7 @@ const sortedPosts = allPosts.sort((a, b) => {
 const posts: ArchivePost[] = sortedPosts.map((post) => {
     const category = getCategoryFromId(post.id);
     const date = post.data.创建时间;
+    const tagsNormalized = post.data.tags.map((tag) => tag.toLowerCase());
     return {
         slug: post.id,
         title: getTitleFromId(post.id),
@@ -38,6 +39,7 @@ const posts: ArchivePost[] = sortedPosts.map((post) => {
         date: date ? formatDateShort(date) : "",
         year: date ? date.getFullYear() : 0,
         tags: post.data.tags,
+        tagsNormalized,
     };
 });
 
@@ -58,7 +60,7 @@ const categories: CategoryMeta[] = Object.entries(categoryCount)
 // 统计标签频次
 const tagFrequency = new Map<string, number>();
 posts.forEach((p) => {
-    p.tags.forEach((tag) => {
+    p.tagsNormalized.forEach((tag) => {
         tagFrequency.set(tag, (tagFrequency.get(tag) ?? 0) + 1);
     });
 });
@@ -70,7 +72,7 @@ const tags: TagEntry[] = [...tagFrequency.entries()]
 const url = new URL(Astro.request.url);
 const initialCategory =
     url.searchParams.get("category")?.toLowerCase() ?? "all";
-const initialTag = url.searchParams.get("tag") ?? undefined;
+const initialTag = url.searchParams.get("tag")?.toLowerCase() ?? undefined;
 ---
 
 <BaseLayout title="Archive | Echoes">
