@@ -106,7 +106,7 @@ export default function ArchiveApp({
             const catMatch = activeCategory === 'all' || post.category === activeCategory;
             const tagMatch =
                 activeTags.length === 0 ||
-                activeTags.every((t) => post.tags.map((x) => x.toLowerCase()).includes(t));
+                activeTags.every((t) => post.tagsNormalized.includes(t));
             const kwMatch =
                 !searchKeyword ||
                 post.title.toLowerCase().includes(searchKeyword.toLowerCase()) ||

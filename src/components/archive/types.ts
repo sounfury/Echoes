@@ -8,6 +8,7 @@ export interface ArchivePost {
     date: string;
     year: number;
     tags: string[];
+    tagsNormalized: string[];
 }
 
 /** 分类元数据 */

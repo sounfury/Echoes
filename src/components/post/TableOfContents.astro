@@ -44,87 +44,27 @@ const tocItems = headings.filter((h) => {
 }
 
 <script>
-    function initToc() {
-        const tocNav = document.getElementById("toc-nav");
-        if (!tocNav) return;
+    import { initToc } from "../../lib/client/toc";
 
-        const tocLinks = tocNav.querySelectorAll(
-            ".toc-link",
-        ) as NodeListOf<HTMLAnchorElement>;
-        if (!tocLinks.length) return;
+    let destroyToc = () => {};
 
-        const headingSlugs: (string | undefined)[] = Array.from(tocLinks).map(
-            (link) => link.dataset.headingSlug,
-        );
-        const headingElements = headingSlugs
-            .map((slug) => (slug ? document.getElementById(slug) : null))
-            .filter(Boolean) as HTMLElement[];
+    const mountToc = () => {
+        destroyToc();
+        destroyToc = initToc();
+    };
 
-        if (!headingElements.length) return;
+    const onAfterSwap = () => mountToc();
+    const onBeforeSwap = () => {
+        destroyToc();
+        destroyToc = () => {};
+        document.removeEventListener("astro:after-swap", onAfterSwap);
+    };
 
-        let currentActive: string | null = null;
-
-        function setActive(slug: string | null) {
-            if (slug === currentActive) return;
-            currentActive = slug;
-            tocLinks.forEach((link) => {
-                link.classList.toggle(
-                    "active",
-                    link.dataset.headingSlug === slug,
-                );
-            });
-        }
-
-        // 基于 scroll 位置追踪当前激活标题
-        let ticking = false;
-        function onScroll() {
-            if (ticking) return;
-            ticking = true;
-            requestAnimationFrame(() => {
-                const scrollY = window.scrollY;
-                const offset = 120;
-
-                let activeSlug = headingSlugs[0] ?? null;
-                for (let i = headingElements.length - 1; i >= 0; i--) {
-                    if (headingElements[i].offsetTop <= scrollY + offset) {
-                        activeSlug = headingSlugs[i] ?? null;
-                        break;
-                    }
-                }
-                setActive(activeSlug);
-                ticking = false;
-            });
-        }
-
-        window.addEventListener("scroll", onScroll, { passive: true });
-
-        // 点击平滑滚动（预留 header 高度）
-        tocLinks.forEach((link) => {
-            link.addEventListener("click", (e) => {
-                e.preventDefault();
-                const slug = link.dataset.headingSlug;
-                const target = slug ? document.getElementById(slug) : null;
-                if (target) {
-                    window.scrollTo({
-                        top: target.offsetTop - 80,
-                        behavior: "smooth",
-                    });
-                }
-            });
-        });
-
-        // 页面切换时清理 scroll 监听，避免内存泄漏
-        document.addEventListener(
-            "astro:before-swap",
-            () => window.removeEventListener("scroll", onScroll),
-            { once: true },
-        );
-
-        onScroll();
-    }
-
-    initToc();
-    document.addEventListener("astro:after-swap", initToc);
+    mountToc();
+    document.addEventListener("astro:after-swap", onAfterSwap);
+    document.addEventListener("astro:before-swap", onBeforeSwap, {
+        once: true,
+    });
 </script>
 
 <style>

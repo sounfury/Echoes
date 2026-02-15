@@ -3,8 +3,6 @@
 Bark push notification for Echoes CI/CD.
 Reads templates from site.config.yaml, detects markdown changes
 between BEFORE_SHA and AFTER_SHA, sends scenario-based notifications.
-
-Zero external dependencies — Python stdlib only.
 """
 import json
 import os
@@ -13,55 +11,29 @@ import subprocess
 import sys
 import urllib.parse
 import urllib.request
+import yaml
 
 
-# ==================== Minimal YAML Parser ====================
+# ==================== Config Helpers ====================
 
 
-def parse_yaml(filepath):
-    """Handles nested dicts and scalar values.
-    Sufficient for site.config.yaml; skips arrays and comments."""
+def load_config(filepath):
     with open(filepath, "r", encoding="utf-8") as f:
-        lines = f.readlines()
+        loaded = yaml.safe_load(f)
 
-    root = {}
-    stack = [(root, -1)]
+    if not isinstance(loaded, dict):
+        raise ValueError("site.config.yaml root must be an object")
 
-    for raw_line in lines:
-        stripped = raw_line.strip()
-        if not stripped or stripped.startswith("#") or stripped.startswith("- "):
-            continue
+    return loaded
 
-        indent = len(raw_line) - len(raw_line.lstrip())
 
-        # 回退到正确的父级
-        while len(stack) > 1 and stack[-1][1] >= indent:
-            stack.pop()
-
-        parent = stack[-1][0]
-        if not isinstance(parent, dict):
-            continue
-
-        colon_idx = stripped.find(":")
-        if colon_idx == -1:
-            continue
-
-        key = stripped[:colon_idx].strip()
-        value = stripped[colon_idx + 1 :].strip()
-
-        if value:
-            if (value.startswith('"') and value.endswith('"')) or (
-                value.startswith("'") and value.endswith("'")
-            ):
-                value = value[1:-1]
-            value = value.replace("\\n", "\n")
-            parent[key] = value
-        else:
-            child = {}
-            parent[key] = child
-            stack.append((child, indent))
-
-    return root
+def require_config_path(config, *keys):
+    current = config
+    for key in keys:
+        if not isinstance(current, dict) or key not in current:
+            raise KeyError(".".join(keys))
+        current = current[key]
+    return current
 
 
 # ==================== Git Helpers ====================
@@ -120,9 +92,14 @@ def get_post_url(filepath, site_url, content_dir):
 
 
 def main():
-    config = parse_yaml("src/config/site.config.yaml")
-
-    site_url = config["site"]["url"].rstrip("/")
+    try:
+        config = load_config("src/config/site.config.yaml")
+        site_url = require_config_path(config, "site", "url").rstrip("/")
+        bark_cfg = require_config_path(config, "ops", "bark")
+        templates = require_config_path(bark_cfg, "templates")
+    except Exception as err:
+        print(f"❌ Invalid site.config.yaml: {err}")
+        sys.exit(1)
 
     # Bark token 从环境变量获取
     bark_key = os.environ.get("BARK_KEY", "")
@@ -130,9 +107,7 @@ def main():
         print("⚠️  BARK_KEY not set, skipping notification.")
         sys.exit(0)
 
-    bark_cfg = config["ops"]["bark"]
     icon_url = bark_cfg.get("iconUrl", "")
-    templates = bark_cfg["templates"]
     content_dir = "src/content/blog"
 
     # 使用 github.event.before / github.sha 比较，
