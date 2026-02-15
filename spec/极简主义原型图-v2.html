@@ -20,6 +20,8 @@
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- APlayer CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css">
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -638,36 +640,76 @@
 
     </main>
 
-    <!-- 2.5 Global Media Player -->
-    <div
-        class="fixed bottom-6 right-6 z-40 flex items-center gap-0 bg-white dark:bg-zinc-900 border border-eva-ink dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] transition-all rounded-full pr-4 pl-1 py-1 max-w-[200px] md:max-w-none">
+    <!-- 2.5 Global Media Player (MetingJS Integrated) -->
+    <div id="global-player"
+        class="fixed bottom-6 right-6 z-40 flex items-center gap-0 bg-white dark:bg-zinc-900 border border-eva-ink dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] transition-all rounded-full pr-4 pl-1 py-1 max-w-[200px] md:max-w-none touch-none select-none">
+
         <!-- Cover Art (Spinning) -->
-        <div
-            class="w-10 h-10 rounded-full bg-eva-purple flex items-center justify-center text-white animate-spin-slow overflow-hidden border border-black relative">
-            <div
-                class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200')] bg-cover opacity-80">
+        <div id="player-cover-container"
+            class="w-10 h-10 rounded-full bg-eva-purple flex items-center justify-center text-white animate-spin-slow overflow-hidden border border-black relative group/cover cursor-pointer"
+            style="animation-play-state: paused;">
+            <div id="player-cover" class="absolute inset-0 bg-cover opacity-80 transition-all duration-500"
+                style="background-image: url('https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200');">
             </div>
-            <i class="ph-fill ph-music-note relative z-10"></i>
+            <i class="ph-fill ph-music-note relative z-10 group-hover/cover:hidden"></i>
+
+            <!-- Hover Controls (Scheme 1) -->
+            <div class="absolute inset-0 z-20 hidden group-hover/cover:flex">
+                <div class="w-1/2 h-full flex items-center justify-center bg-black/30 hover:bg-black/50 text-white text-[8px] transition-colors"
+                    onclick="event.stopPropagation(); playPrev()">
+                    <i class="ph-bold ph-caret-left"></i>
+                </div>
+                <div class="w-1/2 h-full flex items-center justify-center bg-black/30 hover:bg-black/50 text-white text-[8px] transition-colors"
+                    onclick="event.stopPropagation(); playNext()">
+                    <i class="ph-bold ph-caret-right"></i>
+                </div>
+            </div>
         </div>
 
-        <!-- Info -->
-        <div class="flex flex-col mx-3 w-24 md:w-32 overflow-hidden">
-            <span class="text-[10px] font-bold font-serif truncate">Fly Me To The Moon</span>
-            <span class="text-[8px] font-mono opacity-60 truncate">Evangelion OST</span>
+        <!-- Info (Click for Lyrics) -->
+        <div class="flex flex-col mx-3 w-24 md:w-32 overflow-hidden cursor-pointer hover:opacity-70 transition-opacity"
+            onclick="toggleLyrics()">
+            <span id="player-title" class="text-[10px] font-bold font-serif truncate">Loading Stream...</span>
+            <span id="player-artist" class="text-[8px] font-mono opacity-60 truncate">NETEASE // CLOUD</span>
         </div>
 
-        <!-- Visualizer -->
-        <div class="flex items-end gap-[2px] h-4 mr-2">
-            <div class="w-1 bg-eva-purple animate-sound-wave" style="animation-delay: 0s"></div>
-            <div class="w-1 bg-eva-green animate-sound-wave" style="animation-delay: 0.2s"></div>
-            <div class="w-1 bg-eva-red animate-sound-wave" style="animation-delay: 0.4s"></div>
-            <div class="w-1 bg-eva-orange animate-sound-wave" style="animation-delay: 0.1s"></div>
+        <!-- Visualizer (Click for Lyrics) -->
+        <div id="player-visualizer"
+            class="flex items-end gap-[2px] h-4 mr-2 cursor-pointer hover:opacity-70 transition-opacity"
+            onclick="toggleLyrics()">
+            <div class="w-1 bg-eva-purple animate-sound-wave"
+                style="animation-delay: 0s; animation-play-state: paused;"></div>
+            <div class="w-1 bg-eva-green animate-sound-wave"
+                style="animation-delay: 0.2s; animation-play-state: paused;"></div>
+            <div class="w-1 bg-eva-red animate-sound-wave" style="animation-delay: 0.4s; animation-play-state: paused;">
+            </div>
+            <div class="w-1 bg-eva-orange animate-sound-wave"
+                style="animation-delay: 0.1s; animation-play-state: paused;"></div>
         </div>
 
         <!-- Controls -->
-        <button class="hover:text-eva-purple transition-colors">
-            <i class="ph-fill ph-pause"></i>
+        <button id="player-control" class="hover:text-eva-purple transition-colors" onclick="toggleMusic()">
+            <i id="player-icon" class="ph-fill ph-play"></i>
         </button>
+    </div>
+
+    <!-- Lyrics Panel (Scheme 1) -->
+    <div id="lyrics-panel"
+        class="fixed bottom-24 right-6 w-64 bg-white dark:bg-zinc-900 border-2 border-eva-ink dark:border-white p-4 shadow-[4px_4px_0px_0px_currentColor] z-30 hidden animate-fade-in origin-bottom-right">
+        <div
+            class="absolute -bottom-2 right-8 w-4 h-4 bg-white dark:bg-zinc-900 border-r-2 border-b-2 border-eva-ink dark:border-white transform rotate-45">
+        </div>
+        <div id="lrc-content"
+            class="text-center font-serif text-sm leading-relaxed h-32 overflow-hidden flex flex-col justify-center items-center">
+            <p class="text-xs opacity-50 font-mono">WAITING FOR SIGNAL...</p>
+        </div>
+    </div>
+
+    <!-- Hidden Meting Player Instance -->
+    <div style="display: none;">
+        <meting-js server="netease" type="playlist" id="17763697831" fixed="false" autoplay="false" loop="all"
+            order="list" preload="auto" list-folded="true" list-max-height="500px" lrc-type="0">
+        </meting-js>
     </div>
 
     <!-- JS Logic -->
@@ -853,7 +895,7 @@
                 rootMargin: '-10% 0px -60% 0px',
                 threshold: 0
             };
-            
+
             tocObserver = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
@@ -876,6 +918,256 @@
             }
         }
 
+    </script>
+    <!-- MetingJS & APlayer Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/meting@2/dist/Meting.min.js"></script>
+
+    <script>
+        // --- 5. Custom Meting Player Bridge ---
+        let ap = null;
+
+        // Wait for Meting to initialize APlayer
+        window.addEventListener('load', () => {
+            const checkTimer = setInterval(() => {
+                const metingEl = document.querySelector('meting-js');
+                if (metingEl && metingEl.aplayer) {
+                    clearInterval(checkTimer);
+                    ap = metingEl.aplayer;
+                    initPlayerBridge();
+                }
+            }, 500);
+        });
+
+        function initPlayerBridge() {
+            if (!ap) return;
+            console.log("MetingJS Player Connected");
+
+            // Initial UI Sync
+            updatePlayerInfo();
+
+            // Events
+            ap.on('play', () => {
+                setPlayerState(true);
+            });
+
+            ap.on('pause', () => {
+                setPlayerState(false);
+            });
+
+            ap.on('listswitch', () => {
+                updatePlayerInfo();
+                loadLyrics(); // Load new lyrics
+            });
+
+            ap.on('loadedmetadata', () => {
+                updatePlayerInfo();
+                loadLyrics();
+            });
+
+            ap.on('timeupdate', () => {
+                syncLyrics();
+            });
+
+            // Initialize Gesture
+            initGestures();
+        }
+
+        function toggleMusic() {
+            if (ap) ap.toggle();
+        }
+
+        function playPrev() {
+            if (ap) ap.skipBack();
+        }
+
+        function playNext() {
+            if (ap) ap.skipForward();
+        }
+
+        function setPlayerState(isPlaying) {
+            // Updated Visuals
+            const coverContainer = document.getElementById('player-cover-container');
+            const visualizers = document.querySelectorAll('#player-visualizer .animate-sound-wave');
+            const icon = document.getElementById('player-icon');
+
+            if (isPlaying) {
+                // Play State
+                coverContainer.style.animationPlayState = 'running';
+                visualizers.forEach(v => v.style.animationPlayState = 'running');
+                icon.className = 'ph-fill ph-pause';
+            } else {
+                // Pause State
+                coverContainer.style.animationPlayState = 'paused';
+                visualizers.forEach(v => v.style.animationPlayState = 'paused');
+                icon.className = 'ph-fill ph-play';
+            }
+        }
+
+        function updatePlayerInfo() {
+            if (!ap || !ap.list.audios || ap.list.audios.length === 0) return;
+
+            const audio = ap.list.audios[ap.list.index];
+            if (!audio) return;
+
+            document.getElementById('player-title').innerText = audio.name;
+            document.getElementById('player-artist').innerText = audio.artist;
+            document.getElementById('player-cover').style.backgroundImage = `url('${audio.cover}')`;
+        }
+
+        // --- Scheme 1: Lyrics & Gestures ---
+
+        // 1. Lyrics System
+        let currentLrc = [];
+        let isLyricsVisible = false;
+
+        function toggleLyrics() {
+            const panel = document.getElementById('lyrics-panel');
+            isLyricsVisible = !isLyricsVisible;
+            if (isLyricsVisible) {
+                panel.classList.remove('hidden');
+            } else {
+                panel.classList.add('hidden');
+            }
+        }
+
+        async function loadLyrics() {
+            if (!ap) return;
+            const audio = ap.list.audios[ap.list.index];
+            if (!audio || !audio.lrc) {
+                document.getElementById('lrc-content').innerHTML = '<p class="text-xs opacity-50">NO LYRICS FOUND</p>';
+                return;
+            }
+
+            try {
+                // MetingJS usually provides lrc as a URL or raw text
+                let lrcText = '';
+                if (audio.lrc.startsWith('http')) {
+                    const res = await fetch(audio.lrc);
+                    lrcText = await res.text();
+                } else {
+                    lrcText = audio.lrc;
+                }
+                currentLrc = parseLrc(lrcText);
+                renderLyricsPlaceholder();
+            } catch (e) {
+                console.error("LRC Load Failed", e);
+                document.getElementById('lrc-content').innerHTML = '<p class="text-xs opacity-50">LRC ERROR</p>';
+            }
+        }
+
+        function parseLrc(text) {
+            const lines = text.split('\n');
+            const result = [];
+            const timeReg = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/;
+
+            lines.forEach(line => {
+                const match = timeReg.exec(line);
+                if (match) {
+                    const min = parseInt(match[1]);
+                    const sec = parseInt(match[2]);
+                    const ms = match[3].length === 3 ? parseInt(match[3]) : parseInt(match[3]) * 10;
+                    const time = min * 60 + sec + ms / 1000;
+                    const content = line.replace(timeReg, '').trim();
+                    if (content) {
+                        result.push({ time, content });
+                    }
+                }
+            });
+            return result;
+        }
+
+        function renderLyricsPlaceholder() {
+            const container = document.getElementById('lrc-content');
+            container.innerHTML = '<p class="text-xs opacity-50 font-mono">READY</p>';
+        }
+
+        function syncLyrics() {
+            if (!isLyricsVisible || !ap || currentLrc.length === 0) return;
+
+            const currentTime = ap.audio.currentTime;
+            // Find current line
+            let activeIndex = -1;
+            for (let i = 0; i < currentLrc.length; i++) {
+                if (currentTime >= currentLrc[i].time) {
+                    activeIndex = i;
+                } else {
+                    break;
+                }
+            }
+
+            if (activeIndex !== -1) {
+                const line = currentLrc[activeIndex];
+                const nextLine = currentLrc[activeIndex + 1];
+
+                const container = document.getElementById('lrc-content');
+                // Simple render: Current line + Next line
+                container.innerHTML = `
+                    <p class="font-bold text-eva-purple transition-all duration-300 transform scale-105 origin-center">${line.content}</p>
+                    ${nextLine ? `<p class="text-xs opacity-40 mt-2">${nextLine.content}</p>` : ''}
+                `;
+            }
+        }
+
+        // 2. Swipe Gestures
+        function initGestures() {
+            const player = document.getElementById('global-player');
+            let startX = 0;
+            let startY = 0;
+            const threshold = 50; // px
+
+            player.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+            }, { passive: true });
+
+            player.addEventListener('touchend', (e) => {
+                const endX = e.changedTouches[0].clientX;
+                const endY = e.changedTouches[0].clientY;
+                handleSwipe(startX, startY, endX, endY);
+            }, { passive: true });
+
+            // Mouse Drag Support (Desktop)
+            player.addEventListener('mousedown', (e) => {
+                startX = e.clientX;
+                startY = e.clientY;
+
+                const onMouseUp = (upE) => {
+                    handleSwipe(startX, startY, upE.clientX, upE.clientY);
+                    document.removeEventListener('mouseup', onMouseUp);
+                };
+                document.addEventListener('mouseup', onMouseUp);
+            });
+        }
+
+        function handleSwipe(startX, startY, endX, endY) {
+            const diffX = endX - startX;
+            const diffY = endY - startY;
+
+            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+                // Horizontal Swipe
+                if (diffX > 0) {
+                    // Swipe Right -> Prev (Counter-intuitive? No, Right means pulling content from left? Or Moving Forward?)
+                    // Usually Swipe Left = Next, Swipe Right = Prev
+                    playPrev();
+                    showFeedback('PREV');
+                } else {
+                    // Swipe Left -> Next
+                    playNext();
+                    showFeedback('NEXT');
+                }
+            }
+        }
+
+        function showFeedback(text) {
+            // Visual feedback for swipe
+            const player = document.getElementById('global-player');
+            const feedback = document.createElement('div');
+            feedback.className = 'absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-[10px] font-mono px-2 py-1 rounded fade-out';
+            feedback.innerText = text;
+            player.appendChild(feedback);
+            setTimeout(() => feedback.remove(), 1000);
+        }
     </script>
 </body>
 

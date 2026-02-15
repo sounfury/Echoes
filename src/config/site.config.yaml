@@ -63,7 +63,7 @@ category:
 bgm:
   enabled: true
   defaultPlaylist:
-    - https://music.163.com/playlist?id=8882890045
+    - https://music.163.com/playlist?id=17763697831
 
 # 6. 运维通知
 ops:
