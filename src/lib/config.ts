@@ -65,10 +65,22 @@ export interface SiteConfig {
 }
 
 /**
- * 每次调用都重新读取文件，确保 dev 模式下配置变更能即时生效
+ * 模块级缓存：默认复用内存配置；当文件 mtime 变化时自动失效重载
  */
-export function getSiteConfig(): SiteConfig {
-    const configPath = path.resolve(process.cwd(), 'src/config/site.config.yaml');
+const configPath = path.resolve(process.cwd(), 'src/config/site.config.yaml');
+let cachedConfig: SiteConfig | null = null;
+let cachedConfigMtime = -1;
+
+function loadSiteConfig(): SiteConfig {
     const raw = fs.readFileSync(configPath, 'utf-8');
     return yaml.load(raw) as SiteConfig;
+}
+
+export function getSiteConfig(): SiteConfig {
+    const currentMtime = fs.statSync(configPath).mtimeMs;
+    if (!cachedConfig || currentMtime !== cachedConfigMtime) {
+        cachedConfig = loadSiteConfig();
+        cachedConfigMtime = currentMtime;
+    }
+    return cachedConfig;
 }

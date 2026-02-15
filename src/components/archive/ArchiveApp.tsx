@@ -9,11 +9,11 @@ type ArchiveFilters = {
 function readFiltersFromSearch(search: string): ArchiveFilters {
     const params = new URLSearchParams(search);
     const category = params.get('category')?.toLowerCase() ?? 'all';
-    const tag = params.get('tag')?.toLowerCase();
+    const tags = [...new Set(params.getAll('tag').map((tag) => tag.toLowerCase()).filter(Boolean))];
 
     return {
         category,
-        tags: tag ? [tag] : [],
+        tags,
     };
 }
 
@@ -62,6 +62,31 @@ export default function ArchiveApp({
             window.removeEventListener('pageshow', syncFromUrl);
         };
     }, []);
+
+    // 将筛选状态回写到 URL，保证刷新 / 分享 / 回退一致
+    useEffect(() => {
+        const normalizedCategory = activeCategory.toLowerCase();
+        const normalizedTags = [...new Set(activeTags.map((tag) => tag.toLowerCase()).filter(Boolean))];
+        const url = new URL(window.location.href);
+        const params = url.searchParams;
+
+        params.delete('category');
+        params.delete('tag');
+
+        if (normalizedCategory !== 'all') {
+            params.set('category', normalizedCategory);
+        }
+        normalizedTags.forEach((tag) => params.append('tag', tag));
+
+        const nextSearch = params.toString();
+        const currentSearch = window.location.search.replace(/^\?/, '');
+        if (nextSearch === currentSearch) {
+            return;
+        }
+
+        const nextUrl = `${url.pathname}${nextSearch ? `?${nextSearch}` : ''}${url.hash}`;
+        window.history.replaceState(window.history.state, '', nextUrl);
+    }, [activeCategory, activeTags]);
 
     // 点击外部关闭 tag wall
     useEffect(() => {
