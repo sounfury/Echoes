@@ -57,12 +57,36 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ ! -d ".external/blog/content/blog" ]; then
-            echo "Missing directory: .external/blog/content/blog"
+          SRC_ROOT=".external/blog"
+          CATEGORIES=()
+
+          while IFS= read -r -d '' dir; do
+            cat_name="$(basename "$dir")"
+            # 只识别一级分类目录：<CATEGORY>/<POST>.md(x)
+            if find "$dir" -mindepth 1 -maxdepth 1 -type f \( -iname '*.md' -o -iname '*.mdx' \) | grep -q .; then
+              CATEGORIES+=("$cat_name")
+            fi
+          done < <(find "$SRC_ROOT" -mindepth 1 -maxdepth 1 -type d ! -name '.git' ! -name '.github' -print0)
+
+          if [ "${#CATEGORIES[@]}" -eq 0 ]; then
+            echo "No valid single-level category directories found under ${SRC_ROOT}."
+            echo "Expected layout: <CATEGORY>/<POST>.md(x)"
+            echo "Directory snapshot:"
+            find "${SRC_ROOT}" -maxdepth 2 -type d | sort
             exit 1
           fi
+
+          echo "Detected categories:"
+          printf '  - %s\n' "${CATEGORIES[@]}"
+
           mkdir -p src/content/blog
-          rsync -a --delete .external/blog/content/blog/ src/content/blog/
+          RSYNC_ARGS=(-a --delete)
+          for cat in "${CATEGORIES[@]}"; do
+            RSYNC_ARGS+=("--include=${cat}/***")
+          done
+          RSYNC_ARGS+=("--exclude=*")
+          rsync "${RSYNC_ARGS[@]}" "${SRC_ROOT}/" src/content/blog/
+          echo "Synced dynamic categories to src/content/blog"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
