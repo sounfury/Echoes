@@ -4,6 +4,22 @@ on:
   push:
     branches:
       - dev
+  repository_dispatch:
+    types:
+      - content_changed
+  workflow_dispatch:
+    inputs:
+      blog_ref:
+        description: Blog repository ref (branch/tag/sha)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-oss-${{ github.event.client_payload.event_id || github.sha || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   build-and-deploy:
@@ -13,7 +29,40 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event_name == 'push' && github.sha || 'dev' }}
           fetch-depth: 0 # 完整历史，确保多 commit push 时 before SHA 可达
+
+      - name: Resolve blog ref
+        id: blog_meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          BLOG_REF="${{ github.event.client_payload.source_sha || github.event.client_payload.source_ref || inputs.blog_ref || 'main' }}"
+          if [ -z "$BLOG_REF" ]; then
+            BLOG_REF="main"
+          fi
+          echo "blog_ref=$BLOG_REF" >> "$GITHUB_OUTPUT"
+          echo "Using blog ref: $BLOG_REF"
+
+      - name: Checkout blog repository
+        uses: actions/checkout@v4
+        with:
+          repository: sounfury/blog
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+          ref: ${{ steps.blog_meta.outputs.blog_ref }}
+          path: .external/blog
+          fetch-depth: 1
+
+      - name: Sync blog content
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -d ".external/blog/content/blog" ]; then
+            echo "Missing directory: .external/blog/content/blog"
+            exit 1
+          fi
+          mkdir -p src/content/blog
+          rsync -a --delete .external/blog/content/blog/ src/content/blog/
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -46,6 +95,15 @@ jobs:
       - name: Send Bark notification
         env:
           BARK_KEY: ${{ secrets.BARK_KEY }}
+          EVENT_NAME: ${{ github.event_name }}
           BEFORE_SHA: ${{ github.event.before }}
           AFTER_SHA: ${{ github.sha }}
+          DISPATCH_SOURCE_REPO: ${{ github.event.client_payload.source_repo }}
+          DISPATCH_SOURCE_REF: ${{ github.event.client_payload.source_ref }}
+          DISPATCH_SOURCE_SHA: ${{ github.event.client_payload.source_sha }}
+          DISPATCH_EVENT_ID: ${{ github.event.client_payload.event_id }}
+          DISPATCH_CHANGED_FILES: ${{ toJSON(github.event.client_payload.changed_files) }}
+          DISPATCH_CHANGED_CATEGORIES: ${{ toJSON(github.event.client_payload.changed_categories) }}
+          DISPATCH_ADDED_FILES: ${{ toJSON(github.event.client_payload.added_files) }}
+          DISPATCH_MODIFIED_FILES: ${{ toJSON(github.event.client_payload.modified_files) }}
         run: python3 scripts/notify.py
