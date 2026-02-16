@@ -32,24 +32,12 @@ jobs:
           ref: ${{ github.event_name == 'push' && github.sha || 'dev' }}
           fetch-depth: 0 # 完整历史，确保多 commit push 时 before SHA 可达
 
-      - name: Resolve blog ref
-        id: blog_meta
-        shell: bash
-        run: |
-          set -euo pipefail
-          BLOG_REF="${{ github.event.client_payload.source_sha || github.event.client_payload.source_ref || inputs.blog_ref || 'main' }}"
-          if [ -z "$BLOG_REF" ]; then
-            BLOG_REF="main"
-          fi
-          echo "blog_ref=$BLOG_REF" >> "$GITHUB_OUTPUT"
-          echo "Using blog ref: $BLOG_REF"
-
       - name: Checkout blog repository
         uses: actions/checkout@v4
         with:
           repository: sounfury/blog
           token: ${{ secrets.CROSS_REPO_TOKEN }}
-          ref: ${{ steps.blog_meta.outputs.blog_ref }}
+          ref: ${{ github.event.client_payload.source_sha || github.event.client_payload.source_ref || inputs.blog_ref || 'main' }}
           path: .external/blog
           fetch-depth: 1
 
@@ -62,11 +50,11 @@ jobs:
 
           while IFS= read -r -d '' dir; do
             cat_name="$(basename "$dir")"
-            # 只识别一级分类目录：<CATEGORY>/<POST>.md(x)
-            if find "$dir" -mindepth 1 -maxdepth 1 -type f \( -iname '*.md' -o -iname '*.mdx' \) | grep -q .; then
+            # 只识别一级目录为分类，后续层级仅作为文章路径
+            if find "$dir" -type f \( -iname '*.md' -o -iname '*.mdx' \) | grep -q .; then
               CATEGORIES+=("$cat_name")
             fi
-          done < <(find "$SRC_ROOT" -mindepth 1 -maxdepth 1 -type d ! -name '.git' ! -name '.github' -print0)
+          done < <(find "$SRC_ROOT" -mindepth 1 -maxdepth 1 -type d ! -name '.git' ! -name '.github' ! -name 'script' ! -name 'template' ! -name 'todo' -print0)
 
           if [ "${#CATEGORIES[@]}" -eq 0 ]; then
             echo "No valid single-level category directories found under ${SRC_ROOT}."
@@ -127,7 +115,5 @@ jobs:
           DISPATCH_SOURCE_SHA: ${{ github.event.client_payload.source_sha }}
           DISPATCH_EVENT_ID: ${{ github.event.client_payload.event_id }}
           DISPATCH_CHANGED_FILES: ${{ toJSON(github.event.client_payload.changed_files) }}
-          DISPATCH_CHANGED_CATEGORIES: ${{ toJSON(github.event.client_payload.changed_categories) }}
-          DISPATCH_ADDED_FILES: ${{ toJSON(github.event.client_payload.added_files) }}
-          DISPATCH_MODIFIED_FILES: ${{ toJSON(github.event.client_payload.modified_files) }}
+          DISPATCH_NEWLY_PUBLISHED_FILES: ${{ toJSON(github.event.client_payload.newly_published_files) }}
         run: python3 scripts/notify.py

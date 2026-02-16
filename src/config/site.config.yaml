@@ -77,11 +77,11 @@ ops:
       deployOnly:
         title: "🚀 Echoes 部署成功"
         body: "站点已更新部署，本次无新文章变动。"
-      # 模板 2: 批量文章发布 (≥2 篇)
+      # 模板 2: 多篇发布/编辑成功（含编辑、混合变更、或多篇发布）
       batchPublish:
-        title: "📚 Echoes 发布了 {count} 篇文章"
-        body: "新增: {added}  |  修改: {modified}\n{fileList}"
+        title: "📚 Echoes 多篇文章发布成功"
+        body: "文章更新并部署完成。"
       # 模板 3: 单篇文章发布
       singlePublish:
-        title: "✏️ 新文章发布"
+        title: "🎉 新文章发布成功"
         body: "{postTitle}\n{postUrl}"

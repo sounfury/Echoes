@@ -2,33 +2,30 @@
 """
 Bark notification for Echoes CI/CD.
 
-Supported trigger sources:
-1) push in Echoes repo: detect markdown changes via git diff
-2) repository_dispatch from blog repo: read changed files from payload env
+Rules:
+1) push in Echoes repo: only send deploy success notification.
+2) repository_dispatch from blog repo:
+   - exactly one changed article and it is newly published -> single publish template
+   - all other changed scenarios -> batch publish template
 
-This script is intentionally implemented for a single-level category layout:
-  content/blog/<CATEGORY>/<POST>.md(x)
-or
-  src/content/blog/<CATEGORY>/<POST>.md(x)
+Path rule:
+- only the first path segment is treated as category
+- deeper segments are preserved in URL path, but not treated as category levels
 """
 
 import json
 import os
 import re
-import subprocess
 import sys
 import urllib.parse
 import urllib.request
+from collections import OrderedDict
 
 import yaml
 
 
-ZERO_SHA = "0" * 40
 MARKDOWN_RE = re.compile(r"\.(md|mdx)$", re.IGNORECASE)
 CONTENT_ROOTS = ("src/content/blog", "content/blog")
-
-
-# ==================== Config Helpers ====================
 
 
 def load_config(filepath):
@@ -50,9 +47,6 @@ def require_config_path(config, *keys):
     return current
 
 
-# ==================== Path Helpers ====================
-
-
 def normalize_path(filepath):
     path = str(filepath).replace("\\", "/").strip()
     while path.startswith("./"):
@@ -61,7 +55,7 @@ def normalize_path(filepath):
 
 
 def unique_keep_order(items):
-    return list(dict.fromkeys(items))
+    return list(OrderedDict.fromkeys(items))
 
 
 def filter_markdown_files(files):
@@ -102,22 +96,21 @@ def strip_content_root(filepath):
     return normalized
 
 
-def parse_single_level_article(filepath):
+def parse_article_path(filepath):
     """
-    Return (category, slug) only when path strictly matches:
-    <root>/<category>/<filename>.md(x)
+    Accept:
+      <category>/<...>/<post>.md(x)
+    Category is always the first segment.
     """
     relative = strip_content_root(filepath)
     if not relative:
         return None
 
     parts = [part for part in relative.split("/") if part]
-    if len(parts) != 2:
+    if len(parts) < 2:
         return None
 
-    category, filename = parts
-    if not category or not filename:
-        return None
+    filename = parts[-1]
     if not MARKDOWN_RE.search(filename):
         return None
 
@@ -125,134 +118,76 @@ def parse_single_level_article(filepath):
     if not slug:
         return None
 
-    return category, slug
+    route_parts = [*parts[:-1], slug]
+    category = parts[0]
+    return category, route_parts
+
+
+def get_article_key(filepath):
+    parsed = parse_article_path(filepath)
+    if not parsed:
+        return None
+    _, route_parts = parsed
+    return "/".join(route_parts)
+
+
+def build_valid_article_map(files):
+    valid = OrderedDict()
+    invalid = []
+
+    for filepath in files:
+        key = get_article_key(filepath)
+        if not key:
+            invalid.append(normalize_path(filepath))
+            continue
+        if key not in valid:
+            valid[key] = normalize_path(filepath)
+
+    return valid, unique_keep_order(invalid)
 
 
 def get_post_title(filepath):
-    parsed = parse_single_level_article(filepath)
+    parsed = parse_article_path(filepath)
     if parsed:
-        return parsed[1]
+        _, route_parts = parsed
+        return route_parts[-1]
 
     basename = os.path.basename(normalize_path(filepath))
     return re.sub(r"\.(md|mdx)$", "", basename, flags=re.IGNORECASE)
 
 
 def get_post_url(filepath, site_url):
-    parsed = parse_single_level_article(filepath)
+    parsed = parse_article_path(filepath)
     if not parsed:
         return f"{site_url}/"
 
-    category, slug = parsed
-    encoded_category = urllib.parse.quote(category, safe="")
-    encoded_slug = urllib.parse.quote(slug, safe="")
-    return f"{site_url}/posts/{encoded_category}/{encoded_slug}/"
+    _, route_parts = parsed
+    encoded_path = "/".join(urllib.parse.quote(part, safe="") for part in route_parts)
+    return f"{site_url}/posts/{encoded_path}/"
 
 
-def validate_single_level_files(files):
-    valid = []
-    invalid = []
-    for filepath in files:
-        if parse_single_level_article(filepath):
-            valid.append(filepath)
-        else:
-            invalid.append(filepath)
-    return unique_keep_order(valid), unique_keep_order(invalid)
-
-
-# ==================== Git Helpers ====================
-
-
-def run_git_get_lines(args):
-    result = subprocess.run(
-        ["git", "-c", "core.quotePath=false", *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return result.stdout.strip().splitlines()
-
-
-def git_diff_files(diff_filter, before, after, content_dir):
-    lines = run_git_get_lines(
-        [
-            "diff",
-            "--name-only",
-            f"--diff-filter={diff_filter}",
-            before,
-            after,
-            "--",
-            content_dir,
-        ]
-    )
-    return filter_markdown_files(lines)
-
-
-def get_all_content_files(sha, content_dir):
-    lines = run_git_get_lines(
-        ["ls-tree", "-r", "--name-only", sha, "--", content_dir]
-    )
-    return filter_markdown_files(lines)
-
-
-def resolve_changes_from_push(before_sha, after_sha, content_dir):
-    if before_sha == ZERO_SHA or not before_sha:
-        added = get_all_content_files(after_sha, content_dir)
-        modified = []
-    else:
-        added = git_diff_files("A", before_sha, after_sha, content_dir)
-        modified = git_diff_files("M", before_sha, after_sha, content_dir)
-
-    all_changed = unique_keep_order(added + modified)
-    return added, modified, all_changed
-
-
-def resolve_changes_from_dispatch():
-    changed = parse_json_list_env("DISPATCH_CHANGED_FILES")
-    added = parse_json_list_env("DISPATCH_ADDED_FILES")
-    modified = parse_json_list_env("DISPATCH_MODIFIED_FILES")
-
-    if not changed:
-        changed = unique_keep_order(added + modified)
-
-    # 兼容只上报 changed_files 的场景
-    if changed and not added and not modified:
-        added = changed.copy()
-
-    return added, modified, unique_keep_order(changed)
-
-
-# ==================== Bark Helpers ====================
-
-
-def build_message(templates, site_url, added, modified, all_changed):
-    total = len(all_changed)
+def build_message(templates, site_url, mode, single_file):
     click_url = ""
 
-    if total == 0:
-        tpl = templates["deployOnly"]
-        title = tpl["title"]
-        body = tpl["body"]
-    elif total == 1:
+    if mode == "single":
         tpl = templates["singlePublish"]
-        post_title = get_post_title(all_changed[0])
-        post_url = get_post_url(all_changed[0], site_url)
-        title = tpl["title"].replace("{postTitle}", post_title)
-        body = tpl["body"].replace("{postTitle}", post_title).replace(
+        post_title = get_post_title(single_file)
+        post_url = get_post_url(single_file, site_url)
+        title = tpl["title"].replace("{postTitle}", post_title).replace(
             "{postUrl}", post_url
         )
+        body = tpl["body"].replace("{postTitle}", post_title).replace("{postUrl}", post_url)
         click_url = post_url
-    else:
-        tpl = templates["batchPublish"]
-        file_list = "\n".join(f"• {get_post_title(path)}" for path in all_changed)
-        title = tpl["title"].replace("{count}", str(total))
-        body = (
-            tpl["body"]
-            .replace("{added}", str(len(added)))
-            .replace("{modified}", str(len(modified)))
-            .replace("{fileList}", file_list)
-        )
+        return title, body, click_url
 
-    return title, body, click_url
+    if mode == "batch":
+        tpl = templates["batchPublish"]
+        title = tpl["title"]
+        body = tpl["body"]
+        return title, body, click_url
+
+    tpl = templates["deployOnly"]
+    return tpl["title"], tpl["body"], click_url
 
 
 def send_bark(bark_key, icon_url, title, body, click_url):
@@ -276,9 +211,6 @@ def send_bark(bark_key, icon_url, title, body, click_url):
         print(f"✅ HTTP {response.status}")
 
 
-# ==================== Main ====================
-
-
 def main():
     try:
         config = load_config("src/config/site.config.yaml")
@@ -295,8 +227,11 @@ def main():
         sys.exit(0)
 
     icon_url = bark_cfg.get("iconUrl", "")
-    content_dir = "src/content/blog"
     event_name = os.environ.get("EVENT_NAME", "push")
+    mode = "deploy"
+    single_file = ""
+    changed_map = OrderedDict()
+    newly_published_map = OrderedDict()
 
     if event_name == "repository_dispatch":
         source_repo = os.environ.get("DISPATCH_SOURCE_REPO", "")
@@ -307,41 +242,40 @@ def main():
             f"Event: repository_dispatch, source={source_repo}, "
             f"ref={source_ref}, sha={source_sha[:8]}, event_id={event_id}"
         )
-        added, modified, all_changed = resolve_changes_from_dispatch()
-    elif event_name == "push":
-        before_sha = os.environ.get("BEFORE_SHA", "")
-        after_sha = os.environ.get("AFTER_SHA", "HEAD")
-        print(f"Event: push, comparing {before_sha[:8]}..{after_sha[:8]}")
-        added, modified, all_changed = resolve_changes_from_push(
-            before_sha, after_sha, content_dir
+
+        changed_files = parse_json_list_env("DISPATCH_CHANGED_FILES")
+        newly_published_files = parse_json_list_env("DISPATCH_NEWLY_PUBLISHED_FILES")
+
+        changed_map, invalid_changed = build_valid_article_map(changed_files)
+        newly_published_map, invalid_newly = build_valid_article_map(newly_published_files)
+
+        invalid_files = unique_keep_order(invalid_changed + invalid_newly)
+        if invalid_files:
+            print("⚠️ Ignored non-article files:")
+            for path in invalid_files:
+                print(f"  - {path}")
+
+        changed_keys = list(changed_map.keys())
+        newly_keys = [key for key in newly_published_map.keys() if key in changed_map]
+        print(
+            "Resolved article changes -> "
+            f"changed: {len(changed_keys)}, newly_published: {len(newly_keys)}"
         )
+
+        if len(changed_keys) == 1 and len(newly_keys) == 1 and changed_keys[0] == newly_keys[0]:
+            mode = "single"
+            single_file = changed_map[changed_keys[0]]
+        elif changed_keys:
+            mode = "batch"
+        else:
+            mode = "deploy"
     else:
-        print(f"Event: {event_name}, fallback to deployOnly notification.")
-        added, modified, all_changed = [], [], []
+        if event_name != "push":
+            print(f"Event: {event_name}, fallback to deployOnly notification.")
+        else:
+            print("Event: push, deploy-only notification.")
 
-    valid_added, invalid_added = validate_single_level_files(added)
-    valid_modified, invalid_modified = validate_single_level_files(modified)
-    valid_changed, invalid_changed = validate_single_level_files(all_changed)
-
-    if valid_changed and not valid_added and not valid_modified:
-        # dispatch 仅传 changed_files 时，默认按新增计数
-        valid_added = valid_changed.copy()
-
-    invalid_files = unique_keep_order(invalid_added + invalid_modified + invalid_changed)
-    if invalid_files:
-        print("⚠️ Ignored non-single-level files:")
-        for path in invalid_files:
-            print(f"  - {path}")
-
-    print(
-        "Valid single-level changes -> "
-        f"added: {len(valid_added)}, modified: {len(valid_modified)}, "
-        f"total: {len(valid_changed)}"
-    )
-
-    title, body, click_url = build_message(
-        templates, site_url, valid_added, valid_modified, valid_changed
-    )
+    title, body, click_url = build_message(templates, site_url, mode, single_file)
 
     print(f"\n📌 Title: {title}")
     print(f"📝 Body:\n{body}")
