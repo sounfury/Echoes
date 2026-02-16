@@ -1,216 +1,292 @@
 #!/usr/bin/env python3
 """
-Bark push notification for Echoes CI/CD.
-Reads templates from site.config.yaml, detects markdown changes
-between BEFORE_SHA and AFTER_SHA, sends scenario-based notifications.
+Bark notification for Echoes CI/CD.
 
-Zero external dependencies — Python stdlib only.
+Rules:
+1) push in Echoes repo: only send deploy success notification.
+2) repository_dispatch from blog repo:
+   - exactly one changed article and it is newly published -> single publish template
+   - all other changed scenarios -> batch publish template
+
+Path rule:
+- only the first path segment is treated as category
+- deeper segments are preserved in URL path, but not treated as category levels
 """
+
 import json
 import os
 import re
-import subprocess
 import sys
 import urllib.parse
 import urllib.request
+from collections import OrderedDict
+
+import yaml
 
 
-# ==================== Minimal YAML Parser ====================
+MARKDOWN_RE = re.compile(r"\.(md|mdx)$", re.IGNORECASE)
+CONTENT_ROOTS = ("src/content/blog", "content/blog")
 
 
-def parse_yaml(filepath):
-    """Handles nested dicts and scalar values.
-    Sufficient for site.config.yaml; skips arrays and comments."""
-    with open(filepath, "r", encoding="utf-8") as f:
-        lines = f.readlines()
+def load_config(filepath):
+    with open(filepath, "r", encoding="utf-8") as file:
+        loaded = yaml.safe_load(file)
 
-    root = {}
-    stack = [(root, -1)]
+    if not isinstance(loaded, dict):
+        raise ValueError("site.config.yaml root must be an object")
 
-    for raw_line in lines:
-        stripped = raw_line.strip()
-        if not stripped or stripped.startswith("#") or stripped.startswith("- "):
+    return loaded
+
+
+def require_config_path(config, *keys):
+    current = config
+    for key in keys:
+        if not isinstance(current, dict) or key not in current:
+            raise KeyError(".".join(keys))
+        current = current[key]
+    return current
+
+
+def normalize_path(filepath):
+    path = str(filepath).replace("\\", "/").strip()
+    while path.startswith("./"):
+        path = path[2:]
+    return path
+
+
+def unique_keep_order(items):
+    return list(OrderedDict.fromkeys(items))
+
+
+def filter_markdown_files(files):
+    filtered = []
+    for filepath in files:
+        normalized = normalize_path(filepath)
+        if normalized and MARKDOWN_RE.search(normalized):
+            filtered.append(normalized)
+    return unique_keep_order(filtered)
+
+
+def parse_json_list_env(name):
+    raw = os.environ.get(name, "").strip()
+    if not raw or raw.lower() == "null":
+        return []
+
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError:
+        print(f"⚠️ Invalid JSON in {name}, ignored.")
+        return []
+
+    if not isinstance(value, list):
+        return []
+
+    str_items = [item for item in value if isinstance(item, str)]
+    return filter_markdown_files(str_items)
+
+
+def strip_content_root(filepath):
+    normalized = normalize_path(filepath)
+    for root in CONTENT_ROOTS:
+        prefix = f"{root}/"
+        if normalized.startswith(prefix):
+            return normalized[len(prefix):]
+        if normalized == root:
+            return ""
+    return normalized
+
+
+def parse_article_path(filepath):
+    """
+    Accept:
+      <category>/<...>/<post>.md(x)
+    Category is always the first segment.
+    """
+    relative = strip_content_root(filepath)
+    if not relative:
+        return None
+
+    parts = [part for part in relative.split("/") if part]
+    if len(parts) < 2:
+        return None
+
+    filename = parts[-1]
+    if not MARKDOWN_RE.search(filename):
+        return None
+
+    slug = re.sub(r"\.(md|mdx)$", "", filename, flags=re.IGNORECASE)
+    if not slug:
+        return None
+
+    route_parts = [*parts[:-1], slug]
+    category = parts[0]
+    return category, route_parts
+
+
+def get_article_key(filepath):
+    parsed = parse_article_path(filepath)
+    if not parsed:
+        return None
+    _, route_parts = parsed
+    return "/".join(route_parts)
+
+
+def build_valid_article_map(files):
+    valid = OrderedDict()
+    invalid = []
+
+    for filepath in files:
+        key = get_article_key(filepath)
+        if not key:
+            invalid.append(normalize_path(filepath))
             continue
+        if key not in valid:
+            valid[key] = normalize_path(filepath)
 
-        indent = len(raw_line) - len(raw_line.lstrip())
-
-        # 回退到正确的父级
-        while len(stack) > 1 and stack[-1][1] >= indent:
-            stack.pop()
-
-        parent = stack[-1][0]
-        if not isinstance(parent, dict):
-            continue
-
-        colon_idx = stripped.find(":")
-        if colon_idx == -1:
-            continue
-
-        key = stripped[:colon_idx].strip()
-        value = stripped[colon_idx + 1 :].strip()
-
-        if value:
-            if (value.startswith('"') and value.endswith('"')) or (
-                value.startswith("'") and value.endswith("'")
-            ):
-                value = value[1:-1]
-            value = value.replace("\\n", "\n")
-            parent[key] = value
-        else:
-            child = {}
-            parent[key] = child
-            stack.append((child, indent))
-
-    return root
-
-
-# ==================== Git Helpers ====================
-
-ZERO_SHA = "0" * 40
-
-
-def git_diff_files(diff_filter, before, after, content_dir):
-    result = subprocess.run(
-        [
-            "git", "-c", "core.quotePath=false",
-            "diff", "--name-only",
-            f"--diff-filter={diff_filter}",
-            before, after, "--", content_dir,
-        ],
-        capture_output=True,
-        text=True,
-    )
-    return [
-        f
-        for f in result.stdout.strip().split("\n")
-        if f and re.search(r"\.(md|mdx)$", f)
-    ]
-
-
-def get_all_content_files(sha, content_dir):
-    """首次推送时列出该 commit 中所有 markdown 文件。"""
-    result = subprocess.run(
-        [
-            "git", "-c", "core.quotePath=false",
-            "ls-tree", "-r", "--name-only", sha, "--", content_dir,
-        ],
-        capture_output=True,
-        text=True,
-    )
-    return [
-        f
-        for f in result.stdout.strip().split("\n")
-        if f and re.search(r"\.(md|mdx)$", f)
-    ]
+    return valid, unique_keep_order(invalid)
 
 
 def get_post_title(filepath):
-    return re.sub(r"\.(md|mdx)$", "", os.path.basename(filepath))
+    parsed = parse_article_path(filepath)
+    if parsed:
+        _, route_parts = parsed
+        return route_parts[-1]
+
+    basename = os.path.basename(normalize_path(filepath))
+    return re.sub(r"\.(md|mdx)$", "", basename, flags=re.IGNORECASE)
 
 
-def get_post_url(filepath, site_url, content_dir):
-    relative = filepath.replace(f"{content_dir}/", "", 1)
-    parts = relative.split("/")
-    category = parts[0]
-    slug = re.sub(r"\.(md|mdx)$", "", parts[-1]).lower()
-    return f"{site_url}/posts/{category}/{urllib.parse.quote(slug)}/"
+def get_post_url(filepath, site_url):
+    parsed = parse_article_path(filepath)
+    if not parsed:
+        return f"{site_url}/"
+
+    _, route_parts = parsed
+    encoded_path = "/".join(urllib.parse.quote(part, safe="") for part in route_parts)
+    return f"{site_url}/posts/{encoded_path}/"
 
 
-# ==================== Main ====================
+def build_message(templates, site_url, mode, single_file):
+    click_url = ""
+
+    if mode == "single":
+        tpl = templates["singlePublish"]
+        post_title = get_post_title(single_file)
+        post_url = get_post_url(single_file, site_url)
+        title = tpl["title"].replace("{postTitle}", post_title).replace(
+            "{postUrl}", post_url
+        )
+        body = tpl["body"].replace("{postTitle}", post_title).replace("{postUrl}", post_url)
+        click_url = post_url
+        return title, body, click_url
+
+    if mode == "batch":
+        tpl = templates["batchPublish"]
+        title = tpl["title"]
+        body = tpl["body"]
+        return title, body, click_url
+
+    tpl = templates["deployOnly"]
+    return tpl["title"], tpl["body"], click_url
+
+
+def send_bark(bark_key, icon_url, title, body, click_url):
+    payload = {"title": title, "body": body, "icon": icon_url}
+    if click_url:
+        payload["url"] = click_url
+
+    if os.environ.get("NOTIFY_DRY_RUN", "").lower() in {"1", "true", "yes"}:
+        print("DRY RUN: skip Bark API call")
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return
+
+    data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    request = urllib.request.Request(
+        f"https://api.day.app/{bark_key}",
+        data=data,
+        headers={"Content-Type": "application/json; charset=utf-8"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=10) as response:
+        print(f"✅ HTTP {response.status}")
 
 
 def main():
-    config = parse_yaml("src/config/site.config.yaml")
+    try:
+        config = load_config("src/config/site.config.yaml")
+        site_url = require_config_path(config, "site", "url").rstrip("/")
+        bark_cfg = require_config_path(config, "ops", "bark")
+        templates = require_config_path(bark_cfg, "templates")
+    except Exception as err:
+        print(f"❌ Invalid site.config.yaml: {err}")
+        sys.exit(1)
 
-    site_url = config["site"]["url"].rstrip("/")
-
-    # Bark token 从环境变量获取
     bark_key = os.environ.get("BARK_KEY", "")
     if not bark_key:
-        print("⚠️  BARK_KEY not set, skipping notification.")
+        print("⚠️ BARK_KEY not set, skipping notification.")
         sys.exit(0)
 
-    bark_cfg = config["ops"]["bark"]
     icon_url = bark_cfg.get("iconUrl", "")
-    templates = bark_cfg["templates"]
-    content_dir = "src/content/blog"
+    event_name = os.environ.get("EVENT_NAME", "push")
+    mode = "deploy"
+    single_file = ""
+    changed_map = OrderedDict()
+    newly_published_map = OrderedDict()
 
-    # 使用 github.event.before / github.sha 比较，
-    # 解决一次 push 多个 commit 的漏报问题
-    before_sha = os.environ.get("BEFORE_SHA", "")
-    after_sha = os.environ.get("AFTER_SHA", "HEAD")
-
-    print(f"Comparing {before_sha[:8]}..{after_sha[:8]}")
-
-    if before_sha == ZERO_SHA or not before_sha:
-        # 分支首次推送
-        added = get_all_content_files(after_sha, content_dir)
-        modified = []
-    else:
-        added = git_diff_files("A", before_sha, after_sha, content_dir)
-        modified = git_diff_files("M", before_sha, after_sha, content_dir)
-
-    all_changed = list(dict.fromkeys(added + modified))
-    total = len(all_changed)
-
-    print(f"Added: {len(added)}, Modified: {len(modified)}, Total: {total}")
-
-    # ---- 选择模板并替换占位符 ----
-    click_url = ""  # 点击通知跳转的 URL
-
-    if total == 0:
-        tpl = templates["deployOnly"]
-        title = tpl["title"]
-        body = tpl["body"]
-
-    elif total == 1:
-        tpl = templates["singlePublish"]
-        post_title = get_post_title(all_changed[0])
-        post_url = get_post_url(all_changed[0], site_url, content_dir)
-        title = tpl["title"].replace("{postTitle}", post_title)
-        body = tpl["body"].replace("{postTitle}", post_title).replace(
-            "{postUrl}", post_url
-        )
-        click_url = post_url
-
-    else:
-        tpl = templates["batchPublish"]
-        file_list = "\n".join(f"• {get_post_title(f)}" for f in all_changed)
-        title = tpl["title"].replace("{count}", str(total))
-        body = (
-            tpl["body"]
-            .replace("{added}", str(len(added)))
-            .replace("{modified}", str(len(modified)))
-            .replace("{fileList}", file_list)
+    if event_name == "repository_dispatch":
+        source_repo = os.environ.get("DISPATCH_SOURCE_REPO", "")
+        source_ref = os.environ.get("DISPATCH_SOURCE_REF", "")
+        source_sha = os.environ.get("DISPATCH_SOURCE_SHA", "")
+        event_id = os.environ.get("DISPATCH_EVENT_ID", "")
+        print(
+            f"Event: repository_dispatch, source={source_repo}, "
+            f"ref={source_ref}, sha={source_sha[:8]}, event_id={event_id}"
         )
 
-    # ---- 调用 Bark API (POST JSON) ----
-    payload = {
-        "title": title,
-        "body": body,
-        "icon": icon_url,
-    }
-    if click_url:
-        payload["url"] = click_url
+        changed_files = parse_json_list_env("DISPATCH_CHANGED_FILES")
+        newly_published_files = parse_json_list_env("DISPATCH_NEWLY_PUBLISHED_FILES")
+
+        changed_map, invalid_changed = build_valid_article_map(changed_files)
+        newly_published_map, invalid_newly = build_valid_article_map(newly_published_files)
+
+        invalid_files = unique_keep_order(invalid_changed + invalid_newly)
+        if invalid_files:
+            print("⚠️ Ignored non-article files:")
+            for path in invalid_files:
+                print(f"  - {path}")
+
+        changed_keys = list(changed_map.keys())
+        newly_keys = [key for key in newly_published_map.keys() if key in changed_map]
+        print(
+            "Resolved article changes -> "
+            f"changed: {len(changed_keys)}, newly_published: {len(newly_keys)}"
+        )
+
+        if len(changed_keys) == 1 and len(newly_keys) == 1 and changed_keys[0] == newly_keys[0]:
+            mode = "single"
+            single_file = changed_map[changed_keys[0]]
+        elif changed_keys:
+            mode = "batch"
+        else:
+            mode = "deploy"
+    else:
+        if event_name != "push":
+            print(f"Event: {event_name}, fallback to deployOnly notification.")
+        else:
+            print("Event: push, deploy-only notification.")
+
+    title, body, click_url = build_message(templates, site_url, mode, single_file)
 
     print(f"\n📌 Title: {title}")
     print(f"📝 Body:\n{body}")
     if click_url:
         print(f"🔗 URL: {click_url}")
-    print(f"\nSending Bark notification...")
+    print("\nSending Bark notification...")
 
     try:
-        data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(
-            f"https://api.day.app/{bark_key}",
-            data=data,
-            headers={"Content-Type": "application/json; charset=utf-8"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            print(f"✅ HTTP {resp.status}")
-    except Exception as e:
-        print(f"❌ Notification failed: {e}")
+        send_bark(bark_key, icon_url, title, body, click_url)
+    except Exception as err:
+        print(f"❌ Notification failed: {err}")
         sys.exit(1)
 
 

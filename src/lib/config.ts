@@ -1,74 +1,188 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
+import { z } from 'zod';
+import type { PlayerSource } from '../stores/player';
 
-export interface NavItem {
-    name: string;
-    path: string;
-    icon?: string;
-    external?: boolean;
+const navItemSchema = z.object({
+    name: z.string(),
+    path: z.string(),
+    icon: z.string().optional(),
+    external: z.boolean().optional(),
+});
+
+const categoryConfigSchema = z.object({
+    label: z.string(),
+    desc: z.string(),
+    color: z.string(),
+});
+
+const barkTemplateSchema = z.object({
+    title: z.string(),
+    body: z.string(),
+});
+
+const siteConfigSchema = z.object({
+    site: z.object({
+        title: z.string(),
+        subtitle: z.string(),
+        url: z.string().url(),
+        author: z.string(),
+        logoText: z.string(),
+        timezone: z.string(),
+    }),
+    theme: z.object({
+        defaultMode: z.enum(['light', 'dark']),
+        colors: z.object({
+            accent: z.string(),
+            terminal: z.string(),
+            warning: z.string(),
+            defaultCategory: z.string(),
+            light: z.object({
+                bg: z.string(),
+                bgSecondary: z.string(),
+                text: z.string(),
+                textSecondary: z.string(),
+                border: z.string(),
+            }),
+            dark: z.object({
+                bg: z.string(),
+                bgSecondary: z.string(),
+                text: z.string(),
+                textSecondary: z.string(),
+                border: z.string(),
+            }),
+        }),
+    }),
+    navigation: z.array(navItemSchema),
+    category: z.record(categoryConfigSchema),
+    bgm: z.object({
+        enabled: z.boolean(),
+        playlistApi: z.string().url().optional(),
+        defaultPlaylist: z.array(z.string()).default([]),
+    }),
+    ops: z.object({
+        bark: z.object({
+            enabled: z.boolean(),
+            deviceKeyEnv: z.string().optional(),
+            iconUrl: z.string().url(),
+            templates: z.object({
+                deployOnly: barkTemplateSchema,
+                batchPublish: barkTemplateSchema,
+                singlePublish: barkTemplateSchema,
+            }),
+        }),
+    }),
+});
+
+export type NavItem = z.infer<typeof navItemSchema>;
+export type CategoryConfig = z.infer<typeof categoryConfigSchema>;
+export type SiteConfig = z.infer<typeof siteConfigSchema>;
+
+const configPath = path.resolve(process.cwd(), 'src/config/site.config.yaml');
+let cachedConfig: SiteConfig | null = null;
+let cachedConfigMtime = -1;
+
+function loadSiteConfig(): SiteConfig {
+    const raw = fs.readFileSync(configPath, 'utf-8');
+    const parsed = yaml.load(raw);
+    const validated = siteConfigSchema.safeParse(parsed);
+    if (!validated.success) {
+        const issues = validated.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ');
+        throw new Error(`Invalid site.config.yaml: ${issues}`);
+    }
+    return validated.data;
 }
 
-// Category 映射到配置键，slug 由键名决定
-export interface CategoryConfig {
-    label: string;
-    desc: string;
-    color: string;
+export function getSiteConfig(): SiteConfig {
+    const currentMtime = fs.statSync(configPath).mtimeMs;
+    if (!cachedConfig || currentMtime !== cachedConfigMtime) {
+        cachedConfig = loadSiteConfig();
+        cachedConfigMtime = currentMtime;
+    }
+    return cachedConfig;
 }
 
-export interface SiteConfig {
-    site: {
-        title: string;
-        subtitle: string;
-        url: string;
-        author: string;
-        logoText: string;
-        timezone: string;
-    };
-    theme: {
-        defaultMode: 'light' | 'dark';
-        colors: {
-            accent: string;
-            terminal: string;
-            warning: string;
-            defaultCategory: string;
-            light: {
-                bg: string;
-                bgSecondary: string;
-                text: string;
-                textSecondary: string;
-                border: string;
-            };
-            dark: {
-                bg: string;
-                bgSecondary: string;
-                text: string;
-                textSecondary: string;
-                border: string;
-            };
-        };
-    };
-    navigation: NavItem[];
-    category: Record<string, CategoryConfig>;
-    // Phase 2
-    bgm: {
-        enabled: boolean;
-        defaultPlaylist: string[];
-    };
-    ops: {
-        bark: {
-            enabled: boolean;
-            deviceKeyEnv: string;
-            iconUrl: string;
-        };
-    };
+const DEFAULT_METING_API_ORIGIN = 'https://api.injahow.cn/meting/';
+
+function buildPlaylistApiById(id: string): string {
+    const api = new URL(DEFAULT_METING_API_ORIGIN);
+    api.searchParams.set('type', 'playlist');
+    api.searchParams.set('id', id);
+    return api.toString();
+}
+
+function parseIdFromMusic163(url: URL): string | null {
+    const directId = url.searchParams.get('id')?.trim();
+    if (directId) return directId;
+
+    const cleanHash = url.hash.replace(/^#\/?/, '');
+    if (!cleanHash) return null;
+
+    const [route, queryString = ''] = cleanHash.split('?');
+    if (!route.includes('playlist')) return null;
+
+    const query = new URLSearchParams(queryString);
+    return query.get('id')?.trim() ?? null;
 }
 
 /**
- * 每次调用都重新读取文件，确保 dev 模式下配置变更能即时生效
+ * 兼容三种配置输入：
+ * 1) meting playlist API URL
+ * 2) 网易 playlist URL
+ * 3) 纯数字歌单 ID
  */
-export function getSiteConfig(): SiteConfig {
-    const configPath = path.resolve(process.cwd(), 'src/config/site.config.yaml');
-    const raw = fs.readFileSync(configPath, 'utf-8');
-    return yaml.load(raw) as SiteConfig;
+export function parsePlayerSource(rawValue: string): PlayerSource | null {
+    const raw = rawValue.trim();
+    if (!raw) return null;
+
+    if (/^\d+$/.test(raw)) {
+        return {
+            playlistApi: buildPlaylistApiById(raw),
+            raw,
+        };
+    }
+
+    let url: URL;
+    try {
+        url = new URL(raw);
+    } catch {
+        return null;
+    }
+
+    const isMetingApi = /(^|\.)api\.injahow\.cn$/i.test(url.hostname)
+        && url.pathname.startsWith('/meting/')
+        && url.searchParams.get('type') === 'playlist'
+        && Boolean(url.searchParams.get('id'));
+    if (isMetingApi) {
+        return {
+            playlistApi: url.toString(),
+            raw,
+        };
+    }
+
+    const isMusic163 = /(^|\.)music\.163\.com$/i.test(url.hostname);
+    if (!isMusic163) return null;
+
+    const id = parseIdFromMusic163(url);
+    if (!id) return null;
+
+    return {
+        playlistApi: buildPlaylistApiById(id),
+        raw,
+    };
+}
+
+export function getDefaultPlayerSource(config = getSiteConfig()): PlayerSource | null {
+    if (config.bgm.playlistApi) {
+        const parsed = parsePlayerSource(config.bgm.playlistApi);
+        if (parsed) return parsed;
+    }
+
+    for (const entry of config.bgm.defaultPlaylist) {
+        const parsed = parsePlayerSource(entry);
+        if (parsed) return parsed;
+    }
+
+    return null;
 }

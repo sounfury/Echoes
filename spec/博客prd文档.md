@@ -133,7 +133,43 @@
 - **F-MED-02 播放逻辑**
   - 若文章 Frontmatter 指定了 `music` 链接，进入文章时自动切歌。
   - 若文章未指定，保持当前播放列表或静音。
-  - 
+  
+#### 2.5.1 音乐播放器组件设计（实现版）
+
+- **实现结论**：播放器已从 `meting-js/aplayer` 黑盒接入，改为 `Meting API + 原生 Audio`，避免切页时内部 DOM 索引失配导致的 `classList` 报错。
+- **组件拆分**：
+  - UI 组件：`src/components/player/GlobalPlayer.tsx`
+  - 播放桥接层：`src/lib/client/playerBridge.ts`
+  - 全局状态：`src/stores/player.ts`
+  - 配置解析：`src/lib/config.ts`
+  - 全局挂载：`src/layouts/BaseLayout.astro`
+- **配置协议**（`src/config/site.config.yaml`）：
+  - `bgm.enabled: boolean`：是否启用全局播放器。
+  - `bgm.playlistApi: string`：推荐配置，直接填写歌单接口，例如：`https://api.injahow.cn/meting/?type=playlist&id=17763697831`。
+  - `bgm.defaultPlaylist: string[]`：兼容旧配置，允许填写网易歌单 URL 或纯歌单 ID，会在配置层转换为 `playlistApi`。
+- **Meting API 返回契约**（播放器实际依赖字段）：
+  - `name`：歌曲名
+  - `artist`：歌手
+  - `url`：音频流地址
+  - `pic`：封面地址
+  - `lrc`：歌词地址或歌词文本
+- **状态管理（Nanostores）**：
+  - `$playerStatus`: `idle | loading | ready | error`
+  - `$isPlaying`: 播放状态
+  - `$currentTrack`: 当前曲目信息
+  - `$playList`: 当前歌单
+  - `$lyricsOpen`: 歌词面板开关
+- **生命周期策略**：
+  - `BaseLayout` 挂载全局播放器，`transition:persist` 保持壳层节点跨页面复用。
+  - `playerBridge` 维护单例 `Audio` 引擎，页面切换只解绑监听，不销毁音频实例。
+  - 切歌时按索引更新 `Audio.src`，歌词按 `timeupdate` 同步。
+- **异常与降级**：
+  - 歌单接口失败：进入 `error` 状态并显示错误文案。
+  - 歌词为空或拉取失败：显示 `NO LYRICS FOUND` / `LRC ERROR`，不影响播放。
+  - 浏览器自动播放策略阻止：保持暂停状态，等待用户交互触发播放。
+- **与内容系统关系**：
+  - `src/content.config.ts` 已预留 `music` 字段 schema。
+  - 当前阶段仅完成字段预留，不启用“文章进入自动切歌”行为。
 
 ### 2.6 运维与通知 (Ops & Notification)
 
@@ -251,7 +287,7 @@ pnpm add -D @rollup/plugin-yaml @astrojs/sitemap astro-robots-txt astro-pagefind
 
 ### 第一期
 
-+ 音乐播放器怎么做（靠meting库拿到歌词？）
++ 音乐播放器（已落地）：Meting API 拉歌单 + 原生 Audio 渲染，歌词走 `lrc` 字段解析
 
 + blog元数据解析与按tag和分类的搜索筛选怎么做
 
@@ -366,4 +402,3 @@ pnpm add -D @rollup/plugin-yaml @astrojs/sitemap astro-robots-txt astro-pagefind
 
 + 多主题切换怎么做（组件切换？css控制？）
 + 第三方评论系统怎么接入
-

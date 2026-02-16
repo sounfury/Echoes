@@ -12,6 +12,9 @@ export default defineConfig({
 	integrations: [mdx(), sitemap(), react()],
 	vite: {
 		plugins: [tailwindcss()],
+		server: {
+			allowedHosts: ['alist.sounfury.top'],
+		},
 	},
 	markdown: {
 		shikiConfig: {

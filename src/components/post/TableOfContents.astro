@@ -27,11 +27,12 @@ const tocItems = headings.filter((h) => {
 {
     tocItems.length > 0 && (
         <nav id="toc-nav" class="toc-container" aria-label="Table of Contents">
-            {tocItems.map((item) => (
+            {tocItems.map((item, index) => (
                 <a
                     href={`#${item.slug}`}
                     class:list={[
                         "toc-link",
+                        index === 0 && "active",
                         item.depth === 3 && "toc-link--h3",
                     ]}
                     data-heading-slug={item.slug}
@@ -44,87 +45,44 @@ const tocItems = headings.filter((h) => {
 }
 
 <script>
-    function initToc() {
-        const tocNav = document.getElementById("toc-nav");
-        if (!tocNav) return;
+    import { initToc } from "../../lib/client/toc";
 
-        const tocLinks = tocNav.querySelectorAll(
-            ".toc-link",
-        ) as NodeListOf<HTMLAnchorElement>;
-        if (!tocLinks.length) return;
+    let destroyToc = () => {};
 
-        const headingSlugs: (string | undefined)[] = Array.from(tocLinks).map(
-            (link) => link.dataset.headingSlug,
-        );
-        const headingElements = headingSlugs
-            .map((slug) => (slug ? document.getElementById(slug) : null))
-            .filter(Boolean) as HTMLElement[];
+    const mountToc = () => {
+        destroyToc();
+        destroyToc = initToc();
+    };
 
-        if (!headingElements.length) return;
+    const mountTocWithRetry = () => {
+        mountToc();
+        const nav = document.getElementById("toc-nav");
+        if (!nav) return;
 
-        let currentActive: string | null = null;
+        let retryCount = 0;
+        const retry = () => {
+            if (nav.querySelector(".toc-link.active")) return;
+            retryCount += 1;
+            mountToc();
+            if (retryCount < 6) {
+                window.setTimeout(retry, 80);
+            }
+        };
 
-        function setActive(slug: string | null) {
-            if (slug === currentActive) return;
-            currentActive = slug;
-            tocLinks.forEach((link) => {
-                link.classList.toggle(
-                    "active",
-                    link.dataset.headingSlug === slug,
-                );
-            });
-        }
+        window.setTimeout(retry, 0);
+    };
 
-        // 基于 scroll 位置追踪当前激活标题
-        let ticking = false;
-        function onScroll() {
-            if (ticking) return;
-            ticking = true;
-            requestAnimationFrame(() => {
-                const scrollY = window.scrollY;
-                const offset = 120;
+    const onPageLoad = () => mountTocWithRetry();
+    const onBeforeSwap = () => {
+        destroyToc();
+        destroyToc = () => {};
+    };
 
-                let activeSlug = headingSlugs[0] ?? null;
-                for (let i = headingElements.length - 1; i >= 0; i--) {
-                    if (headingElements[i].offsetTop <= scrollY + offset) {
-                        activeSlug = headingSlugs[i] ?? null;
-                        break;
-                    }
-                }
-                setActive(activeSlug);
-                ticking = false;
-            });
-        }
-
-        window.addEventListener("scroll", onScroll, { passive: true });
-
-        // 点击平滑滚动（预留 header 高度）
-        tocLinks.forEach((link) => {
-            link.addEventListener("click", (e) => {
-                e.preventDefault();
-                const slug = link.dataset.headingSlug;
-                const target = slug ? document.getElementById(slug) : null;
-                if (target) {
-                    window.scrollTo({
-                        top: target.offsetTop - 80,
-                        behavior: "smooth",
-                    });
-                }
-            });
-        });
-
-        // 页面切换时清理 scroll 监听，避免内存泄漏
-        document.addEventListener(
-            "astro:before-swap",
-            () => window.removeEventListener("scroll", onScroll),
-            { once: true },
-        );
-
-        onScroll();
-    }
-
-    initToc();
-    document.addEventListener("astro:after-swap", initToc);
+    mountTocWithRetry();
+    document.addEventListener("astro:page-load", onPageLoad);
+    document.addEventListener("astro:before-swap", onBeforeSwap, {
+        once: true,
+    });
 </script>
 
 <style>

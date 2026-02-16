@@ -84,68 +84,23 @@ const PAGE_SIZE = 5;
 </BaseLayout>
 
 <script>
-	function initTimeline() {
-		const container = document.getElementById("timeline-container");
-		const loadMoreBtn = document.getElementById("load-more-btn");
-		const sentinel = document.getElementById("scroll-sentinel");
-		const footer = document.getElementById("timeline-footer");
+	import { initTimeline } from "../lib/client/timeline";
 
-		if (!container) return;
+	let destroyTimeline = () => {};
 
-		const pageSize = parseInt(container.dataset.pageSize ?? "5", 10);
-		const total = parseInt(container.dataset.total ?? "0", 10);
-		let visibleCount = Math.min(pageSize, total);
+	const mountTimeline = () => {
+		destroyTimeline();
+		destroyTimeline = initTimeline();
+	};
 
-		function loadMore() {
-			const entries = container!.querySelectorAll(
-				".timeline-entry.hidden",
-			);
-			const toShow = Array.from(entries).slice(0, pageSize);
+	const onAfterSwap = () => mountTimeline();
+	const onBeforeSwap = () => {
+		destroyTimeline();
+		destroyTimeline = () => {};
+		document.removeEventListener("astro:after-swap", onAfterSwap);
+	};
 
-			toShow.forEach((entry, i) => {
-				entry.classList.remove("hidden");
-				// 渐入动画
-				const el = entry as HTMLElement;
-				el.style.opacity = "0";
-				el.style.transform = "translateY(20px)";
-				setTimeout(() => {
-					el.style.transition = "all 0.4s ease-out";
-					el.style.opacity = "1";
-					el.style.transform = "translateY(0)";
-				}, i * 80);
-			});
-
-			visibleCount += toShow.length;
-
-			// 全部加载完毕
-			if (visibleCount >= total && footer) {
-				footer.innerHTML = `
-                    <span class="text-sm font-mono opacity-50 uppercase tracking-wider">
-                        [ END OF TRANSMISSIONS ]
-                    </span>
-                `;
-			}
-		}
-
-		// 按钮点击加载
-		loadMoreBtn?.addEventListener("click", loadMore);
-
-		// IntersectionObserver 自动加载
-		if (sentinel && "IntersectionObserver" in window) {
-			const observer = new IntersectionObserver(
-				(entries) => {
-					entries.forEach((entry) => {
-						if (entry.isIntersecting && visibleCount < total) {
-							loadMore();
-						}
-					});
-				},
-				{ rootMargin: "200px" },
-			);
-			observer.observe(sentinel);
-		}
-	}
-
-	initTimeline();
-	document.addEventListener("astro:after-swap", initTimeline);
+	mountTimeline();
+	document.addEventListener("astro:after-swap", onAfterSwap);
+	document.addEventListener("astro:before-swap", onBeforeSwap, { once: true });
 </script>
