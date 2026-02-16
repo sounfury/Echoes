@@ -5,6 +5,9 @@ on:
     branches:
       - dev
       - master
+    paths-ignore:
+      - 'spec/**'
+      - '**.md'
   repository_dispatch:
     types:
       - content_changed
