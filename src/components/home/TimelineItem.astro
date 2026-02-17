@@ -19,14 +19,13 @@ const color = getCategoryColor(category);
 
 const createDate = post.data.创建时间;
 const updateDate = post.data.更新时间;
-const displayDate = updateDate ?? createDate;
 const isUpdated = !!(
     updateDate &&
     createDate &&
     updateDate.getTime() !== createDate.getTime()
 );
-const fullDate = displayDate
-    ? `${displayDate.getFullYear()}.${formatDateShort(displayDate)}`
+const fullDate = createDate
+    ? `${createDate.getFullYear()}.${formatDateShort(createDate)}`
     : "";
 const tags = post.data.tags;
 
