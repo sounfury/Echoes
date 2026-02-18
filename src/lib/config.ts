@@ -82,6 +82,9 @@ export type SiteConfig = z.infer<typeof siteConfigSchema>;
 const configPath = path.resolve(process.cwd(), 'src/config/site.config.yaml');
 let cachedConfig: SiteConfig | null = null;
 let cachedConfigMtime = -1;
+let lastMtimeCheckAt = 0;
+const SHOULD_WATCH_CONFIG_CHANGES = process.env.NODE_ENV !== 'production';
+const MTIME_CHECK_INTERVAL_MS = 1000;
 
 function loadSiteConfig(): SiteConfig {
     const raw = fs.readFileSync(configPath, 'utf-8');
@@ -95,8 +98,24 @@ function loadSiteConfig(): SiteConfig {
 }
 
 export function getSiteConfig(): SiteConfig {
+    if (!cachedConfig) {
+        cachedConfig = loadSiteConfig();
+        cachedConfigMtime = fs.statSync(configPath).mtimeMs;
+        return cachedConfig;
+    }
+
+    if (!SHOULD_WATCH_CONFIG_CHANGES) {
+        return cachedConfig;
+    }
+
+    const now = Date.now();
+    if (now - lastMtimeCheckAt < MTIME_CHECK_INTERVAL_MS) {
+        return cachedConfig;
+    }
+    lastMtimeCheckAt = now;
+
     const currentMtime = fs.statSync(configPath).mtimeMs;
-    if (!cachedConfig || currentMtime !== cachedConfigMtime) {
+    if (currentMtime !== cachedConfigMtime) {
         cachedConfig = loadSiteConfig();
         cachedConfigMtime = currentMtime;
     }

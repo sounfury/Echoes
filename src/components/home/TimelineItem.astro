@@ -2,10 +2,9 @@
 import type { CollectionEntry } from "astro:content";
 import {
     getCategoryFromId,
-    getCategoryColor,
+    getCategoryMeta,
     getTitleFromId,
     formatDateShort,
-    getCategoryLabel,
 } from "../../lib/utils";
 
 interface Props {
@@ -14,8 +13,9 @@ interface Props {
 
 const { post } = Astro.props;
 const category = getCategoryFromId(post.id);
+const categoryMeta = getCategoryMeta(category);
 const title = getTitleFromId(post.id);
-const color = getCategoryColor(category);
+const color = categoryMeta.color;
 
 const createDate = post.data.创建时间;
 const updateDate = post.data.更新时间;
@@ -67,7 +67,7 @@ const excerpt = lines[0]?.trim().slice(0, 120) ?? "";
                     class="text-[10px] font-mono px-1 py-0.5 text-white"
                     style={`background-color: ${color};`}
                 >
-                    {getCategoryLabel(category)}
+                    {categoryMeta.label}
                 </span>
             </div>
 
