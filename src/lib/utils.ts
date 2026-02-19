@@ -8,6 +8,10 @@ export function getReadingTime(content: string): number {
 import { getSiteConfig } from './config';
 
 export type Category = string;
+export type CategoryMeta = {
+    label: string;
+    color: string;
+};
 
 /**
  * 从文章 id 路径中提取分类 (返回文件夹名，小写)
@@ -19,28 +23,32 @@ export function getCategoryFromId(id: string): string {
 }
 
 /**
+ * 获取分类展示元数据（label + color）
+ */
+export function getCategoryMeta(category: string): CategoryMeta {
+    const config = getSiteConfig();
+    const catConfig = config.category[category.toLowerCase()];
+    const fallbackColor = config.theme.colors.defaultCategory || config.theme.colors.accent;
+
+    return {
+        label: catConfig?.label ?? `[${category.toUpperCase()}]`,
+        color: catConfig?.color ?? fallbackColor,
+    };
+}
+
+/**
  * 获取分类颜色
  * 优先从 config.category[cat].color 获取，否则使用 theme.colors.defaultCategory 或 accent
  */
 export function getCategoryColor(category: string): string {
-    const config = getSiteConfig();
-    const catConfig = config.category[category.toLowerCase()];
-    if (catConfig && catConfig.color) {
-        return catConfig.color;
-    }
-    return config.theme.colors.defaultCategory || config.theme.colors.accent;
+    return getCategoryMeta(category).color;
 }
 
 /**
  * 获取分类显示标签 (e.g. "[TECH]")
  */
 export function getCategoryLabel(category: string): string {
-    const config = getSiteConfig();
-    const catConfig = config.category[category.toLowerCase()];
-    if (catConfig && catConfig.label) {
-        return catConfig.label;
-    }
-    return `[${category.toUpperCase()}]`;
+    return getCategoryMeta(category).label;
 }
 
 /**

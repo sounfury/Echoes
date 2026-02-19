@@ -5,8 +5,7 @@ import {
     getCategoryFromId,
     getTitleFromId,
     formatDateShort,
-    getCategoryColor,
-    getCategoryLabel,
+    getCategoryMeta,
 } from "../lib/utils";
 import ArchiveApp from "../components/archive/ArchiveApp";
 import type {
@@ -26,16 +25,28 @@ const sortedPosts = allPosts.sort((a, b) => {
 });
 
 // 序列化 posts 为可传递给 React 的纯数据
+const categoryMetaCache = new Map<string, ReturnType<typeof getCategoryMeta>>();
+function resolveCategoryMeta(category: string) {
+    const key = category.toLowerCase();
+    const cached = categoryMetaCache.get(key);
+    if (cached) return cached;
+
+    const meta = getCategoryMeta(key);
+    categoryMetaCache.set(key, meta);
+    return meta;
+}
+
 const posts: ArchivePost[] = sortedPosts.map((post) => {
     const category = getCategoryFromId(post.id);
+    const categoryMeta = resolveCategoryMeta(category);
     const date = post.data.创建时间;
     const tagsNormalized = post.data.tags.map((tag) => tag.toLowerCase());
     return {
         slug: post.id,
         title: getTitleFromId(post.id),
         category,
-        categoryLabel: getCategoryLabel(category),
-        categoryColor: getCategoryColor(category),
+        categoryLabel: categoryMeta.label,
+        categoryColor: categoryMeta.color,
         date: date ? formatDateShort(date) : "",
         year: date ? date.getFullYear() : 0,
         tags: post.data.tags,
@@ -50,12 +61,15 @@ posts.forEach((p) => {
 });
 const categories: CategoryMeta[] = Object.entries(categoryCount)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([slug, count]) => ({
-        slug,
-        label: getCategoryLabel(slug),
-        color: getCategoryColor(slug),
-        count,
-    }));
+    .map(([slug, count]) => {
+        const categoryMeta = resolveCategoryMeta(slug);
+        return {
+            slug,
+            label: categoryMeta.label,
+            color: categoryMeta.color,
+            count,
+        };
+    });
 
 // 统计标签频次
 const tagFrequency = new Map<string, number>();
