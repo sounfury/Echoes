@@ -31,6 +31,4 @@ export interface ArchiveAppProps {
     categories: CategoryMeta[];
     tags: TagEntry[];
     totalCount: number;
-    initialCategory?: string;
-    initialTag?: string;
 }

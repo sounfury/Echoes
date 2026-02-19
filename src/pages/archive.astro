@@ -68,23 +68,37 @@ const tags: TagEntry[] = [...tagFrequency.entries()]
     .sort((a, b) => b[1] - a[1])
     .map(([tag, count]) => ({ tag, count }));
 
-// 从 URL params 中读取初始值 (SSR 阶段)
-const url = new URL(Astro.request.url);
-const initialCategory =
-    url.searchParams.get("category")?.toLowerCase() ?? "all";
-const initialTag = url.searchParams.get("tag")?.toLowerCase() ?? undefined;
+// 筛选参数改为客户端读取，避免 SSG 首屏与 URL 查询参数不一致
 ---
 
 <BaseLayout title="Archive | Echoes">
     <ArchiveApp
-        client:load
+        client:only="react"
         posts={posts}
         categories={categories}
         tags={tags}
         totalCount={posts.length}
-        initialCategory={initialCategory}
-        initialTag={initialTag}
-    />
+    >
+        <main
+            slot="fallback"
+            class="pt-24 pb-20 max-w-4xl mx-auto px-4 min-h-screen"
+        >
+            <div class="mb-10 border-b-2 border-eva-ink dark:border-white pb-6">
+                <h1
+                    class="text-4xl md:text-5xl font-serif font-black mb-2 tracking-tight"
+                >
+                    ARCHIVE_DB
+                </h1>
+                <p class="font-mono text-xs opacity-50 tracking-widest">
+                    LOADING ARCHIVE...
+                </p>
+            </div>
+            <div
+                class="h-24 border border-dashed border-gray-300 dark:border-white/20 animate-pulse"
+            >
+            </div>
+        </main>
+    </ArchiveApp>
 </BaseLayout>
 
 <style>
