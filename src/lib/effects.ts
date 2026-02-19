@@ -1,5 +1,5 @@
 /**
- * Typewriter effect options
+ * 打字机效果工具类
  */
 export interface TypewriterOptions {
     /**

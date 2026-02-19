@@ -6,8 +6,19 @@ const blog = defineCollection({
 		base: './src/content/blog',
 		pattern: '**/*.{md,mdx}',
 		generateId: ({ entry }) => {
-			// 保留原始文件名（含特殊字符如顿号），只去掉扩展名
-			return entry.replace(/\.(md|mdx)$/, '');
+			// 将路径分隔符统一（Windows下可能是反斜杠）
+			const normalized = entry.replace(/\\/g, '/');
+			const parts = normalized.split('/');
+			const filename = parts[parts.length - 1];
+
+			// 如果在根目录下 (length=1)，只有文件名
+			if (parts.length === 1) {
+				return filename.replace(/\.(md|mdx)$/, '');
+			}
+
+			// 忽略中间目录，只取 "一级目录/文件名" (e.g. "TECH/前端/基础.md" -> "TECH/基础")
+			const category = parts[0];
+			return `${category}/${filename.replace(/\.(md|mdx)$/, '')}`;
 		},
 	}),
 	schema: z.object({
