@@ -71,7 +71,7 @@ ops:
   bark:
     enabled: true
     iconUrl: "https://sounfury-blog.oss-cn-beijing.aliyuncs.com/favicon.ico"
-    # 推送模板 — 占位符由 CI 脚本替换
+    # 推送模板 — 占位符由 CI 脚本替换；url 为可选跳转链接
     templates:
       # 模板 1: 无文章变更，仅代码/样式部署
       deployOnly:
@@ -81,7 +81,12 @@ ops:
       batchPublish:
         title: "📚 Echoes 多篇文章发布成功"
         body: "文章更新并部署完成。"
-      # 模板 3: 单篇文章发布
+      # 模板 3: 单篇文章发布（url 由脚本动态生成并覆盖）
       singlePublish:
         title: "🎉 新文章发布成功"
         body: "{postTitle}\n{postUrl}"
+      # 模板 4: 部署失败告警
+      deployFail:
+        title: "❌ Echoes 部署失败"
+        body: "构建或部署过程中出现错误，请检查 Actions 日志。"
+        url: "https://github.com/sounfury/Echoes/actions"

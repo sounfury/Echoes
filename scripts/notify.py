@@ -167,7 +167,13 @@ def get_post_url(filepath, site_url):
 
 
 def build_message(templates, site_url, mode, single_file):
-    click_url = ""
+    # 优先使用模板中配置的 url，脚本动态生成的可覆盖它
+    def tpl_url(tpl):
+        return tpl.get("url", "")
+
+    if mode == "deployFail":
+        tpl = templates["deployFail"]
+        return tpl["title"], tpl["body"], tpl_url(tpl)
 
     if mode == "single":
         tpl = templates["singlePublish"]
@@ -177,17 +183,16 @@ def build_message(templates, site_url, mode, single_file):
             "{postUrl}", post_url
         )
         body = tpl["body"].replace("{postTitle}", post_title).replace("{postUrl}", post_url)
-        click_url = post_url
+        # 动态生成的文章 url 优先，其次读模板配置
+        click_url = post_url or tpl_url(tpl)
         return title, body, click_url
 
     if mode == "batch":
         tpl = templates["batchPublish"]
-        title = tpl["title"]
-        body = tpl["body"]
-        return title, body, click_url
+        return tpl["title"], tpl["body"], tpl_url(tpl)
 
     tpl = templates["deployOnly"]
-    return tpl["title"], tpl["body"], click_url
+    return tpl["title"], tpl["body"], tpl_url(tpl)
 
 
 def send_bark(bark_key, icon_url, title, body, click_url):
@@ -227,6 +232,24 @@ def main():
         sys.exit(0)
 
     icon_url = bark_cfg.get("iconUrl", "")
+
+    # 部署失败时由 workflow 设置 NOTIFY_STATUS=failure 来触发告警
+    notify_status = os.environ.get("NOTIFY_STATUS", "success").lower()
+    if notify_status == "failure":
+        print("Deploy failed, sending failure notification.")
+        title, body, click_url = build_message(templates, site_url, "deployFail", "")
+        print(f"\n📌 Title: {title}")
+        print(f"📝 Body:\n{body}")
+        if click_url:
+            print(f"🔗 URL: {click_url}")
+        print("\nSending Bark notification...")
+        try:
+            send_bark(bark_key, icon_url, title, body, click_url)
+        except Exception as err:
+            print(f"❌ Notification failed: {err}")
+            sys.exit(1)
+        return
+
     event_name = os.environ.get("EVENT_NAME", "push")
     mode = "deploy"
     single_file = ""
