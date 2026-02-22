@@ -1,0 +1,119 @@
+---
+import { SEO } from "astro-seo";
+import { getSiteConfig } from "../lib/config";
+import "../styles/global.css";
+
+const config = getSiteConfig();
+const title = `404 // 信号丢失 — ${config.site.title}`;
+const description =
+    "如同坠入深海的石子，你的请求没有激起任何涟漪。请确认记忆的路径是否发生了偏移。";
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+
+const { colors, defaultMode: defaultThemeMode } = config.theme;
+const { accent, terminal, warning, light, dark: darkColors } = colors;
+---
+
+<!doctype html>
+<html
+    lang="zh-CN"
+    style={`--c-accent:${accent};--c-terminal:${terminal};--c-warning:${warning};--c-bg-light:${light.bg};--c-bg-secondary-light:${light.bgSecondary};--c-text-light:${light.text};--c-text-secondary-light:${light.textSecondary};--c-border-light:${light.border};--c-bg-dark:${darkColors.bg};--c-bg-secondary-dark:${darkColors.bgSecondary};--c-text-dark:${darkColors.text};--c-text-secondary-dark:${darkColors.textSecondary};--c-border-dark:${darkColors.border}`}
+>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <meta name="generator" content={Astro.generator} />
+
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Noto+Serif+SC:wght@400;700;900&display=swap"
+            rel="stylesheet"
+        />
+
+        <SEO
+            title={title}
+            description={description}
+            canonical={canonicalURL.href}
+            noindex={true}
+            nofollow={true}
+        />
+
+        <script is:inline define:vars={{ defaultThemeMode }}>
+            (function () {
+                var stored = localStorage.getItem("theme-mode");
+                var isDark = (stored || defaultThemeMode) === "dark";
+                document.documentElement.classList.toggle("dark", isDark);
+            })();
+        </script>
+    </head>
+    <body
+        class="transition-colors duration-500 min-h-screen relative overflow-hidden flex items-center justify-center font-sans"
+    >
+        <!-- Blurred Atmosphere Orbs -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+            <div
+                class="absolute top-1/4 left-1/4 w-[40vw] h-[40vw] bg-eva-purple/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] animate-[pulse_8s_cubic-bezier(0.4,0,0.6,1)_infinite]"
+            >
+            </div>
+            <div
+                class="absolute bottom-1/4 right-1/4 w-[30vw] h-[30vw] bg-black/5 dark:bg-white/5 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[80px] animate-[pulse_8s_cubic-bezier(0.4,0,0.6,1)_infinite]"
+                style="animation-delay: -4s"
+            >
+            </div>
+        </div>
+
+        <!-- Frosted Glass Card -->
+        <div
+            class="z-10 relative max-w-lg w-full px-6 flex flex-col items-center"
+        >
+            <!-- Abstract Missing Graphic -->
+            <div
+                class="w-24 h-24 mb-12 relative flex items-center justify-center"
+            >
+                <div
+                    class="absolute inset-0 border border-black/20 dark:border-white/20 rounded-full animate-[spin_10s_linear_infinite]"
+                >
+                </div>
+                <div
+                    class="absolute inset-2 border border-black/10 dark:border-white/10 rounded-full animate-[spin_15s_linear_infinite_reverse]"
+                >
+                </div>
+                <div
+                    class="w-1 h-1 bg-black dark:bg-white rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)] dark:shadow-[0_0_10px_rgba(255,255,255,0.8)]"
+                >
+                </div>
+            </div>
+
+            <h1
+                class="text-3xl font-serif font-light tracking-widest mb-6 opacity-90 text-center"
+            >
+                信 号 <span
+                    class="text-eva-purple font-serif ml-1 opacity-70 italic"
+                    >丢失</span
+                >
+            </h1>
+
+            <p
+                class="text-sm opacity-50 text-center leading-relaxed font-light mb-12 max-w-sm"
+            >
+                如同坠入深海的石子，你的请求没有激起任何涟漪。请确认记忆的路径是否发生了偏移。
+            </p>
+
+            <a
+                href="/"
+                class="relative overflow-hidden group border border-black/20 dark:border-white/20 py-3 px-8 rounded-full bg-black/5 dark:bg-white/5 backdrop-blur-md hover:border-eva-purple dark:hover:border-eva-purple transition-colors duration-500"
+            >
+                <span
+                    class="relative z-10 text-xs font-mono tracking-[0.2em] group-hover:text-eva-purple transition-colors"
+                >
+                    重新浮出水面
+                </span>
+                <div
+                    class="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 dark:via-white/5 to-transparent transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"
+                >
+                </div>
+            </a>
+        </div>
+    </body>
+</html>

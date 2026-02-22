@@ -34,6 +34,7 @@ const siteConfigSchema = z.object({
         author: z.string(),
         logoText: z.string(),
         timezone: z.string(),
+        icp: z.string().optional(),
     }),
     theme: z.object({
         defaultMode: z.enum(['light', 'dark']),

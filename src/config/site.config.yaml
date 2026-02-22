@@ -11,6 +11,7 @@ site:
   author: sounfury
   logoText: "ECHOES"
   timezone: Asia/Shanghai
+  icp: "鲁ICP备2024121123号-1"
 
 # 2. 视觉与主题
 theme:

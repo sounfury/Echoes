@@ -101,6 +101,30 @@ const ogImage = `${config.site.url}/covers/og-default.jpg`;
         <!-- Page Content -->
         <slot />
 
+        <!-- Footer -->
+        <footer
+            class="py-6 flex flex-col items-center justify-center gap-2 text-xs opacity-50 font-mono"
+        >
+            <div class="flex items-center gap-2">
+                <span
+                    >&copy; {new Date().getFullYear()}
+                    {config.site.author}</span
+                >
+            </div>
+            {
+                config.site.icp && (
+                    <a
+                        href="https://beian.miit.gov.cn/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="hover:text-eva-purple transition-colors"
+                    >
+                        {config.site.icp}
+                    </a>
+                )
+            }
+        </footer>
+
         <!-- Global Music Player -->
         {
             config.bgm.enabled && playerSource && (
