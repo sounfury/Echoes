@@ -69,7 +69,8 @@ const { accent, terminal, warning, light, dark: darkColors } = colors;
         >
             <!-- Abstract Missing Graphic -->
             <div
-                class="w-24 h-24 mb-12 relative flex items-center justify-center"
+                id="eye-container"
+                class="w-24 h-24 mb-12 relative flex items-center justify-center transition-transform duration-75 ease-out"
             >
                 <div
                     class="absolute inset-0 border border-black/20 dark:border-white/20 rounded-full animate-[spin_10s_linear_infinite]"
@@ -80,7 +81,7 @@ const { accent, terminal, warning, light, dark: darkColors } = colors;
                 >
                 </div>
                 <div
-                    class="w-1 h-1 bg-black dark:bg-white rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)] dark:shadow-[0_0_10px_rgba(255,255,255,0.8)]"
+                    class="eye-dot w-1 h-1 bg-black dark:bg-white rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)] dark:shadow-[0_0_10px_rgba(255,255,255,0.8)] transition-transform duration-75 ease-out"
                 >
                 </div>
             </div>
@@ -115,5 +116,54 @@ const { accent, terminal, warning, light, dark: darkColors } = colors;
                 </div>
             </a>
         </div>
+
+        <!-- Eye Tracking Script -->
+        <script is:inline>
+            document.addEventListener("DOMContentLoaded", () => {
+                const eyeContainer = document.getElementById("eye-container");
+                const eyeDot = eyeContainer?.querySelector(".eye-dot");
+
+                if (!eyeContainer || !eyeDot) return;
+
+                let ticking = false;
+                let mouseX = 0;
+                let mouseY = 0;
+
+                document.addEventListener("mousemove", (e) => {
+                    mouseX = e.clientX;
+                    mouseY = e.clientY;
+                    if (!ticking) {
+                        requestAnimationFrame(() => {
+                            const rect = eyeContainer.getBoundingClientRect();
+                            const centerX = rect.left + rect.width / 2;
+                            const centerY = rect.top + rect.height / 2;
+
+                            // 计算鼠标相对于圆心的偏移
+                            const deltaX = mouseX - centerX;
+                            const deltaY = mouseY - centerY;
+
+                            // 限制最大移动距离，产生像眼球在眼眶内转动的效果
+                            const distance = Math.sqrt(
+                                deltaX * deltaX + deltaY * deltaY,
+                            );
+                            const maxRadius = 15;
+                            const factor =
+                                Math.min(distance, maxRadius) / (distance || 1);
+
+                            const mappedX = deltaX * factor;
+                            const mappedY = deltaY * factor;
+
+                            // 光点移动幅度稍大
+                            eyeDot.style.transform = `translate(${mappedX}px, ${mappedY}px)`;
+                            // 整个外层容器做视差极小幅移动
+                            eyeContainer.style.transform = `translate(${mappedX * 0.2}px, ${mappedY * 0.2}px)`;
+
+                            ticking = false;
+                        });
+                        ticking = true;
+                    }
+                });
+            });
+        </script>
     </body>
 </html>
