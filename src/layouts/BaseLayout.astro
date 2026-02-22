@@ -12,13 +12,15 @@ interface Props {
 }
 
 const config = getSiteConfig();
-const { title = config.site.title, description = config.site.subtitle } =
+const { title = config.site.title, description = config.site.description } =
     Astro.props;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 const playerSource = getDefaultPlayerSource(config);
 
 const { colors, defaultMode: defaultThemeMode } = config.theme;
 const { accent, terminal, warning, light, dark: darkColors } = colors;
+
+const ogImage = `${config.site.url}/covers/og-default.jpg`;
 ---
 
 <!doctype html>
@@ -50,8 +52,19 @@ const { accent, terminal, warning, light, dark: darkColors } = colors;
                     title: title,
                     type: "website",
                     url: canonicalURL.href,
-                    image: "",
+                    image: ogImage,
                 },
+                optional: {
+                    description: description,
+                    siteName: config.site.title,
+                    locale: "zh_CN",
+                },
+            }}
+            twitter={{
+                card: "summary_large_image",
+                title: title,
+                description: description,
+                image: ogImage,
             }}
         />
 
@@ -90,15 +103,11 @@ const { accent, terminal, warning, light, dark: darkColors } = colors;
 
         <!-- Global Music Player -->
         {
-            config.bgm.enabled &&
-                playerSource && (
-                    <div id="global-player-shell" transition:persist>
-                        <GlobalPlayer
-                            source={playerSource}
-                            client:only="react"
-                        />
-                    </div>
-                )
+            config.bgm.enabled && playerSource && (
+                <div id="global-player-shell" transition:persist>
+                    <GlobalPlayer source={playerSource} client:only="react" />
+                </div>
+            )
         }
     </body>
 </html>

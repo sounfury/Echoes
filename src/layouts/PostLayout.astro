@@ -10,7 +10,9 @@ import {
     formatDateFull,
     getCategoryColor,
     getCategoryLabel,
+    getExcerpt,
 } from "../lib/utils";
+import { getSiteConfig } from "../lib/config";
 
 interface Props {
     post: CollectionEntry<"blog">;
@@ -18,12 +20,14 @@ interface Props {
     headings: MarkdownHeading[];
 }
 
+const config = getSiteConfig();
 const { post, content, headings } = Astro.props;
 const title = getTitleFromId(post.id);
 const category = getCategoryFromId(post.id);
 const color = getCategoryColor(category);
 const tags = post.data.tags;
 const readingMinutes = getReadingTime(content);
+const excerpt = getExcerpt(content);
 
 const createdDate = post.data.创建时间
     ? formatDateFull(post.data.创建时间)
@@ -33,10 +37,27 @@ const updatedDate = post.data.更新时间
     : "";
 ---
 
-<BaseLayout title={`${title} | Echoes`} description={title}>
+<BaseLayout title={`${title} | Echoes`} description={excerpt}>
     <TableOfContents headings={headings} charCount={content.length} />
     <main class="pt-24 pb-20 max-w-4xl mx-auto px-4">
         <article>
+            <!-- JSON-LD 结构化数据 -->
+            <script
+                type="application/ld+json"
+                set:html={JSON.stringify({
+                    "@context": "https://schema.org",
+                    "@type": "BlogPosting",
+                    headline: title,
+                    description: excerpt,
+                    author: { "@type": "Person", name: config.site.author },
+                    datePublished: post.data.创建时间?.toISOString(),
+                    dateModified: (
+                        post.data.更新时间 ?? post.data.创建时间
+                    )?.toISOString(),
+                    keywords: tags.join(", "),
+                    url: Astro.url.href,
+                })}
+            />
             <!-- Dossier Header -->
             <header
                 class="mb-12 relative border-t-4 border-eva-ink dark:border-white pt-6"

@@ -6,6 +6,7 @@
 site:
   title: "Echoes"
   subtitle: "念念不忘，必有回响"
+  description: "Echoes — sounfury 的个人博客，关于技术、书影音游与生活的回响记录。"
   url: https://blog.sounfury.top
   author: sounfury
   logoText: "ECHOES"
@@ -41,7 +42,7 @@ navigation:
     path: /archive
     icon: lucide:database
   - name: Universe
-    path: https://github.com
+    path: https://github.com/sounfury
     external: true
 
 # 4. 归档分类
@@ -70,7 +71,7 @@ bgm:
 ops:
   bark:
     enabled: true
-    iconUrl: "https://sounfury-blog.oss-cn-beijing.aliyuncs.com/favicon.ico"
+    iconUrl: "https://sounfury-image.oss-cn-beijing.aliyuncs.com/icon.jpg"
     # 推送模板 — 占位符由 CI 脚本替换；url 为可选跳转链接
     templates:
       # 模板 1: 无文章变更，仅代码/样式部署

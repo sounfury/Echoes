@@ -29,6 +29,7 @@ const siteConfigSchema = z.object({
     site: z.object({
         title: z.string(),
         subtitle: z.string(),
+        description: z.string(),
         url: z.string().url(),
         author: z.string(),
         logoText: z.string(),

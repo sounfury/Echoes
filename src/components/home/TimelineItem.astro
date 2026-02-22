@@ -5,6 +5,7 @@ import {
     getCategoryMeta,
     getTitleFromId,
     formatDateShort,
+    getExcerpt,
 } from "../../lib/utils";
 
 interface Props {
@@ -29,12 +30,7 @@ const fullDate = createDate
     : "";
 const tags = post.data.tags;
 
-// 从 markdown body 中提取摘要（取第一个非空非标题段落）
-const body = post.body ?? "";
-const lines = body
-    .split("\n")
-    .filter((l) => l.trim() && !l.startsWith("#") && !l.startsWith("---"));
-const excerpt = lines[0]?.trim().slice(0, 120) ?? "";
+const excerpt = getExcerpt(post.body ?? "");
 ---
 
 <article

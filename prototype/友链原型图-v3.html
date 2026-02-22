@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNIVERSE // SYNC-STREAM</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&family=Noto+Serif+SC:wght@400;700;900&display=swap"
+        rel="stylesheet">
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        eva: {
+                            purple: '#6528F7',
+                            green: '#39ff14',
+                            red: '#F90000',
+                            orange: '#FF9900',
+                            dark: '#0a0a0c',
+                            paper: '#f0f0f2',
+                            ink: '#111111'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['"Noto Serif SC"', 'serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'fade-in': 'fadeIn 0.5s ease-out forwards',
+                        'scanline': 'scanline 8s linear infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        scanline: {
+                            '0%': { transform: 'translateY(-100%)' },
+                            '100%': { transform: 'translateY(100vh)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+        }
+
+        .dark ::-webkit-scrollbar-thumb {
+            background: #6528F7;
+        }
+
+        /* Background Noise/Grid Pattern */
+        .bg-grid-pattern {
+            background-image: linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .dark .bg-grid-pattern {
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+        }
+
+        .crt::before {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.05) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            z-index: 50;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        .dark .crt::before {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(255, 255, 255, 0.03) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            background-size: 100% 2px, 3px 100%;
+        }
+
+        /* Glitch effect on hover for names */
+        .glitch-hover:hover {
+            animation: glitch-anim 0.2s cubic-bezier(.25, .46, .45, .94) both infinite;
+            color: #6528F7;
+        }
+
+        @keyframes glitch-anim {
+            0% {
+                transform: translate(0)
+            }
+
+            20% {
+                transform: translate(-2px, 1px)
+            }
+
+            40% {
+                transform: translate(-1px, -1px)
+            }
+
+            60% {
+                transform: translate(2px, 1px)
+            }
+
+            80% {
+                transform: translate(1px, -1px)
+            }
+
+            100% {
+                transform: translate(0)
+            }
+        }
+    </style>
+</head>
+
+<body
+    class="bg-eva-paper text-eva-ink dark:bg-eva-dark dark:text-gray-200 transition-colors duration-500 min-h-screen relative overflow-x-hidden selection:bg-eva-purple selection:text-white font-sans crt">
+
+    <div class="fixed inset-0 w-full h-1 bg-eva-purple/20 animate-scanline z-50 pointer-events-none"></div>
+    <div class="fixed inset-0 -z-10 bg-grid-pattern opacity-50 pointer-events-none"></div>
+    <div class="fixed top-20 left-4 text-[10px] font-mono opacity-30 rotate-90 hidden lg:block tracking-widest">
+        SYSTEM_STATUS: NORMAL // UNIVERSE_SYNC: ENABLED
+    </div>
+
+    <!-- Global Navigation -->
+    <nav
+        class="fixed top-0 w-full z-40 border-b-2 border-eva-ink/10 dark:border-white/10 backdrop-blur-md bg-white/70 dark:bg-eva-dark/70 transition-all duration-300">
+        <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3 cursor-pointer group">
+                <div
+                    class="w-8 h-8 bg-eva-ink dark:bg-white text-white dark:text-eva-dark flex items-center justify-center font-bold font-mono text-xs group-hover:bg-eva-purple transition-colors">
+                    S/S
+                </div>
+                <div class="flex flex-col">
+                    <span
+                        class="font-black tracking-tighter text-lg leading-none font-sans uppercase">Sync-Stream</span>
+                    <span class="text-[9px] font-mono tracking-[0.2em] opacity-60">DIGITAL GARDEN V3.0</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-6">
+                <div class="hidden md:flex gap-6 font-mono text-xs tracking-widest font-bold">
+                    <a href="#" class="hover:text-eva-purple transition-colors relative group">
+                        TIMELINE
+                        <span
+                            class="absolute -bottom-1 left-0 w-0 h-[2px] bg-eva-purple group-hover:w-full transition-all"></span>
+                    </a>
+                    <a href="#" class="hover:text-eva-purple transition-colors relative group">
+                        ARCHIVE
+                        <span
+                            class="absolute -bottom-1 left-0 w-0 h-[2px] bg-eva-purple group-hover:w-full transition-all"></span>
+                    </a>
+                    <a href="#" class="text-eva-purple transition-colors relative group">
+                        UNIVERSE
+                        <span class="absolute -bottom-1 left-0 w-full h-[2px] bg-eva-purple transition-all"></span>
+                    </a>
+                </div>
+
+                <button onclick="document.documentElement.classList.toggle('dark')"
+                    class="w-8 h-8 flex items-center justify-center border border-current hover:bg-eva-ink hover:text-white dark:hover:bg-white dark:hover:text-eva-dark transition-all rounded-sm">
+                    <i class="ph ph-moon hidden dark:block"></i>
+                    <i class="ph ph-sun block dark:hidden"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="pt-24 pb-20 max-w-4xl mx-auto px-4 min-h-screen">
+
+        <!-- VIEW: UNIVERSE -->
+        <div class="animate-fade-in pl-0 md:pl-2">
+            <!-- Header -->
+            <header class="mb-10 border-b-2 border-eva-ink dark:border-white pb-6">
+                <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div>
+                        <h1 class="text-4xl md:text-5xl font-serif font-black mb-2 tracking-tight">UNIVERSE_NETWORK</h1>
+                        <p class="font-mono text-xs opacity-60 tracking-widest">ACCESS_LEVEL: PUBLIC // CONNECTED_NODES:
+                            24 // ACTIVE_SYNC</p>
+                    </div>
+                    <div class="w-full md:w-[280px]">
+                        <button
+                            class="w-full bg-eva-ink text-white dark:bg-white dark:text-eva-dark font-mono text-xs py-2 px-4 hover:bg-eva-purple dark:hover:bg-eva-purple dark:hover:text-white transition-colors flex items-center justify-between group">
+                            <span class="tracking-widest">> ESTABLISH_CONNECTION</span>
+                            <i class="ph ph-plus group-hover:rotate-90 transition-transform"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Terminal Output Style description -->
+            <div class="mb-12 border-l-2 border-eva-purple bg-eva-purple/5 p-4 font-mono text-sm leading-relaxed">
+                <p class="opacity-70">> INITIALIZING NETWORK RADAR...</p>
+                <p class="opacity-70">> SCANNING SECTORS...</p>
+                <p class="text-eva-purple font-bold">> [OK] 3 SECTORS IDENTIFIED. 24 NODES FOUND.</p>
+                <div class="mt-4 text-xs opacity-60 max-w-2xl font-sans">
+                    此页面是同步流的网络枢纽，展示了与其建立连接的外部节点（友链）。每一个节点代表一个独立的数字花园或信号站。
+                    欢迎在此申请您的信号接入，建议站点包含独立见解、技术探讨或生活记录。
+                </div>
+            </div>
+
+            <!-- Category 1: CORE ALLIES -->
+            <div class="mb-16">
+                <!-- Section Header -->
+                <div class="flex items-center gap-4 mb-8 relative">
+                    <h2 class="text-2xl font-serif font-bold bg-eva-paper dark:bg-eva-dark pr-4 relative z-10 italic">
+                        CORE_ALLIES</h2>
+                    <div class="absolute left-0 top-1/2 w-full h-[1px] bg-eva-ink/20 dark:bg-white/20 -z-0"></div>
+                    <span
+                        class="absolute right-0 bg-eva-paper dark:bg-eva-dark pl-4 text-xs font-mono opacity-50 relative z-10">[04]
+                        NODES</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    <!-- Friend Card 1 -->
+                    <a href="#" target="_blank"
+                        class="group relative block p-4 border border-eva-ink/20 dark:border-white/20 hover:border-eva-purple transition-all bg-white dark:bg-white/5 overflow-hidden">
+                        <div
+                            class="absolute top-0 left-0 w-2 h-2 border-t border-l border-eva-purple opacity-0 group-hover:opacity-100 transition-opacity">
+                        </div>
+                        <div
+                            class="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-eva-purple opacity-0 group-hover:opacity-100 transition-opacity">
+                        </div>
+                        <div
+                            class="absolute right-0 top-0 bottom-0 w-1 bg-eva-purple transform translate-x-1 group-hover:translate-x-0 transition-transform">
+                        </div>
+
+                        <div class="flex gap-4">
+                            <!-- Avatar -->
+                            <div
+                                class="w-14 h-14 shrink-0 border border-eva-ink/10 dark:border-white/10 overflow-hidden relative rounded-sm">
+                                <div
+                                    class="absolute inset-0 bg-eva-purple/20 group-hover:hidden mix-blend-multiply dark:mix-blend-screen z-10">
+                                </div>
+                                <img src="https://avatars.githubusercontent.com/u/499550?v=4" alt="Evan You"
+                                    class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500 transform group-hover:scale-110">
+                            </div>
+
+                            <!-- Meta -->
+                            <div class="flex-1 min-w-0 flex flex-col justify-between">
+                                <div>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <h3 class="font-serif font-bold text-lg glitch-hover truncate tracking-tight">
+                                            Evan You</h3>
+                                        <span
+                                            class="text-[9px] font-mono px-1 border border-eva-green text-eva-green bg-eva-green/10 whitespace-nowrap">ONLINE</span>
+                                    </div>
+                                    <p class="text-xs font-sans opacity-70 mb-2 line-clamp-2">Creator of Vue.js & Vite.
+                                        Independent software developer.</p>
+                                </div>
+                                <div class="flex items-center gap-3 text-[9px] font-mono opacity-50">
+                                    <span
+                                        class="flex items-center gap-1 group-hover:text-eva-green transition-colors"><i
+                                            class="ph-fill ph-check-circle"></i> SYNCED</span>
+                                    <span>PING: 12ms</span>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Friend Card 2 -->
+                    <a href="#" target="_blank"
+                        class="group relative block p-4 border border-eva-ink/20 dark:border-white/20 hover:border-eva-purple transition-all bg-white dark:bg-white/5 overflow-hidden">
+                        <div
+                            class="absolute top-0 left-0 w-2 h-2 border-t border-l border-eva-purple opacity-0 group-hover:opacity-100 transition-opacity">
+                        </div>
+                        <div
+                            class="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-eva-purple opacity-0 group-hover:opacity-100 transition-opacity">
+                        </div>
+                        <div
+                            class="absolute right-0 top-0 bottom-0 w-1 bg-eva-purple transform translate-x-1 group-hover:translate-x-0 transition-transform">
+                        </div>
+
+                        <div class="flex gap-4">
+                            <div
+                                class="w-14 h-14 shrink-0 border border-eva-ink/10 dark:border-white/10 overflow-hidden relative rounded-sm">
+                                <div
+                                    class="absolute inset-0 bg-eva-purple/20 group-hover:hidden mix-blend-multiply dark:mix-blend-screen z-10">
+                                </div>
+                                <img src="https://avatars.githubusercontent.com/u/690661?v=4" alt="Anthony Fu"
+                                    class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500 transform group-hover:scale-110">
+                            </div>
+                            <div class="flex-1 min-w-0 flex flex-col justify-between">
+                                <div>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <h3 class="font-serif font-bold text-lg glitch-hover truncate tracking-tight">
+                                            Anthony Fu</h3>
+                                        <span
+                                            class="text-[9px] font-mono px-1 border border-eva-green text-eva-green bg-eva-green/10 whitespace-nowrap">ONLINE</span>
+                                    </div>
+                                    <p class="text-xs font-sans opacity-70 mb-2 line-clamp-2">Open source fanatic. Core
+                                        team member of Vue, Nuxt and Vite.</p>
+                                </div>
+                                <div class="flex items-center gap-3 text-[9px] font-mono opacity-50">
+                                    <span
+                                        class="flex items-center gap-1 group-hover:text-eva-green transition-colors"><i
+                                            class="ph-fill ph-check-circle"></i> SYNCED</span>
+                                    <span>PING: 8ms</span>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Category 2: OBSERVERS -->
+            <div class="mb-16">
+                <!-- Section Header -->
+                <div class="flex items-center gap-4 mb-8 relative">
+                    <h2 class="text-2xl font-serif font-bold bg-eva-paper dark:bg-eva-dark pr-4 relative z-10 italic">
+                        OBSERVERS</h2>
+                    <div class="absolute left-0 top-1/2 w-full h-[1px] bg-eva-ink/20 dark:bg-white/20 -z-0"></div>
+                    <span
+                        class="absolute right-0 bg-eva-paper dark:bg-eva-dark pl-4 text-xs font-mono opacity-50 relative z-10">[12]
+                        NODES</span>
+                </div>
+
+                <!-- High Density Grid for Observers -->
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+
+                    <!-- Small Friendly Card 1 -->
+                    <a href="#" target="_blank"
+                        class="group flex items-center gap-3 p-3 border border-dashed border-eva-ink/20 dark:border-white/20 hover:border-eva-ink dark:hover:border-white transition-all bg-white/50 dark:bg-white/5">
+                        <div class="w-8 h-8 shrink-0 overflow-hidden rounded-sm relative">
+                            <div
+                                class="absolute inset-0 bg-eva-ink/20 group-hover:hidden mix-blend-multiply dark:mix-blend-screen z-10">
+                            </div>
+                            <img src="https://avatars.githubusercontent.com/u/1024?v=4" alt="User"
+                                class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-300">
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h3
+                                class="font-serif font-bold text-sm truncate group-hover:text-eva-purple transition-colors">
+                                Node User 01</h3>
+                            <p class="text-[10px] font-mono opacity-50 truncate">Design & Tech</p>
+                        </div>
+                    </a>
+
+                    <!-- Small Friendly Card 2 -->
+                    <a href="#" target="_blank"
+                        class="group flex items-center gap-3 p-3 border border-dashed border-eva-ink/20 dark:border-white/20 hover:border-eva-ink dark:hover:border-white transition-all bg-white/50 dark:bg-white/5">
+                        <div class="w-8 h-8 shrink-0 overflow-hidden rounded-sm relative">
+                            <div
+                                class="absolute inset-0 bg-eva-ink/20 group-hover:hidden mix-blend-multiply dark:mix-blend-screen z-10">
+                            </div>
+                            <img src="https://avatars.githubusercontent.com/u/2048?v=4" alt="User"
+                                class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-300">
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h3
+                                class="font-serif font-bold text-sm truncate group-hover:text-eva-purple transition-colors">
+                                Cyber Punk</h3>
+                            <p class="text-[10px] font-mono opacity-50 truncate">Generative Art</p>
+                        </div>
+                    </a>
+
+                    <!-- Small Friendly Card 3 -->
+                    <a href="#" target="_blank"
+                        class="group flex items-center gap-3 p-3 border border-dashed border-eva-ink/20 dark:border-white/20 hover:border-eva-ink dark:hover:border-white transition-all bg-white/50 dark:bg-white/5">
+                        <div class="w-8 h-8 shrink-0 overflow-hidden rounded-sm relative">
+                            <div
+                                class="absolute inset-0 bg-eva-ink/20 group-hover:hidden mix-blend-multiply dark:mix-blend-screen z-10">
+                            </div>
+                            <img src="https://avatars.githubusercontent.com/u/4096?v=4" alt="User"
+                                class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-300">
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h3
+                                class="font-serif font-bold text-sm truncate group-hover:text-eva-purple transition-colors">
+                                Astro Dev</h3>
+                            <p class="text-[10px] font-mono opacity-50 truncate">Web Frameworks</p>
+                        </div>
+                    </a>
+
+                </div>
+            </div>
+
+            <!-- Category 3: LOST SIGNALS (Offline Links) -->
+            <div class="mb-16">
+                <!-- Section Header -->
+                <div class="flex items-center gap-4 mb-8 relative">
+                    <h2
+                        class="text-2xl font-serif font-bold bg-eva-paper dark:bg-eva-dark pr-4 relative z-10 italic text-eva-red/80">
+                        LOST_SIGNALS</h2>
+                    <div class="absolute left-0 top-1/2 w-full h-[1px] border-b border-dashed border-eva-red/20 -z-0">
+                    </div>
+                    <span
+                        class="absolute right-0 bg-eva-paper dark:bg-eva-dark pl-4 text-xs font-mono opacity-50 relative z-10 text-eva-red/80">[02]
+                        NODES</span>
+                </div>
+
+                <div
+                    class="grid grid-cols-1 md:grid-cols-2 gap-6 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+                    <!-- Offline Card -->
+                    <div
+                        class="group relative block p-4 border border-eva-red/20 transition-all bg-white/5 dark:bg-white/5 overflow-hidden">
+                        <div class="flex gap-4 items-center">
+                            <!-- Avatar (Static Noise Effect using CSS) -->
+                            <div
+                                class="w-14 h-14 shrink-0 border border-eva-red/20 overflow-hidden relative rounded-sm bg-eva-red/10 flex items-center justify-center">
+                                <i class="ph ph-wifi-x text-2xl text-eva-red/50"></i>
+                            </div>
+
+                            <!-- Meta -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between mb-1">
+                                    <h3 class="font-serif line-through text-lg truncate">Old Friend</h3>
+                                    <span
+                                        class="text-[9px] font-mono px-1 border border-eva-red text-eva-red bg-eva-red/10 animate-pulse">OFFLINE</span>
+                                </div>
+                                <div class="flex items-center gap-3 text-[9px] font-mono text-eva-red/70 mt-2">
+                                    <span class="flex items-center gap-1"><i class="ph ph-warning-circle"></i>
+                                        SIGNAL_LOST</span>
+                                    <span>LAST_SEEN: 2024.01</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Application Section -->
+            <div class="mt-20 pt-10 border-t-2 border-eva-ink dark:border-white">
+                <div class="max-w-2xl">
+                    <h2 class="text-3xl font-serif font-black mb-4">ESTABLISH_CONNECTION</h2>
+                    <p class="font-sans text-sm opacity-70 mb-6 leading-relaxed">
+                        如果你希望与本站建立连接，请在 Github Issue 中提交申请，或直接发送协议至管理员终端。推荐包含以下元数据：
+                    </p>
+
+                    <div
+                        class="bg-gray-100 dark:bg-gray-900 p-4 rounded-sm border border-gray-200 dark:border-gray-800 font-mono text-xs mb-6 overflow-x-auto">
+                        <pre class="text-eva-purple">
+{
+  "name": "Your Name",
+  "link": "https://your-domain.com",
+  "avatar": "https://domain.com/avatar.png",
+  "bio": "Keep exploring the boundaries.",
+  "theme": "dark"
+}
+</pre>
+                    </div>
+
+                    <a href="https://github.com/sounfury/Echoes/issues" target="_blank"
+                        class="inline-flex items-center gap-2 bg-eva-ink text-white dark:bg-white dark:text-eva-dark font-mono text-sm px-6 py-3 hover:bg-eva-purple dark:hover:bg-eva-purple dark:hover:text-white transition-colors group">
+                        <span>INITIATE_HANDSHAKE()</span>
+                        <i class="ph ph-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer mimicking terminal -->
+    <footer class="border-t border-eva-ink/10 dark:border-white/10 py-6 mt-12 backdrop-blur-md relative z-10">
+        <div class="max-w-4xl mx-auto px-4 text-center font-mono text-[10px] opacity-40 uppercase tracking-widest">
+            SYNC-STREAM © 2026 // ALL_SYSTEMS_NOMINAL
+        </div>
+    </footer>
+</body>
+
+</html>

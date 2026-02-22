@@ -5,6 +5,15 @@ export function getReadingTime(content: string): number {
     return Math.ceil(result.minutes);
 }
 
+/** 从 Markdown body 中提取摘要（第一个非空非标题段落，截取前 maxLen 字符） */
+export function getExcerpt(body: string, maxLen = 120): string {
+    const lines = body
+        .split('\n')
+        .filter((l) => l.trim() && !l.startsWith('#') && !l.startsWith('---'));
+    const raw = lines[0]?.trim() ?? '';
+    return raw.length > maxLen ? raw.slice(0, maxLen) + '…' : raw;
+}
+
 import { getSiteConfig } from './config';
 
 export type Category = string;

@@ -85,7 +85,10 @@ const tags: TagEntry[] = [...tagFrequency.entries()]
 // 筛选参数改为客户端读取，避免 SSG 首屏与 URL 查询参数不一致
 ---
 
-<BaseLayout title="Archive | Echoes">
+<BaseLayout
+    title="Archive | Echoes"
+    description="按分类与标签检索所有文章 — Echoes 归档数据库"
+>
     <ArchiveApp
         client:only="react"
         posts={posts}
