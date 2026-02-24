@@ -44,7 +44,11 @@ navigation:
     path: https://github.com
     external: true
 
-# 4. 归档分类
+# 4. 时间轴
+timeline:
+  pageSize: 5
+
+# 5. 归档分类
 category:
   tech:
     label: "[TECH]"
@@ -59,14 +63,14 @@ category:
     color: "#F90000"
     desc: "随笔与生活"
 
-# 5. 全局播放器
+# 6. 全局播放器
 bgm:
   enabled: true
   playlistApi: https://api.injahow.cn/meting/?type=playlist&id=17763697831
   defaultPlaylist:
     - https://music.163.com/playlist?id=17763697831
 
-# 6. 运维通知
+# 7. 运维通知
 ops:
   bark:
     enabled: true

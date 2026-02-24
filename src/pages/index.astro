@@ -2,6 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import TimelineItem from "../components/home/TimelineItem.astro";
 import { getCollection } from "astro:content";
+import { getSiteConfig } from "../lib/config";
 
 const allPosts = await getCollection("blog", ({ data }) => data.published);
 
@@ -11,7 +12,7 @@ const sortedPosts = allPosts.sort((a, b) => {
 	return dateB - dateA;
 });
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = getSiteConfig().timeline.pageSize;
 ---
 
 <BaseLayout>
@@ -86,21 +87,39 @@ const PAGE_SIZE = 5;
 <script>
 	import { initTimeline } from "../lib/client/timeline";
 
-	let destroyTimeline = () => {};
-
-	const mountTimeline = () => {
-		destroyTimeline();
-		destroyTimeline = initTimeline();
+	type TimelineRuntime = {
+		mount: () => void;
 	};
 
-	const onAfterSwap = () => mountTimeline();
-	const onBeforeSwap = () => {
-		destroyTimeline();
-		destroyTimeline = () => {};
-		document.removeEventListener("astro:after-swap", onAfterSwap);
+	const win = window as Window & {
+		__echoesTimelineRuntime?: TimelineRuntime;
 	};
 
-	mountTimeline();
-	document.addEventListener("astro:after-swap", onAfterSwap);
-	document.addEventListener("astro:before-swap", onBeforeSwap, { once: true });
+	if (!win.__echoesTimelineRuntime) {
+		let destroyTimeline = () => {};
+
+		const mount = () => {
+			destroyTimeline();
+			destroyTimeline = () => {};
+
+			const isHomePage =
+				window.location.pathname === "/" || window.location.pathname === "";
+			if (!isHomePage) return;
+
+			destroyTimeline = initTimeline();
+		};
+
+		const onPageLoad = () => mount();
+		const onBeforeSwap = () => {
+			destroyTimeline();
+			destroyTimeline = () => {};
+		};
+
+		document.addEventListener("astro:page-load", onPageLoad);
+		document.addEventListener("astro:before-swap", onBeforeSwap);
+
+		win.__echoesTimelineRuntime = { mount };
+	}
+
+	win.__echoesTimelineRuntime?.mount();
 </script>

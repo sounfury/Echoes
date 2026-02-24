@@ -55,6 +55,11 @@ const siteConfigSchema = z.object({
         }),
     }),
     navigation: z.array(navItemSchema),
+    timeline: z.object({
+        pageSize: z.number().int().positive().default(5),
+    }).default({
+        pageSize: 5,
+    }),
     category: z.record(categoryConfigSchema),
     bgm: z.object({
         enabled: z.boolean(),
