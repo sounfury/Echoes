@@ -24,6 +24,7 @@ export const $playList = atom<TrackInfo[]>([]);
 export const $isPlayerVisible = atom(false);
 export const $lyricsOpen = atom(false);
 export const $playlistSource = atom<PlayerSource | null>(null);
+export const $volume = atom<number>(0.25);
 
 export function setPlayerLoading() {
     $playerStatus.set('loading');
@@ -58,6 +59,12 @@ export function setPlayerVisible(visible: boolean) {
 
 export function setPlayerSource(source: PlayerSource | null) {
     $playlistSource.set(source);
+}
+
+export function setVolume(volume: number) {
+    if (volume < 0) volume = 0;
+    if (volume > 1) volume = 1;
+    $volume.set(volume);
 }
 
 export function toggleLyrics() {

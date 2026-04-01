@@ -6,6 +6,7 @@ import {
     setPlayerReady,
     setPlayerSource,
     setPlaying,
+    $volume,
     type PlayerSource,
     type TrackInfo,
 } from '../../stores/player';
@@ -227,6 +228,15 @@ export async function initPlayerBridge({
         emitLyricFrame(findLyricFrame(currentLyrics, player.audio.currentTime || 0));
     };
 
+    const unbindVolume = $volume.listen((vol) => {
+        if (disposed) return;
+        if (player.audio.volume !== vol) {
+            player.audio.volume = vol;
+        }
+    });
+
+    player.audio.volume = $volume.get();
+
     const loadCurrentLyrics = async () => {
         if (disposed) return;
         const track = player.playlist[player.index];
@@ -336,6 +346,7 @@ export async function initPlayerBridge({
         destroy: () => {
             if (disposed) return;
             disposed = true;
+            unbindVolume();
             player.audio.removeEventListener('play', onPlay);
             player.audio.removeEventListener('pause', onPause);
             player.audio.removeEventListener('ended', onEnded);

@@ -6,8 +6,10 @@ import {
     $lyricsOpen,
     $playerError,
     $playerStatus,
+    $volume,
     closeLyrics,
     setPlayerVisible,
+    setVolume,
     toggleLyrics,
     type PlayerSource,
 } from '../../stores/player';
@@ -30,6 +32,50 @@ type Props = {
     source: PlayerSource;
 };
 
+function ScrollText({ text, className = "" }: { text: string; className?: string }) {
+    const [isOverflowing, setIsOverflowing] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const textRef = useRef<HTMLSpanElement>(null);
+
+    useEffect(() => {
+        const check = () => {
+            if (containerRef.current && textRef.current) {
+                setIsOverflowing(textRef.current.offsetWidth > containerRef.current.offsetWidth);
+            }
+        };
+        check();
+        const observer = new ResizeObserver(check);
+        if (containerRef.current) observer.observe(containerRef.current);
+        return () => observer.disconnect();
+    }, [text]);
+
+    return (
+        <div ref={containerRef} className={`overflow-hidden whitespace-nowrap w-full relative ${className}`}>
+            <div 
+                className={`flex w-max`}
+                style={isOverflowing ? { animation: 'ev-scroll-left 8s linear infinite' } : {}}
+            >
+                <span ref={textRef} className="block">{text}</span>
+                {isOverflowing && (
+                    <>
+                        <span className="inline-block w-4" />
+                        <span className="block">{text}</span>
+                        <span className="inline-block w-4" />
+                    </>
+                )}
+            </div>
+            {isOverflowing && (
+                <style>{`
+                    @keyframes ev-scroll-left {
+                        0% { transform: translateX(0); }
+                        100% { transform: translateX(-50%); }
+                    }
+                `}</style>
+            )}
+        </div>
+    );
+}
+
 export default function GlobalPlayer({ source }: Props) {
     const [playerStatus, setPlayerStatusState] = useState($playerStatus.get());
     const [playerError, setPlayerErrorState] = useState($playerError.get());
@@ -37,6 +83,7 @@ export default function GlobalPlayer({ source }: Props) {
     const [isPlaying, setIsPlayingState] = useState($isPlaying.get());
     const [isPlayerVisible, setIsPlayerVisibleState] = useState($isPlayerVisible.get());
     const [isLyricsOpen, setIsLyricsOpenState] = useState($lyricsOpen.get());
+    const [volume, setVolumeState] = useState($volume.get());
 
     const controlsRef = useRef<PlayerBridgeControls | null>(null);
     const playerRef = useRef<HTMLDivElement | null>(null);
@@ -59,6 +106,7 @@ export default function GlobalPlayer({ source }: Props) {
         const unbindPlaying = $isPlaying.listen(setIsPlayingState);
         const unbindVisible = $isPlayerVisible.listen(setIsPlayerVisibleState);
         const unbindLyricsOpen = $lyricsOpen.listen(setIsLyricsOpenState);
+        const unbindVolume = $volume.listen(setVolumeState);
 
         return () => {
             unbindStatus();
@@ -67,6 +115,7 @@ export default function GlobalPlayer({ source }: Props) {
             unbindPlaying();
             unbindVisible();
             unbindLyricsOpen();
+            unbindVolume();
         };
     }, []);
 
@@ -193,7 +242,7 @@ export default function GlobalPlayer({ source }: Props) {
             <div
                 id="global-player"
                 ref={playerRef}
-                className="fixed bottom-6 right-6 z-40 flex items-center gap-0 bg-white dark:bg-zinc-900 border border-eva-ink dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] transition-all rounded-full pr-4 pl-1 py-1 max-w-[220px] md:max-w-none touch-none select-none"
+                className="fixed bottom-6 right-4 z-40 flex items-center gap-0 bg-white dark:bg-zinc-900 border border-eva-ink dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] transition-all rounded-full pr-2 pl-1 py-1 max-w-[220px] md:max-w-none touch-none select-none"
                 onTouchStart={(e) => {
                     const point = e.touches[0];
                     swipeStartRef.current = { x: point.clientX, y: point.clientY };
@@ -252,25 +301,23 @@ export default function GlobalPlayer({ source }: Props) {
                 </div>
 
                 <button
-                    className="flex flex-col mx-3 w-24 md:w-32 overflow-hidden text-left cursor-pointer hover:opacity-70 transition-opacity"
+                    className="flex flex-col mx-2 w-16 md:w-24 overflow-hidden text-left cursor-pointer hover:opacity-70 transition-opacity"
                     onClick={() => toggleLyrics()}
                     aria-label="Toggle lyrics panel"
                 >
                     {isTrackBootLoading ? (
                         <>
-                            <span className="block h-[10px] w-20 rounded bg-eva-ink/20 dark:bg-white/20 animate-pulse" />
-                            <span className="block h-[8px] w-14 rounded mt-1 bg-eva-ink/15 dark:bg-white/15 animate-pulse" />
+                            <span className="block h-[10px] w-14 rounded bg-eva-ink/20 dark:bg-white/20 animate-pulse" />
+                            <span className="block h-[8px] w-10 rounded mt-1 bg-eva-ink/15 dark:bg-white/15 animate-pulse" />
                         </>
                     ) : (
                         <>
-                            <span className={`text-[10px] font-bold font-serif truncate transition-all duration-300 ${trackTransitioning ? 'opacity-30 translate-y-1' : 'opacity-100 translate-y-0'
-                                }`}>
-                                {currentTrack?.title ?? 'Loading Stream...'}
-                            </span>
-                            <span className={`text-[8px] font-mono truncate transition-all duration-300 ${trackTransitioning ? 'opacity-25 translate-y-1' : 'opacity-60 translate-y-0'
-                                }`}>
-                                {currentTrack?.artist ?? 'NETEASE // CLOUD'}
-                            </span>
+                            <ScrollText
+                                text={currentTrack?.title ?? 'Loading'} 
+                                className={`text-[10px] font-bold font-serif transition-all duration-300 ${trackTransitioning ? 'opacity-30 translate-y-1' : 'opacity-100 translate-y-0'}`} />
+                            <ScrollText
+                                text={currentTrack?.artist ?? 'NETEASE'} 
+                                className={`text-[8px] font-mono mt-0.5 transition-all duration-300 ${trackTransitioning ? 'opacity-25 translate-y-1' : 'opacity-60 translate-y-0'}`} />
                         </>
                     )}
                 </button>
@@ -327,6 +374,37 @@ export default function GlobalPlayer({ source }: Props) {
                         </svg>
                     )}
                 </button>
+
+                <div className="hidden md:flex flex-row items-center group/volume ml-3 mr-1 relative">
+                    <div 
+                        className="text-eva-ink/40 dark:text-white/40 group-hover/volume:text-eva-purple transition-colors flex items-center justify-center cursor-pointer" 
+                        aria-hidden="true" 
+                        onClick={() => setVolume(volume === 0 ? 0.25 : 0)}
+                        title={volume === 0 ? "取消静音" : "静音"}
+                    >
+                        {volume === 0 ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-[14px] h-[14px]"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" /></svg>
+                        ) : volume < 0.5 ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-[14px] h-[14px]"><path d="M3 9v6h4l5 5V4L7 9H3zm11.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" /></svg>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-[14px] h-[14px]"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" /></svg>
+                        )}
+                    </div>
+                    
+                    <div className="w-0 overflow-hidden group-hover/volume:w-14 group-hover/volume:ml-1.5 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] flex items-center opacity-0 group-hover/volume:opacity-100 origin-left">
+                        <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value={volume}
+                            onChange={(e) => setVolume(parseFloat(e.target.value))}
+                            className="w-full h-[3px] bg-eva-ink/20 dark:bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-eva-purple focus:outline-none transition-transform active:[&::-webkit-slider-thumb]:scale-125 hover:[&::-webkit-slider-thumb]:scale-125"
+                            aria-label="Volume Control"
+                            title={`音量: ${Math.round(volume * 100)}%`}
+                        />
+                    </div>
+                </div>
 
                 {gestureFeedback && (
                     <div className="absolute -top-8 right-4 text-[10px] font-mono px-2 py-0.5 border border-eva-ink dark:border-white bg-white dark:bg-zinc-900 animate-fade-in">
