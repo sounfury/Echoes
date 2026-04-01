@@ -16,6 +16,7 @@ Path rule:
 import json
 import os
 import re
+import subprocess
 import sys
 import urllib.parse
 import urllib.request
@@ -166,7 +167,36 @@ def get_post_url(filepath, site_url):
     return f"{site_url}/posts/{encoded_path}/"
 
 
-def build_message(templates, site_url, mode, single_file):
+def get_commit_message():
+    """读取当前部署对应提交的 commit message，供代码变更通知正文复用。"""
+    after_sha = os.environ.get("AFTER_SHA", "").strip()
+    if not after_sha:
+        return ""
+
+    try:
+        result = subprocess.run(
+            ["git", "log", "-1", "--format=%B", after_sha],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+    except OSError as err:
+        print(f"⚠️ Unable to read commit message via git: {err}")
+        return ""
+
+    if result.returncode != 0:
+        stderr = result.stderr.strip()
+        if stderr:
+            print(f"⚠️ git log failed: {stderr}")
+        return ""
+
+    return result.stdout.strip()
+
+
+def build_message(templates, site_url, mode, single_file, commit_message=""):
+    """按通知场景构建 Bark 标题、正文和跳转链接。"""
     # 优先使用模板中配置的 url，脚本动态生成的可覆盖它
     def tpl_url(tpl):
         return tpl.get("url", "")
@@ -192,7 +222,8 @@ def build_message(templates, site_url, mode, single_file):
         return tpl["title"], tpl["body"], tpl_url(tpl)
 
     tpl = templates["deployOnly"]
-    return tpl["title"], tpl["body"], tpl_url(tpl)
+    body = commit_message or tpl["body"]
+    return tpl["title"], body, tpl_url(tpl)
 
 
 def send_bark(bark_key, icon_url, title, body, click_url):
@@ -217,6 +248,7 @@ def send_bark(bark_key, icon_url, title, body, click_url):
 
 
 def main():
+    """解析 CI 环境并发送对应的 Bark 通知。"""
     try:
         config = load_config("src/config/site.config.yaml")
         site_url = require_config_path(config, "site", "url").rstrip("/")
@@ -253,6 +285,7 @@ def main():
     event_name = os.environ.get("EVENT_NAME", "push")
     mode = "deploy"
     single_file = ""
+    commit_message = ""
     changed_map = OrderedDict()
     newly_published_map = OrderedDict()
 
@@ -297,8 +330,12 @@ def main():
             print(f"Event: {event_name}, fallback to deployOnly notification.")
         else:
             print("Event: push, deploy-only notification.")
+            # 仅代码变更部署时，正文改为本次提交信息；读取失败时仍回退模板文案。
+            commit_message = get_commit_message()
 
-    title, body, click_url = build_message(templates, site_url, mode, single_file)
+    title, body, click_url = build_message(
+        templates, site_url, mode, single_file, commit_message
+    )
 
     print(f"\n📌 Title: {title}")
     print(f"📝 Body:\n{body}")
