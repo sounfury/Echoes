@@ -25,6 +25,7 @@ const blog = defineCollection({
 		创建时间: z.coerce.date().optional(),
 		更新时间: z.coerce.date().optional(),
 		tags: z.array(z.string()).default([]),
+		mediaRefs: z.array(z.string().url()).default([]),
 		music: z
 			.object({
 				server: z.enum(['netease']).default('netease'),

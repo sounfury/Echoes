@@ -4,7 +4,8 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev --host",
-    "build": "astro build",
+    "build:media-links": "node ./scripts/build-media-links.mjs",
+    "build": "pnpm run build:media-links && astro build",
     "preview": "astro preview",
     "astro": "astro"
   },
