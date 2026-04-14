@@ -6,6 +6,7 @@ import react from '@astrojs/react';
 import robotsTxt from 'astro-robots-txt';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'astro/config';
+import { remarkCallout } from './src/plugins/remark-callout.mjs';
 
 // https://astro.build/config
 export default defineConfig({
@@ -18,6 +19,7 @@ export default defineConfig({
 		},
 	},
 	markdown: {
+		remarkPlugins: [remarkCallout],
 		shikiConfig: {
 			themes: {
 				light: 'github-light',

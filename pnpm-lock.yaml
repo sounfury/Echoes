@@ -59,12 +59,18 @@ importers:
       reading-time:
         specifier: ^1.5.0
         version: 1.5.0
+      remark-obsidian-callout:
+        specifier: ^1.5.1
+        version: 1.5.1
       sharp:
         specifier: ^0.34.3
         version: 0.34.5
       tailwindcss:
         specifier: ^4.1.18
         version: 4.1.18
+      unist-util-visit:
+        specifier: ^5.1.0
+        version: 5.1.0
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -2163,6 +2169,9 @@ packages:
 
   remark-mdx@3.1.1:
     resolution: {integrity: sha512-Pjj2IYlUY3+D8x00UJsIOg5BEvfMyeI+2uLPn9VO9Wg4MEtN/VTIq2NEJQfde9PnX15KgtHyl9S0BcTnWrIuWg==}
+
+  remark-obsidian-callout@1.5.1:
+    resolution: {integrity: sha512-eLvaDujdmAGugWvIBta5FPhwbBq3X+2ZyGBSdcteoGI5pJMmrdJJoA72ustRBr/ObDqS0cB4q1ERKzwyiJhpxw==}
 
   remark-parse@11.0.0:
     resolution: {integrity: sha512-FCxlKLNGknS5ba/1lmpYijMUzX2esxW5xQqjWxw2eHFfS2MSdaHVINFmhjo+qN1WhZhNimq0dZATN9pH0IDrpA==}
@@ -5120,6 +5129,11 @@ snapshots:
       micromark-extension-mdxjs: 3.0.0
     transitivePeerDependencies:
       - supports-color
+
+  remark-obsidian-callout@1.5.1:
+    dependencies:
+      mdast-util-to-string: 4.0.0
+      unist-util-visit: 5.1.0
 
   remark-parse@11.0.0:
     dependencies:
