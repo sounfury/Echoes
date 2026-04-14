@@ -123,6 +123,82 @@ const updatedDate = post.data.更新时间
             <div class="prose-eva max-w-none text-lg">
                 <slot />
             </div>
+            <script is:inline>
+                /**
+                 * 解析 blockquote 第一段中的 Obsidian callout 标记。
+                 * 返回值为 null 表示这是普通引用块，不应转换为提示块。
+                 */
+                function parseCalloutMarker(text) {
+                    const lines = text.split(/\r?\n/);
+                    const firstLine = (lines[0] ?? "").trim();
+                    const match = firstLine.match(/^\[!([a-zA-Z]+)\]([+-]?)\s*(.*)$/);
+
+                    if (!match) {
+                        return null;
+                    }
+
+                    return {
+                        type: match[1].toLowerCase(),
+                        mode: match[2] ?? "",
+                        title: match[3] || match[1],
+                        remainingText: lines.slice(1).join("\n").trim(),
+                    };
+                }
+
+                /**
+                 * 将原始 Markdown 生成的 blockquote 就地转换为 callout DOM。
+                 * 这样可以在不依赖 remark 插件的前提下恢复 Obsidian 风格提示块。
+                 */
+                function transformObsidianCallouts() {
+                    const contentRoot = document.querySelector(".prose-eva");
+                    if (!(contentRoot instanceof HTMLElement)) return;
+
+                    const blockquotes = Array.from(contentRoot.querySelectorAll("blockquote"));
+
+                    blockquotes.forEach((blockquote) => {
+                        const firstChild = blockquote.firstElementChild;
+                        if (!(firstChild instanceof HTMLParagraphElement)) {
+                            return;
+                        }
+
+                        const parsed = parseCalloutMarker(firstChild.textContent ?? "");
+                        if (!parsed) {
+                            return;
+                        }
+
+                        const isCollapsible = parsed.mode === "+" || parsed.mode === "-";
+                        const callout = document.createElement(isCollapsible ? "details" : "div");
+                        callout.className = `callout callout-${parsed.type}`;
+
+                        if (isCollapsible) {
+                            callout.classList.add("callout-collapsible");
+                            if (parsed.mode === "+") {
+                                callout.open = true;
+                            }
+                        }
+
+                        const title = document.createElement(isCollapsible ? "summary" : "div");
+                        title.className = "callout-title";
+                        title.textContent = parsed.title;
+                        callout.appendChild(title);
+
+                        if (parsed.remainingText) {
+                            const contentParagraph = document.createElement("p");
+                            contentParagraph.textContent = parsed.remainingText;
+                            callout.appendChild(contentParagraph);
+                        }
+
+                        Array.from(blockquote.children).slice(1).forEach((child) => {
+                            callout.appendChild(child.cloneNode(true));
+                        });
+
+                        blockquote.replaceWith(callout);
+                    });
+                }
+
+                transformObsidianCallouts();
+                document.addEventListener("astro:page-load", transformObsidianCallouts);
+            </script>
         </article>
     </main>
 </BaseLayout>
