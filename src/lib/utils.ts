@@ -5,6 +5,26 @@ export function getReadingTime(content: string): number {
     return Math.ceil(result.minutes);
 }
 
+/**
+ * 统计文章正文的可读字数，尽量排除常见 Markdown 标记对字数的干扰。
+ */
+export function getArticleWordCount(content: string): number {
+    const plainText = content
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/!\[[^\]]*]\([^)]+\)/g, '')
+        .replace(/\[([^\]]+)]\([^)]+\)/g, '$1')
+        .replace(/^>+\s?/gm, '')
+        .replace(/^#{1,6}\s+/gm, '')
+        .replace(/[*_~>#|[\]()-]/g, ' ')
+        .trim();
+
+    const cjkChars = plainText.match(/[\u3400-\u9fff\uf900-\ufaff]/g)?.length ?? 0;
+    const latinWords = plainText.match(/[a-zA-Z0-9]+(?:['-][a-zA-Z0-9]+)*/g)?.length ?? 0;
+
+    return cjkChars + latinWords;
+}
+
 /** 从 Markdown body 中提取摘要（第一个非空非标题段落，截取前 maxLen 字符） */
 export function getExcerpt(body: string, maxLen = 120): string {
     const lines = body

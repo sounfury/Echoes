@@ -5,6 +5,7 @@ import type { MarkdownHeading } from "astro";
 import TableOfContents from "../components/post/TableOfContents.astro";
 import {
     getReadingTime,
+    getArticleWordCount,
     getCategoryFromId,
     getTitleFromId,
     formatDateFull,
@@ -27,6 +28,7 @@ const category = getCategoryFromId(post.id);
 const color = getCategoryColor(category);
 const tags = post.data.tags;
 const readingMinutes = getReadingTime(content);
+const articleWordCount = getArticleWordCount(content);
 const excerpt = getExcerpt(content);
 
 const createdDate = post.data.创建时间
@@ -98,7 +100,7 @@ const updatedDate = post.data.更新时间
                     </div>
                     <div>
                         <span class="block opacity-50 mb-1">READ_TIME</span>
-                        {readingMinutes} MIN
+                        {readingMinutes}MIN/{articleWordCount}字
                     </div>
                     <div>
                         <span class="block opacity-50 mb-1">TAGS</span>
