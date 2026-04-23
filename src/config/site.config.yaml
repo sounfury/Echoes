@@ -72,7 +72,23 @@ bgm:
   defaultPlaylist:
     - https://music.163.com/playlist?id=17763697831
 
-# 7. 运维通知
+# 7. 评论系统
+comment:
+  enabled: true
+  serverUrl: https://comments.sounfury.top
+  lang: zh-CN
+  meta:
+    - nick
+    - mail
+    - link
+  requiredMeta:
+    - nick
+    - mail
+  login: enable
+  pageSize: 10
+  reaction: false
+
+# 8. 运维通知
 ops:
   bark:
     enabled: true

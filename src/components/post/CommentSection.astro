@@ -1,0 +1,598 @@
+---
+import "@waline/client/style";
+import { getSiteConfig } from "../../lib/config";
+
+interface Props {
+    path: string;
+}
+
+const { path } = Astro.props;
+const { comment } = getSiteConfig();
+const serializedMeta = JSON.stringify(comment.meta);
+const serializedRequiredMeta = JSON.stringify(comment.requiredMeta);
+---
+
+{
+    comment.enabled && (
+        <section class="comments-section" aria-label="评论区">
+            <div class="comments-header">
+                <h2 class="comments-title">评论</h2>
+                <p class="comments-hint">
+                    留下你的想法、补充、纠错，或者只是打个招呼。
+                </p>
+            </div>
+
+            <div
+                class="comments-container"
+                data-comment-root
+                data-comment-path={path}
+                data-server-url={comment.serverUrl}
+                data-lang={comment.lang}
+                data-login={comment.login}
+                data-page-size={String(comment.pageSize)}
+                data-reaction={String(comment.reaction)}
+                data-meta={serializedMeta}
+                data-required-meta={serializedRequiredMeta}
+            >
+            </div>
+        </section>
+    )
+}
+
+<script>
+    type WalineLoginMode = "enable" | "disable" | "force";
+    type WalineMetaField = "nick" | "mail" | "link";
+
+    let walineInstance: import("@waline/client").WalineInstance | null = null;
+    let walineEnhancementCleanup: (() => void) | null = null;
+
+    /**
+     * 获取当前页面的评论挂载节点。
+     * Astro 页面切换后，旧节点会被替换，因此每次都需要重新查询。
+     */
+    function getCommentContainer() {
+        const container = document.querySelector("[data-comment-root]");
+
+        return container instanceof HTMLElement ? container : null;
+    }
+
+    /**
+     * 解析 data-* 中的 JSON 配置。
+     * 当配置被手动改坏时，回退到默认值，避免评论区整体不可用。
+     */
+    function parseDatasetJson<T>(value: string | undefined, fallback: T): T {
+        if (!value) {
+            return fallback;
+        }
+
+        try {
+            return JSON.parse(value);
+        } catch {
+            return fallback;
+        }
+    }
+
+    /**
+     * 将 data-login 的字符串值限制到 Waline 支持的枚举范围内。
+     * 这样既满足类型检查，也能在配置缺省时回退到游客填写信息评论的模式。
+     */
+    function getLoginMode(value: string | undefined): WalineLoginMode {
+        if (value === "enable" || value === "force") {
+            return value;
+        }
+
+        return "disable";
+    }
+
+    /**
+     * 按“非空白字符数”统计评论长度。
+     * 这样英文、数字和中文都会逐字符计入，避免 Waline 默认的英文按单词聚合带来的误差。
+     */
+    function countCommentCharacters(value: string): number {
+        return Array.from(value.replace(/\s+/gu, "")).length;
+    }
+
+    /**
+     * 将邮箱前缀转成较稳妥的默认昵称。
+     * 这里做轻度脱敏，既保留一定可辨识度，也尽量不把邮箱前缀原样暴露出来。
+     */
+    function createDefaultNicknameFromMail(mail: string): string {
+        const [localPart = ""] = mail.trim().split("@");
+        const normalized = localPart.replace(/[^\p{L}\p{N}._-]+/gu, "");
+
+        if (!normalized) {
+            return "";
+        }
+
+        if (normalized.length <= 2) {
+            return normalized;
+        }
+
+        if (normalized.length <= 4) {
+            return `${normalized.slice(0, 1)}***${normalized.slice(-1)}`;
+        }
+
+        return `${normalized.slice(0, 2)}***${normalized.slice(-2)}`;
+    }
+
+    /**
+     * 以事件的形式写回输入框值，确保 Waline 的 v-model 和本地缓存一并更新。
+     */
+    function setInputValue(input: HTMLInputElement, value: string): void {
+        if (input.value === value) {
+            return;
+        }
+
+        input.value = value;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    /**
+     * 根据邮箱为当前面板补一个默认昵称。
+     * 若用户已经手动改过昵称，就保持用户输入，不再强行覆盖。
+     */
+    function syncNicknameFromMail(panel: HTMLElement): void {
+        const mailInput = panel.querySelector<HTMLInputElement>("#wl-mail");
+        const nickInput = panel.querySelector<HTMLInputElement>("#wl-nick");
+
+        if (!mailInput || !nickInput) {
+            return;
+        }
+
+        if (!mailInput.value.trim()) {
+            nickInput.dataset.autoNickname = "";
+            return;
+        }
+
+        const currentNick = nickInput.value.trim();
+        const nextAutoNick = createDefaultNicknameFromMail(mailInput.value);
+        const lastAutoNick = nickInput.dataset.autoNickname ?? "";
+        const shouldAutofill = currentNick === "" || currentNick === lastAutoNick;
+
+        nickInput.dataset.autoNickname = nextAutoNick;
+
+        if (shouldAutofill) {
+            setInputValue(nickInput, nextAutoNick);
+        }
+    }
+
+    /**
+     * 将 Waline 的计数展示改为按字符统计。
+     * 这里只处理显示层，让英文输入的反馈和中文保持一致。
+     */
+    function renderCharacterCounter(panel: HTMLElement): void {
+        const editor = panel.querySelector<HTMLTextAreaElement>(".wl-editor");
+        const counter = panel.querySelector<HTMLElement>(".wl-text-number");
+
+        if (!editor || !counter) {
+            return;
+        }
+
+        const count = countCommentCharacters(editor.value);
+        const nextText = `${count} 字符`;
+
+        if (counter.textContent === nextText) {
+            return;
+        }
+
+        counter.textContent = nextText;
+    }
+
+    /**
+     * 初始化当前容器内的全部 Waline 编辑面板。
+     * 这既覆盖首屏评论框，也覆盖回复/编辑时动态插入的新面板。
+     */
+    function syncAllWalinePanels(container: HTMLElement): void {
+        const panels = container.querySelectorAll<HTMLElement>(".wl-panel");
+
+        panels.forEach((panel) => {
+            syncNicknameFromMail(panel);
+            renderCharacterCounter(panel);
+        });
+    }
+
+    /**
+     * 为 Waline 评论区挂载输入增强：
+     * 1) 邮箱自动补默认昵称
+     * 2) 字数统计改为按字符显示
+     */
+    function enhanceWaline(container: HTMLElement): () => void {
+        let isSyncingPanels = false;
+
+        const safelySyncPanels = () => {
+            if (isSyncingPanels) {
+                return;
+            }
+
+            isSyncingPanels = true;
+
+            try {
+                syncAllWalinePanels(container);
+            } finally {
+                isSyncingPanels = false;
+            }
+        };
+
+        const handleInput = (event: Event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) {
+                return;
+            }
+
+            const panel = target.closest<HTMLElement>(".wl-panel");
+            if (!panel) {
+                return;
+            }
+
+            if (target instanceof HTMLInputElement && target.id === "wl-mail") {
+                syncNicknameFromMail(panel);
+                return;
+            }
+
+            if (target instanceof HTMLTextAreaElement && target.classList.contains("wl-editor")) {
+                renderCharacterCounter(panel);
+            }
+        };
+
+        const handleClick = (event: Event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) {
+                return;
+            }
+
+            if (!target.closest(".wl-reply, .wl-edit")) {
+                return;
+            }
+
+            window.setTimeout(() => {
+                safelySyncPanels();
+            }, 0);
+        };
+
+        const handleBlur = (event: FocusEvent) => {
+            const target = event.target;
+            if (!(target instanceof HTMLInputElement) || target.id !== "wl-mail") {
+                return;
+            }
+
+            const panel = target.closest<HTMLElement>(".wl-panel");
+            if (!panel) {
+                return;
+            }
+
+            syncNicknameFromMail(panel);
+        };
+
+        const observer = new MutationObserver((mutations) => {
+            const hasPanelStructureChange = mutations.some((mutation) => {
+                const changedNodes = [...mutation.addedNodes, ...mutation.removedNodes];
+
+                return changedNodes.some((node) => {
+                    if (!(node instanceof HTMLElement)) {
+                        return false;
+                    }
+
+                    return node.matches(".wl-panel") || Boolean(node.querySelector(".wl-panel"));
+                });
+            });
+
+            if (hasPanelStructureChange) {
+                safelySyncPanels();
+            }
+        });
+
+        container.addEventListener("input", handleInput);
+        container.addEventListener("focusout", handleBlur);
+        container.addEventListener("click", handleClick);
+        observer.observe(container, { childList: true, subtree: true });
+        safelySyncPanels();
+
+        return () => {
+            container.removeEventListener("input", handleInput);
+            container.removeEventListener("focusout", handleBlur);
+            container.removeEventListener("click", handleClick);
+            observer.disconnect();
+        };
+    }
+
+    /**
+     * 销毁旧的 Waline 实例。
+     * 这样可以避免 Astro View Transitions 下重复挂载同一套评论 DOM。
+     */
+    function destroyWaline() {
+        walineEnhancementCleanup?.();
+        walineEnhancementCleanup = null;
+
+        if (!walineInstance) {
+            return;
+        }
+
+        walineInstance.destroy();
+        walineInstance = null;
+    }
+
+    /**
+     * 根据页面上的 data-* 配置挂载评论区。
+     * 这里显式关闭浏览量和图片上传，先保持一个轻量、稳定的初版。
+     */
+    async function mountWaline() {
+        const container = getCommentContainer();
+
+        if (!container) {
+            destroyWaline();
+            return;
+        }
+
+        const serverURL = container.dataset.serverUrl;
+        if (!serverURL) {
+            return;
+        }
+
+        const { init } = await import("@waline/client");
+
+        destroyWaline();
+        container.innerHTML = "";
+
+        walineInstance = init({
+            el: container,
+            serverURL,
+            path: container.dataset.commentPath || window.location.pathname.replace(/\/$/, "") || "/",
+            lang: container.dataset.lang || "zh-CN",
+            meta: parseDatasetJson<WalineMetaField[]>(container.dataset.meta, ["nick", "mail", "link"]),
+            requiredMeta: parseDatasetJson<WalineMetaField[]>(container.dataset.requiredMeta, ["nick"]),
+            login: getLoginMode(container.dataset.login),
+            pageSize: Number(container.dataset.pageSize || "10"),
+            reaction: container.dataset.reaction === "true",
+            dark: "html.dark",
+            pageview: false,
+            imageUploader: false,
+            search: false,
+            commentSorting: "latest",
+            emoji: ["https://unpkg.com/@waline/emojis@1.4.0/tieba"],
+            locale: {
+                word: "字符",
+                wordHint: "评论长度应在 $0 到 $1 个字符之间！\n当前长度：$2",
+            },
+        });
+
+        walineEnhancementCleanup = enhanceWaline(container);
+    }
+
+    mountWaline();
+    document.addEventListener("astro:before-swap", destroyWaline);
+    document.addEventListener("astro:page-load", mountWaline);
+</script>
+
+<style is:global>
+    .comments-section {
+        margin-top: 5rem;
+        padding-top: 4rem;
+        position: relative;
+    }
+
+    /* 评论区与正文的分割标识 */
+    .comments-section::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: var(--c-border);
+    }
+
+    .comments-section::after {
+        content: "COMMENTS";
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: var(--c-bg);
+        padding: 0 1rem;
+        font-family: var(--font-sans);
+        color: var(--c-text-secondary);
+        font-size: 0.75rem;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        opacity: 0.6;
+    }
+
+    .comments-header {
+        margin-bottom: 2.5rem;
+    }
+
+    .comments-title {
+        margin: 0;
+        font-family: var(--font-serif);
+        font-size: 1.5rem;
+        font-weight: 500;
+        color: var(--c-text);
+        line-height: 1.2;
+    }
+
+    .comments-hint {
+        margin: 0.5rem 0 0;
+        color: var(--c-text-secondary);
+        font-size: 0.95rem;
+    }
+
+    .comments-container {
+        --waline-font-size: 0.95rem;
+        --waline-theme-color: var(--c-text);
+        --waline-active-color: var(--c-text);
+        --waline-color: var(--c-text);
+        --waline-bg-color: transparent;
+        --waline-bg-color-light: transparent;
+        --waline-bg-color-hover: color-mix(in srgb, var(--c-bg-secondary) 50%, transparent);
+        --waline-border-color: var(--c-border);
+        --waline-disable-bg-color: var(--c-bg-secondary);
+        --waline-disable-color: var(--c-text-secondary);
+        --waline-info-bg-color: var(--c-bg-secondary);
+        --waline-info-color: var(--c-text-secondary);
+        --waline-light-grey: var(--c-text-secondary);
+        --waline-dark-grey: var(--c-text);
+        --waline-bq-color: var(--c-border);
+        --waline-border: 1px solid var(--c-border);
+        --waline-box-shadow: none;
+        --waline-avatar-radius: 50%;
+        --waline-code-bg-color: var(--c-bg-secondary);
+    }
+
+    /* Reset some default borders */
+    .comments-container [data-waline] * {
+        box-sizing: border-box;
+    }
+
+    .comments-container .wl-panel {
+        margin: 0;
+        border: 1px solid var(--c-border);
+        border-radius: 8px;
+        background: transparent;
+        position: relative; /* 确保弹出框相对于 panel 定位 */
+        overflow: visible; /* 必须设为 visible，否则表情弹出层会被裁剪隐藏 */
+    }
+
+    .comments-container .wl-header {
+        border-bottom: 1px solid var(--c-border);
+        padding: 0;
+    }
+
+    .comments-container .wl-header input,
+    .comments-container .wl-editor,
+    .comments-container .wl-card .wl-content,
+    .comments-container .wl-preview .wl-content {
+        font-family: var(--font-sans);
+    }
+
+    /* 修复表单 Label 与输入框的垂直、水平对齐问题 */
+    .comments-container .wl-header-item {
+        display: flex;
+        align-items: center;
+        padding: 0 1rem;
+    }
+
+    .comments-container .wl-header label {
+        position: static;
+        color: var(--c-text-secondary);
+        font-size: 0.85rem;
+        margin-right: 0.5rem;
+        white-space: nowrap;
+    }
+
+    .comments-container .wl-header input {
+        flex: 1;
+        padding: 0.8rem 0;
+        font-size: 0.9rem;
+        background: transparent;
+        border: none;
+        outline: none;
+    }
+
+    .comments-container .wl-editor {
+        padding: 1rem;
+        min-height: 8rem;
+        background: color-mix(in srgb, var(--c-bg-secondary) 40%, transparent);
+        border-radius: 0;
+    }
+
+    .comments-container .wl-footer {
+        padding: 0.5rem 1rem;
+        background: transparent;
+    }
+
+    /* 修复左侧操作图标（Markdown, Emoji 等）的对齐和大小 */
+    .comments-container .wl-actions {
+        display: flex;
+        align-items: center;
+    }
+
+    .comments-container .wl-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .comments-container .wl-action svg {
+        width: 1.3rem;
+        height: 1.3rem;
+        vertical-align: middle;
+    }
+
+    /* 修复表情包下拉框透明导致重叠的问题：加入毛玻璃质感、半透明底色与轻微阴影 */
+    .comments-container .wl-emoji-popup {
+        background: color-mix(in srgb, var(--c-bg) 85%, transparent);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--c-border);
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+        z-index: 999;
+    }
+
+    .comments-container .wl-btn {
+        padding: 0.4rem 1rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        background: transparent;
+        color: var(--c-text);
+        border: 1px solid var(--c-border);
+        transition: all 0.2s ease;
+    }
+
+    .comments-container .wl-btn.primary {
+        background: var(--c-text);
+        color: var(--c-bg);
+        border-color: var(--c-text);
+    }
+
+    .comments-container .wl-btn:not(:disabled):hover {
+        opacity: 0.8;
+        background: var(--c-bg-secondary);
+    }
+    
+    .comments-container .wl-btn.primary:not(:disabled):hover {
+        opacity: 0.9;
+        background: var(--c-text);
+    }
+
+    .comments-container .wl-card-item {
+        padding: 1.5rem 0;
+    }
+
+    .comments-container .wl-card {
+        border-bottom: 1px solid color-mix(in srgb, var(--c-border) 40%, transparent);
+    }
+
+    .comments-container .wl-card:last-child {
+        border-bottom: none;
+    }
+    
+    .comments-container .wl-card .wl-head .wl-nick {
+        font-weight: 500;
+    }
+
+    .comments-container .wl-card .wl-meta {
+        font-family: var(--font-sans);
+        font-size: 0.8rem;
+        color: var(--c-text-secondary);
+    }
+
+    .comments-container .wl-empty {
+        padding: 3rem 0;
+        color: var(--c-text-secondary);
+        font-size: 0.95rem;
+        text-align: center;
+    }
+
+    @media (max-width: 768px) {
+        .comments-section {
+            margin-top: 3rem;
+            padding-top: 2rem;
+        }
+
+        .comments-header {
+            margin-bottom: 2rem;
+        }
+    }
+</style>
