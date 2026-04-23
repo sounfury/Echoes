@@ -4,6 +4,7 @@ import { SEO } from "astro-seo";
 import { getDefaultPlayerSource, getSiteConfig } from "../lib/config";
 import Header from "../components/common/Header.astro";
 import GlobalPlayer from "../components/player/GlobalPlayer";
+import QuickSearchLauncher from "../components/search/QuickSearchLauncher.astro";
 import "../styles/global.css";
 
 interface Props {
@@ -100,6 +101,8 @@ const ogImage = `${config.site.url}/covers/og-default.jpg`;
 
         <!-- Page Content -->
         <slot />
+
+        <QuickSearchLauncher />
 
         <!-- Footer -->
         <footer

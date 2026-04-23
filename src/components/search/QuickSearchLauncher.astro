@@ -1,0 +1,52 @@
+---
+import { getCollection } from 'astro:content';
+import QuickSearch from './QuickSearch';
+import { buildStaticQuickSearchPages } from '../../lib/search';
+import { buildPinyinSearchMeta } from '../../lib/pinyin';
+import { formatDateFull, getCategoryFromId, getCategoryMeta, getExcerpt, getTitleFromId } from '../../lib/utils';
+import type { QuickSearchItem } from './types';
+
+const posts = await getCollection('blog', ({ data }) => data.published);
+
+const searchPosts = posts
+    .sort((a, b) => (b.data.创建时间?.valueOf() ?? 0) - (a.data.创建时间?.valueOf() ?? 0))
+    .map((post) => {
+        const category = getCategoryFromId(post.id);
+        const categoryMeta = getCategoryMeta(category);
+        const date = post.data.创建时间;
+        const title = getTitleFromId(post.id);
+        const tagSearch = post.data.tags.join(' ');
+        const excerpt = getExcerpt(post.body ?? '');
+        const categorySearch = `${category} ${categoryMeta.label}`;
+        const titlePinyin = buildPinyinSearchMeta(title);
+        const tagPinyin = buildPinyinSearchMeta(tagSearch);
+        const categoryPinyin = buildPinyinSearchMeta(categorySearch);
+
+        return {
+            type: 'post' as const,
+            id: `post-${post.id}`,
+            title,
+            href: `/posts/${post.id}`,
+            date: date ? formatDateFull(date) : 'UNKNOWN',
+            timestamp: date?.valueOf() ?? 0,
+            category,
+            categoryLabel: categoryMeta.label,
+            tags: post.data.tags,
+            excerpt,
+            searchText: [title, category, categoryMeta.label, tagSearch, excerpt]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase(),
+            pinyinFull: [titlePinyin.full, tagPinyin.full, categoryPinyin.full]
+                .filter(Boolean)
+                .join(' '),
+            pinyinInitials: [titlePinyin.initials, tagPinyin.initials, categoryPinyin.initials]
+                .filter(Boolean)
+                .join(' '),
+        };
+    });
+
+const items: QuickSearchItem[] = [...searchPosts, ...buildStaticQuickSearchPages()];
+---
+
+<QuickSearch client:only="react" items={items} />
