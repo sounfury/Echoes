@@ -163,15 +163,30 @@ function buildPlaylistApiById(id: string): string {
     return api.toString();
 }
 
-function parseIdFromMusic163(url: URL): string | null {
+
+function parsePlaylistIdFromMusic163(url: URL): string | null {
     const directId = url.searchParams.get('id')?.trim();
-    if (directId) return directId;
+    if (directId && /playlist/.test(url.pathname)) return directId;
 
     const cleanHash = url.hash.replace(/^#\/?/, '');
     if (!cleanHash) return null;
 
     const [route, queryString = ''] = cleanHash.split('?');
     if (!route.includes('playlist')) return null;
+
+    const query = new URLSearchParams(queryString);
+    return query.get('id')?.trim() ?? null;
+}
+
+function parseSongIdFromMusic163(url: URL): string | null {
+    const directId = url.searchParams.get('id')?.trim();
+    if (directId && /song/.test(url.pathname)) return directId;
+
+    const cleanHash = url.hash.replace(/^#\/?/, '');
+    if (!cleanHash) return null;
+
+    const [route, queryString = ''] = cleanHash.split('?');
+    if (!route.includes('song')) return null;
 
     const query = new URLSearchParams(queryString);
     return query.get('id')?.trim() ?? null;
@@ -215,7 +230,7 @@ export function parsePlayerSource(rawValue: string): PlayerSource | null {
     const isMusic163 = /(^|\.)music\.163\.com$/i.test(url.hostname);
     if (!isMusic163) return null;
 
-    const id = parseIdFromMusic163(url);
+    const id = parsePlaylistIdFromMusic163(url);
     if (!id) return null;
 
     return {
@@ -236,4 +251,33 @@ export function getDefaultPlayerSource(config = getSiteConfig()): PlayerSource |
     }
 
     return null;
+}
+
+
+export function getPostMusicSource(rawValue: string | null | undefined): PlayerSource | null {
+    const raw = rawValue?.trim();
+    if (!raw) return null;
+
+    let url: URL;
+    try {
+        url = new URL(raw);
+    } catch {
+        return null;
+    }
+
+    const isMusic163 = /(^|\.)music\.163\.com$/i.test(url.hostname);
+    if (!isMusic163) return null;
+
+    const id = parseSongIdFromMusic163(url);
+    if (!id) return null;
+
+    const api = new URL(DEFAULT_METING_API_ORIGIN);
+    api.searchParams.set('server', 'netease');
+    api.searchParams.set('type', 'song');
+    api.searchParams.set('id', id);
+
+    return {
+        playlistApi: api.toString(),
+        raw,
+    };
 }
