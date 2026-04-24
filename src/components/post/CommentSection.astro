@@ -45,6 +45,7 @@ const serializedRequiredMeta = JSON.stringify(comment.requiredMeta);
 
     let walineInstance: import("@waline/client").WalineInstance | null = null;
     let walineEnhancementCleanup: (() => void) | null = null;
+    let walineToastTimeout = 0;
 
     /**
      * 获取当前页面的评论挂载节点。
@@ -192,6 +193,70 @@ const serializedRequiredMeta = JSON.stringify(comment.requiredMeta);
         });
     }
 
+
+    function createCommentToast(container: HTMLElement): HTMLElement {
+        let toast = container.querySelector<HTMLElement>(".comment-feedback-toast");
+
+        if (toast) {
+            return toast;
+        }
+
+        toast = document.createElement("div");
+        toast.className = "comment-feedback-toast";
+        toast.setAttribute("aria-live", "polite");
+        container.append(toast);
+
+        return toast;
+    }
+
+    function showCommentToast(container: HTMLElement, message: string, type: "success" | "error" = "success") {
+        const toast = createCommentToast(container);
+
+        toast.textContent = message;
+        toast.dataset.state = "visible";
+        toast.dataset.type = type;
+
+        window.clearTimeout(walineToastTimeout);
+        walineToastTimeout = window.setTimeout(() => {
+            toast.dataset.state = "hidden";
+        }, 2200);
+    }
+
+    function getAdminActionLabel(button: HTMLButtonElement): string {
+        if (button.classList.contains("wl-sticky")) {
+            return button.textContent?.trim() === "取消置顶" ? "已取消置顶" : "已置顶";
+        }
+
+        if (button.classList.contains("wl-approved")) {
+            return "已通过评论";
+        }
+
+        if (button.classList.contains("wl-waiting")) {
+            return "已设为待审核";
+        }
+
+        if (button.classList.contains("wl-spam")) {
+            return "已标记为垃圾评论";
+        }
+
+        return "操作已完成";
+    }
+
+    function refreshAdminActionState(scope: ParentNode): void {
+        const groups = scope.querySelectorAll<HTMLElement>(".wl-comment-status");
+
+        groups.forEach((group) => {
+            const buttons = group.querySelectorAll<HTMLButtonElement>(".wl-btn");
+
+            buttons.forEach((button) => {
+                const isDisabled = button.disabled;
+                button.setAttribute("aria-disabled", String(isDisabled));
+                button.classList.toggle("is-disabled", isDisabled);
+            });
+        });
+    }
+
+
     /**
      * 为 Waline 评论区挂载输入增强：
      * 1) 邮箱自动补默认昵称
@@ -241,6 +306,26 @@ const serializedRequiredMeta = JSON.stringify(comment.requiredMeta);
                 return;
             }
 
+            const adminButton = target.closest<HTMLButtonElement>(".wl-admin-actions .wl-btn");
+            if (adminButton) {
+                const actionLabel = getAdminActionLabel(adminButton);
+                adminButton.dataset.pending = "true";
+                adminButton.setAttribute("aria-busy", "true");
+
+                window.setTimeout(() => {
+                    adminButton.dataset.pending = "false";
+                    adminButton.removeAttribute("aria-busy");
+                    refreshAdminActionState(container);
+                    showCommentToast(container, actionLabel, "success");
+                }, 250);
+
+                window.setTimeout(() => {
+                    refreshAdminActionState(container);
+                }, 0);
+
+                return;
+            }
+
             if (!target.closest(".wl-reply, .wl-edit")) {
                 return;
             }
@@ -280,15 +365,21 @@ const serializedRequiredMeta = JSON.stringify(comment.requiredMeta);
             if (hasPanelStructureChange) {
                 safelySyncPanels();
             }
+
+            if (mutations.some((mutation) => mutation.type === "childList" || mutation.type === "attributes")) {
+                refreshAdminActionState(container);
+            }
         });
 
         container.addEventListener("input", handleInput);
         container.addEventListener("focusout", handleBlur);
         container.addEventListener("click", handleClick);
-        observer.observe(container, { childList: true, subtree: true });
+        observer.observe(container, { childList: true, subtree: true, attributes: true, attributeFilter: ["disabled", "class"] });
         safelySyncPanels();
+        refreshAdminActionState(container);
 
         return () => {
+            window.clearTimeout(walineToastTimeout);
             container.removeEventListener("input", handleInput);
             container.removeEventListener("focusout", handleBlur);
             container.removeEventListener("click", handleClick);
@@ -573,9 +664,89 @@ const serializedRequiredMeta = JSON.stringify(comment.requiredMeta);
     }
 
     .comments-container .wl-card .wl-meta {
+        display: flow-root;
         font-family: var(--font-sans);
         font-size: 0.8rem;
         color: var(--c-text-secondary);
+    }
+
+    /* Waline 的管理操作按钮（通过/待审核/垃圾/置顶）依赖右浮动布局。
+       这里若把 .wl-meta 改成纯 inline 内容容器，会让右侧按钮区域没有可点击宽度，
+       表现为按钮“看得到但点不动”。改为建立独立格式化上下文，保留右浮动可点击区域。 */
+    .comments-container .wl-card .wl-comment-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        position: relative;
+        z-index: 1;
+    }
+    .comments-container .wl-card .wl-admin-actions .wl-btn {
+        position: relative;
+        min-width: 4.5rem;
+    }
+
+    .comments-container .wl-card .wl-admin-actions .wl-btn.is-disabled,
+    .comments-container .wl-card .wl-admin-actions .wl-btn:disabled {
+        opacity: 0.45;
+        filter: saturate(0.7);
+        cursor: not-allowed;
+    }
+
+    .comments-container .wl-card .wl-admin-actions .wl-btn[data-pending="true"] {
+        opacity: 0.7;
+    }
+
+    .comments-container .wl-card .wl-admin-actions .wl-btn[data-pending="true"]::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        right: 0.55rem;
+        width: 0.7rem;
+        height: 0.7rem;
+        margin-top: -0.35rem;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: comment-action-spin 0.7s linear infinite;
+    }
+
+    .comments-container .comment-feedback-toast {
+        position: sticky;
+        bottom: 1rem;
+        margin-left: auto;
+        width: fit-content;
+        max-width: min(18rem, 100%);
+        padding: 0.6rem 0.9rem;
+        border: 1px solid var(--c-border);
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--c-bg) 88%, transparent);
+        color: var(--c-text);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        font-size: 0.85rem;
+        line-height: 1.2;
+        opacity: 0;
+        transform: translateY(0.5rem);
+        pointer-events: none;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        z-index: 5;
+    }
+
+    .comments-container .comment-feedback-toast[data-state="visible"] {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .comments-container .comment-feedback-toast[data-type="error"] {
+        color: #c0392b;
+        border-color: color-mix(in srgb, #c0392b 35%, var(--c-border));
+    }
+
+    @keyframes comment-action-spin {
+        to {
+            transform: rotate(360deg);
+        }
     }
 
     .comments-container .wl-empty {
