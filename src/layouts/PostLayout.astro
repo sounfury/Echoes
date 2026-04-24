@@ -13,7 +13,7 @@ import {
     getCategoryLabel,
     getExcerpt,
 } from "../lib/utils";
-import { getSiteConfig } from "../lib/config";
+import { getPostMusicSource, getSiteConfig } from "../lib/config";
 
 interface Props {
     post: CollectionEntry<"blog">;
@@ -37,9 +37,11 @@ const createdDate = post.data.创建时间
 const updatedDate = post.data.更新时间
     ? formatDateFull(post.data.更新时间)
     : "";
+const postPlayerSource = getPostMusicSource(post.data.music);
+const hasPostSoundtrack = Boolean(postPlayerSource);
 ---
 
-<BaseLayout title={`${title} | Echoes`} description={excerpt}>
+<BaseLayout title={`${title} | Echoes`} description={excerpt} playerSource={postPlayerSource}>
     <TableOfContents headings={headings} charCount={content.length} />
     <main class="pt-24 pb-20 max-w-4xl mx-auto px-4">
         <article>
@@ -78,7 +80,7 @@ const updatedDate = post.data.更新时间
 
                 <!-- Meta Grid -->
                 <div
-                    class="grid grid-cols-2 md:grid-cols-5 gap-4 border-y border-dashed border-gray-400 py-4 font-mono text-xs opacity-80"
+                    class="grid grid-cols-2 md:grid-cols-6 gap-4 border-y border-dashed border-gray-400 py-4 font-mono text-xs opacity-80"
                 >
                     <div>
                         <span class="block opacity-50 mb-1">CATEGORY</span>
@@ -101,6 +103,10 @@ const updatedDate = post.data.更新时间
                     <div>
                         <span class="block opacity-50 mb-1">READ_TIME</span>
                         {readingMinutes}MIN/{articleWordCount}字
+                    </div>
+                    <div>
+                        <span class="block opacity-50 mb-1">SOUNDTRACK</span>
+                        {hasPostSoundtrack ? "ATTACHED" : "—"}
                     </div>
                     <div>
                         <span class="block opacity-50 mb-1">TAGS</span>
