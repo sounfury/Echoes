@@ -1,4 +1,5 @@
 import readingTime from 'reading-time';
+import { buildPinyinSearchMeta } from './pinyin';
 
 export function getReadingTime(content: string): number {
     const result = readingTime(content);
@@ -106,4 +107,30 @@ export function formatDateFull(date: Date): string {
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
     return `${y}.${m}.${d}`;
+}
+
+
+export function buildCommentId(title: string, createdAt?: Date): string {
+    const date = createdAt instanceof Date && !Number.isNaN(createdAt.getTime())
+        ? createdAt
+        : new Date(0);
+    const datePart = [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0'),
+    ].join('');
+
+    const normalizedTitle = title.trim();
+    const pinyinTitle = buildPinyinSearchMeta(normalizedTitle).full;
+    const asciiTitle = normalizedTitle
+        .toLowerCase()
+        .replace(/[^a-z0-9一-鿿]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+    const slug = (pinyinTitle || asciiTitle || 'untitled')
+        .replace(/[^a-z0-9-]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+    return `post-${datePart}-${slug || 'untitled'}`;
 }

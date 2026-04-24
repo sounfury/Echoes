@@ -13,6 +13,7 @@ import {
     getCategoryColor,
     getCategoryLabel,
     getExcerpt,
+    buildCommentId,
 } from "../lib/utils";
 import { getPostMusicSource, getSiteConfig } from "../lib/config";
 
@@ -38,7 +39,7 @@ const createdDate = post.data.创建时间
 const updatedDate = post.data.更新时间
     ? formatDateFull(post.data.更新时间)
     : "";
-const commentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
+const commentPath = buildCommentId(title, post.data.创建时间);
 const postPlayerSource = getPostMusicSource(post.data.music);
 const hasPostSoundtrack = Boolean(postPlayerSource);
 ---
