@@ -25,6 +25,9 @@ const barkTemplateSchema = z.object({
     body: z.string(),
 });
 
+const walineMetaSchema = z.enum(['nick', 'mail', 'link']);
+const walineLoginSchema = z.enum(['enable', 'disable', 'force']);
+
 const siteConfigSchema = z.object({
     site: z.object({
         title: z.string(),
@@ -70,6 +73,25 @@ const siteConfigSchema = z.object({
         enabled: z.boolean(),
         playlistApi: z.string().url().optional(),
         defaultPlaylist: z.array(z.string()).default([]),
+    }),
+    comment: z.object({
+        enabled: z.boolean().default(false),
+        serverUrl: z.string().url().default('https://comments.example.com'),
+        lang: z.string().default('zh-CN'),
+        meta: z.array(walineMetaSchema).default(['nick', 'mail', 'link']),
+        requiredMeta: z.array(walineMetaSchema).default(['nick']),
+        login: walineLoginSchema.default('disable'),
+        pageSize: z.number().int().positive().default(10),
+        reaction: z.boolean().default(false),
+    }).default({
+        enabled: false,
+        serverUrl: 'https://comments.example.com',
+        lang: 'zh-CN',
+        meta: ['nick', 'mail', 'link'],
+        requiredMeta: ['nick'],
+        login: 'disable',
+        pageSize: 10,
+        reaction: false,
     }),
     ops: z.object({
         bark: z.object({

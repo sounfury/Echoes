@@ -3,6 +3,7 @@ import BaseLayout from "./BaseLayout.astro";
 import type { CollectionEntry } from "astro:content";
 import type { MarkdownHeading } from "astro";
 import TableOfContents from "../components/post/TableOfContents.astro";
+import CommentSection from "../components/post/CommentSection.astro";
 import {
     getReadingTime,
     getArticleWordCount,
@@ -37,6 +38,7 @@ const createdDate = post.data.创建时间
 const updatedDate = post.data.更新时间
     ? formatDateFull(post.data.更新时间)
     : "";
+const commentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 const postPlayerSource = getPostMusicSource(post.data.music);
 const hasPostSoundtrack = Boolean(postPlayerSource);
 ---
@@ -131,6 +133,7 @@ const hasPostSoundtrack = Boolean(postPlayerSource);
             <div class="prose-eva max-w-none text-lg">
                 <slot />
             </div>
+            <CommentSection path={commentPath} />
             <script is:inline>
                 /**
                  * 解析 blockquote 第一段中的 Obsidian callout 标记。

@@ -18,6 +18,7 @@
     "@tailwindcss/vite": "^4.1.18",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@waline/client": "^3.13.0",
     "astro": "^5.17.1",
     "astro-seo": "^1.1.0",
     "class-variance-authority": "^0.7.1",
