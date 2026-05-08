@@ -22,6 +22,7 @@ const {
 } = Astro.props;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 const playerSource = pagePlayerSource ?? getDefaultPlayerSource(config);
+const playerSourcePayload = JSON.stringify(playerSource);
 
 const { colors, defaultMode: defaultThemeMode } = config.theme;
 const { accent, terminal, warning, light, dark: darkColors } = colors;
@@ -136,9 +137,23 @@ const ogImage = `${config.site.url}/covers/og-default.jpg`;
         <!-- Global Music Player -->
         {
             config.bgm.enabled && playerSource && (
-                <div id="global-player-shell" transition:persist>
-                    <GlobalPlayer source={playerSource} client:only="react" />
-                </div>
+                <>
+                    <script is:inline define:vars={{ playerSourcePayload }}>
+                        /**
+                         * 将当前页面期望使用的播放源广播给持久化播放器。
+                         * 页面切换时播放器节点会保留，因此需要靠事件同步新的目标歌单或单曲。
+                         */
+                        (() => {
+                            const nextSource = JSON.parse(playerSourcePayload);
+                            window.dispatchEvent(new CustomEvent("echoes:player-source-change", {
+                                detail: nextSource,
+                            }));
+                        })();
+                    </script>
+                    <div id="global-player-shell" transition:persist>
+                        <GlobalPlayer source={playerSource} client:only="react" />
+                    </div>
+                </>
             )
         }
     </body>

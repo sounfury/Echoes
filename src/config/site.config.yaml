@@ -68,7 +68,10 @@ category:
 # 6. 全局播放器
 bgm:
   enabled: true
-  playlistApi: https://api.injahow.cn/meting/?type=playlist&id=17763697831
+  # Meting 兼容接口基址；后续切第三方服务时优先改这里
+  # apiBase: https://api.injahow.cn/meting/
+  apiBase: https://api.qijieya.cn/meting/
+  # 默认歌单支持网易云歌单链接，代码会自动转成上面的 apiBase
   defaultPlaylist:
     - https://music.163.com/playlist?id=17763697831
 

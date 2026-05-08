@@ -25,6 +25,8 @@ type Props = {
     source: PlayerSource;
 };
 
+type PlayerSourceChangeEvent = CustomEvent<PlayerSource>;
+
 /**
  * 在标题超出容器宽度时启用跑马灯，避免播放器窄宽度下文字被硬截断。
  */
@@ -97,6 +99,7 @@ export default function GlobalPlayer({ source }: Props) {
         next: '',
     });
     const [trackTransitioning, setTrackTransitioning] = useState(false);
+    const latestSourceRef = useRef(source);
 
     useEffect(() => {
         const unbindStatus = $playerStatus.listen(setPlayerStatusState);
@@ -115,6 +118,30 @@ export default function GlobalPlayer({ source }: Props) {
             unbindVisible();
             unbindLyricsOpen();
             unbindVolume();
+        };
+    }, []);
+
+    useEffect(() => {
+        latestSourceRef.current = source;
+    }, [source]);
+
+    useEffect(() => {
+        /**
+         * 持久化播放器不会随着页面切换重建，因此需要主动监听页面广播的目标播放源。
+         */
+        const handleSourceChange = (event: Event) => {
+            const nextSource = (event as PlayerSourceChangeEvent).detail;
+            if (!nextSource || nextSource.playlistApi === latestSourceRef.current.playlistApi) {
+                return;
+            }
+
+            latestSourceRef.current = nextSource;
+            void controlsRef.current?.setSource(nextSource);
+        };
+
+        window.addEventListener('echoes:player-source-change', handleSourceChange as EventListener);
+        return () => {
+            window.removeEventListener('echoes:player-source-change', handleSourceChange as EventListener);
         };
     }, []);
 
@@ -181,7 +208,7 @@ export default function GlobalPlayer({ source }: Props) {
         setPlayerVisible(true);
 
         void initPlayerBridge({
-            source,
+            source: latestSourceRef.current,
             onLyricFrame: (payload) => {
                 if (disposed) return;
                 setLyrics(payload);
@@ -197,6 +224,9 @@ export default function GlobalPlayer({ source }: Props) {
                     return;
                 }
                 controlsRef.current = controls;
+                if (latestSourceRef.current.playlistApi !== source.playlistApi) {
+                    void controls.setSource(latestSourceRef.current);
+                }
             })
             .catch(() => {
                 // 错误状态已在 store 中设置，这里无需重复处理
@@ -209,7 +239,7 @@ export default function GlobalPlayer({ source }: Props) {
             closeLyrics();
             setPlayerVisible(false);
         };
-    }, [source.playlistApi]);
+    }, []);
 
     useEffect(() => {
         if (!isLyricsOpen) return;

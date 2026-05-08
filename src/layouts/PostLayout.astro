@@ -4,6 +4,7 @@ import type { CollectionEntry } from "astro:content";
 import type { MarkdownHeading } from "astro";
 import TableOfContents from "../components/post/TableOfContents.astro";
 import CommentSection from "../components/post/CommentSection.astro";
+import PostSoundtrack from "../components/post/PostSoundtrack";
 import {
     getReadingTime,
     getArticleWordCount,
@@ -40,8 +41,10 @@ const updatedDate = post.data.更新时间
     ? formatDateFull(post.data.更新时间)
     : "";
 const commentPath = buildCommentId(title, post.data.创建时间);
-const postPlayerSource = getPostMusicSource(post.data.music);
-const hasPostSoundtrack = Boolean(postPlayerSource);
+const postPlayerSource = getPostMusicSource(post.data.music, config.bgm.apiBase);
+const shouldShowSoundtrack = Boolean(postPlayerSource);
+const soundtrackSourceApi = postPlayerSource?.playlistApi ?? "";
+const metaGridColumnsClass = shouldShowSoundtrack ? "md:grid-cols-6" : "md:grid-cols-5";
 ---
 
 <BaseLayout title={`${title} | Echoes`} description={excerpt} playerSource={postPlayerSource}>
@@ -83,7 +86,10 @@ const hasPostSoundtrack = Boolean(postPlayerSource);
 
                 <!-- Meta Grid -->
                 <div
-                    class="grid grid-cols-2 md:grid-cols-6 gap-4 border-y border-dashed border-gray-400 py-4 font-mono text-xs opacity-80"
+                    class:list={[
+                        "grid grid-cols-2 gap-4 border-y border-dashed border-gray-400 py-4 font-mono text-xs opacity-80",
+                        metaGridColumnsClass,
+                    ]}
                 >
                     <div>
                         <span class="block opacity-50 mb-1">CATEGORY</span>
@@ -107,10 +113,17 @@ const hasPostSoundtrack = Boolean(postPlayerSource);
                         <span class="block opacity-50 mb-1">READ_TIME</span>
                         {readingMinutes}MIN/{articleWordCount}字
                     </div>
-                    <div>
-                        <span class="block opacity-50 mb-1">SOUNDTRACK</span>
-                        {hasPostSoundtrack ? "ATTACHED" : "—"}
-                    </div>
+                    {
+                        shouldShowSoundtrack && (
+                            <div>
+                                <span class="block opacity-50 mb-1">SOUNDTRACK</span>
+                                <PostSoundtrack
+                                    sourceApi={soundtrackSourceApi}
+                                    client:load
+                                />
+                            </div>
+                        )
+                    }
                     <div>
                         <span class="block opacity-50 mb-1">TAGS</span>
                         <div class="flex flex-wrap gap-2">

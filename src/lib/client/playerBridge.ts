@@ -48,6 +48,7 @@ export type PlayerBridgeControls = {
     toggleMusic: () => void;
     playPrev: () => void;
     playNext: () => void;
+    setSource: (source: PlayerSource) => Promise<void>;
     destroy: () => void;
 };
 
@@ -195,6 +196,10 @@ function normalizeIndex(nextIndex: number, length: number) {
     return (nextIndex + length) % length;
 }
 
+/**
+ * 根据当前播放状态切换播放源。
+ * 如果切源前正在播放，则新源加载完成后继续播放；如果原本是暂停状态，则只更新曲目不自动播放。
+ */
 export async function initPlayerBridge({
     source,
     onLyricFrame,
@@ -266,6 +271,40 @@ export async function initPlayerBridge({
         }
     };
 
+    /**
+     * 加载并应用新的播放源，同时尽量保留用户当前的播放/暂停意图。
+     */
+    const applySource = async (nextSource: PlayerSource) => {
+        if (disposed) return;
+
+        const shouldResumePlayback = !player.audio.paused;
+        setPlayerSource(nextSource);
+        setPlayerLoading();
+        emitLyricFrame({ current: WAITING_TEXT, next: '' }, true);
+        onLyricsStatus?.('loading');
+
+        const needReload = player.sourceApi !== nextSource.playlistApi || !player.playlist.length;
+        if (needReload) {
+            player.sourceApi = nextSource.playlistApi;
+            player.playlist = await fetchPlaylist(nextSource.playlistApi);
+            player.index = 0;
+            await selectTrack(0, shouldResumePlayback);
+        } else {
+            syncTrackStore();
+            await loadCurrentLyrics();
+            if (shouldResumePlayback && player.audio.paused) {
+                try {
+                    await player.audio.play();
+                } catch {
+                    setPlaying(false);
+                }
+            }
+        }
+
+        setPlaying(!player.audio.paused);
+        setPlayerReady();
+    };
+
     const selectTrack = async (targetIndex: number, autoPlay: boolean) => {
         if (!player.playlist.length) return;
         player.index = normalizeIndex(targetIndex, player.playlist.length);
@@ -291,19 +330,7 @@ export async function initPlayerBridge({
     };
 
     try {
-        const needReload = player.sourceApi !== source.playlistApi || !player.playlist.length;
-        if (needReload) {
-            player.sourceApi = source.playlistApi;
-            player.playlist = await fetchPlaylist(source.playlistApi);
-            player.index = 0;
-            await selectTrack(0, false);
-        } else {
-            syncTrackStore();
-            await loadCurrentLyrics();
-        }
-
-        setPlaying(!player.audio.paused);
-        setPlayerReady();
+        await applySource(source);
     } catch (error) {
         const message = error instanceof Error ? error.message : '播放器初始化失败';
         setPlayerError(message);
@@ -342,6 +369,17 @@ export async function initPlayerBridge({
         playNext: () => {
             if (disposed) return;
             void selectTrack(player.index + 1, true);
+        },
+        setSource: async (nextSource) => {
+            if (disposed) return;
+            try {
+                await applySource(nextSource);
+            } catch (error) {
+                const message = error instanceof Error ? error.message : '播放器初始化失败';
+                setPlayerError(message);
+                onLyricsStatus?.('error');
+                emitLyricFrame({ current: LYRICS_ERROR_TEXT, next: '' }, true);
+            }
         },
         destroy: () => {
             if (disposed) return;

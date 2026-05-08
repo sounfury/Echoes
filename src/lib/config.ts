@@ -71,6 +71,7 @@ const siteConfigSchema = z.object({
     category: z.record(categoryConfigSchema),
     bgm: z.object({
         enabled: z.boolean(),
+        apiBase: z.string().url().default('https://api.injahow.cn/meting/'),
         playlistApi: z.string().url().optional(),
         defaultPlaylist: z.array(z.string()).default([]),
     }),
@@ -156,14 +157,38 @@ export function getSiteConfig(): SiteConfig {
 
 const DEFAULT_METING_API_ORIGIN = 'https://api.injahow.cn/meting/';
 
-function buildPlaylistApiById(id: string): string {
-    const api = new URL(DEFAULT_METING_API_ORIGIN);
+/**
+ * 规范化 Meting 接口基址，确保后续 URL 拼接始终稳定。
+ */
+function resolveMetingApiBase(apiBase?: string): string {
+    return apiBase?.trim() || DEFAULT_METING_API_ORIGIN;
+}
+
+/**
+ * 根据歌单 ID 构建兼容 Meting 的歌单接口地址。
+ */
+function buildPlaylistApiById(id: string, apiBase?: string): string {
+    const api = new URL(resolveMetingApiBase(apiBase));
     api.searchParams.set('type', 'playlist');
     api.searchParams.set('id', id);
     return api.toString();
 }
 
+/**
+ * 根据单曲 ID 构建兼容 Meting 的单曲接口地址。
+ */
+function buildSongApiById(id: string, apiBase?: string): string {
+    const api = new URL(resolveMetingApiBase(apiBase));
+    api.searchParams.set('server', 'netease');
+    api.searchParams.set('type', 'song');
+    api.searchParams.set('id', id);
+    return api.toString();
+}
 
+
+/**
+ * 从网易云歌单链接中解析歌单 ID，兼容 hash 路由形式。
+ */
 function parsePlaylistIdFromMusic163(url: URL): string | null {
     const directId = url.searchParams.get('id')?.trim();
     if (directId && /playlist/.test(url.pathname)) return directId;
@@ -178,6 +203,9 @@ function parsePlaylistIdFromMusic163(url: URL): string | null {
     return query.get('id')?.trim() ?? null;
 }
 
+/**
+ * 从网易云单曲链接中解析歌曲 ID，兼容 hash 路由形式。
+ */
 function parseSongIdFromMusic163(url: URL): string | null {
     const directId = url.searchParams.get('id')?.trim();
     if (directId && /song/.test(url.pathname)) return directId;
@@ -198,13 +226,13 @@ function parseSongIdFromMusic163(url: URL): string | null {
  * 2) 网易 playlist URL
  * 3) 纯数字歌单 ID
  */
-export function parsePlayerSource(rawValue: string): PlayerSource | null {
+export function parsePlayerSource(rawValue: string, apiBase?: string): PlayerSource | null {
     const raw = rawValue.trim();
     if (!raw) return null;
 
     if (/^\d+$/.test(raw)) {
         return {
-            playlistApi: buildPlaylistApiById(raw),
+            playlistApi: buildPlaylistApiById(raw, apiBase),
             raw,
         };
     }
@@ -216,9 +244,7 @@ export function parsePlayerSource(rawValue: string): PlayerSource | null {
         return null;
     }
 
-    const isMetingApi = /(^|\.)api\.injahow\.cn$/i.test(url.hostname)
-        && url.pathname.startsWith('/meting/')
-        && url.searchParams.get('type') === 'playlist'
+    const isMetingApi = url.searchParams.get('type') === 'playlist'
         && Boolean(url.searchParams.get('id'));
     if (isMetingApi) {
         return {
@@ -234,19 +260,24 @@ export function parsePlayerSource(rawValue: string): PlayerSource | null {
     if (!id) return null;
 
     return {
-        playlistApi: buildPlaylistApiById(id),
+        playlistApi: buildPlaylistApiById(id, apiBase),
         raw,
     };
 }
 
+/**
+ * 解析站点默认播放器来源，优先使用显式接口，再回退到默认歌单列表。
+ */
 export function getDefaultPlayerSource(config = getSiteConfig()): PlayerSource | null {
+    const apiBase = config.bgm.apiBase;
+
     if (config.bgm.playlistApi) {
-        const parsed = parsePlayerSource(config.bgm.playlistApi);
+        const parsed = parsePlayerSource(config.bgm.playlistApi, apiBase);
         if (parsed) return parsed;
     }
 
     for (const entry of config.bgm.defaultPlaylist) {
-        const parsed = parsePlayerSource(entry);
+        const parsed = parsePlayerSource(entry, apiBase);
         if (parsed) return parsed;
     }
 
@@ -254,7 +285,10 @@ export function getDefaultPlayerSource(config = getSiteConfig()): PlayerSource |
 }
 
 
-export function getPostMusicSource(rawValue: string | null | undefined): PlayerSource | null {
+/**
+ * 将文章里的网易云单曲链接转换为当前 Meting 服务可消费的播放源。
+ */
+export function getPostMusicSource(rawValue: string | null | undefined, apiBase?: string): PlayerSource | null {
     const raw = rawValue?.trim();
     if (!raw) return null;
 
@@ -271,13 +305,8 @@ export function getPostMusicSource(rawValue: string | null | undefined): PlayerS
     const id = parseSongIdFromMusic163(url);
     if (!id) return null;
 
-    const api = new URL(DEFAULT_METING_API_ORIGIN);
-    api.searchParams.set('server', 'netease');
-    api.searchParams.set('type', 'song');
-    api.searchParams.set('id', id);
-
     return {
-        playlistApi: api.toString(),
+        playlistApi: buildSongApiById(id, apiBase),
         raw,
     };
 }
