@@ -46,6 +46,7 @@ const serializedRequiredMeta = JSON.stringify(comment.requiredMeta);
     let walineInstance: import("@waline/client").WalineInstance | null = null;
     let walineEnhancementCleanup: (() => void) | null = null;
     let walineToastTimeout = 0;
+    const walineLikeReleaseTimers = new Map<HTMLButtonElement, number>();
 
     /**
      * 获取当前页面的评论挂载节点。
@@ -256,6 +257,99 @@ const serializedRequiredMeta = JSON.stringify(comment.requiredMeta);
         });
     }
 
+    /**
+     * 释放评论点赞按钮的临时锁。
+     * Waline 的点赞请求是异步完成的，锁释放必须同步清掉定时器和可访问性状态。
+     */
+    function releaseCommentLikeButton(button: HTMLButtonElement, replayQueuedToggle = true): void {
+        const releaseTimer = walineLikeReleaseTimers.get(button);
+        const shouldReplayQueuedToggle = replayQueuedToggle && button.dataset.queuedToggle === "true";
+
+        if (releaseTimer) {
+            window.clearTimeout(releaseTimer);
+            walineLikeReleaseTimers.delete(button);
+        }
+
+        button.dataset.pending = "false";
+        delete button.dataset.pendingTitle;
+        delete button.dataset.pendingText;
+        delete button.dataset.queuedToggle;
+        button.removeAttribute("aria-busy");
+        button.removeAttribute("aria-disabled");
+        button.classList.remove("is-pending");
+        button.classList.remove("has-queued-toggle");
+
+        if (shouldReplayQueuedToggle && button.isConnected) {
+            window.setTimeout(() => {
+                button.click();
+            }, 0);
+        }
+    }
+
+    /**
+     * 给点赞按钮设置兜底解锁。
+     * 正常情况下会在 Waline 更新标题或计数时提前释放；超时只解锁不重放，避免未知请求状态下补发错误动作。
+     */
+    function scheduleCommentLikeRelease(button: HTMLButtonElement): void {
+        const existingTimer = walineLikeReleaseTimers.get(button);
+
+        if (existingTimer) {
+            window.clearTimeout(existingTimer);
+        }
+
+        const releaseTimer = window.setTimeout(() => {
+            releaseCommentLikeButton(button, false);
+        }, 8000);
+
+        walineLikeReleaseTimers.set(button, releaseTimer);
+    }
+
+    /**
+     * 将评论点赞按钮标记为请求中。
+     * 第一击会继续交给 Waline 内部处理，后续快速点击会按奇偶排队，避免并发累加点赞数。
+     */
+    function lockCommentLikeButton(button: HTMLButtonElement): void {
+        button.dataset.pending = "true";
+        button.dataset.pendingTitle = button.title;
+        button.dataset.pendingText = button.textContent?.trim() ?? "";
+        button.dataset.queuedToggle = "false";
+        button.setAttribute("aria-busy", "true");
+        button.setAttribute("aria-disabled", "true");
+        button.classList.add("is-pending");
+
+        scheduleCommentLikeRelease(button);
+    }
+
+    /**
+     * 根据 Waline 的渲染结果刷新点赞锁状态。
+     * 当按钮标题或计数发生变化时，说明点赞请求已经完成并触发了 UI 更新，可以安全允许下一次点击。
+     */
+    function refreshCommentLikeActionState(scope: ParentNode): void {
+        const buttons = scope.querySelectorAll<HTMLButtonElement>(".wl-like[data-pending='true']");
+
+        buttons.forEach((button) => {
+            const pendingTitle = button.dataset.pendingTitle ?? "";
+            const pendingText = button.dataset.pendingText ?? "";
+            const currentText = button.textContent?.trim() ?? "";
+
+            if (button.title !== pendingTitle || currentText !== pendingText) {
+                releaseCommentLikeButton(button);
+            }
+        });
+    }
+
+    /**
+     * 清理当前评论区内仍在等待释放的点赞按钮。
+     * 页面切换或 Waline 重挂载时调用，避免旧 DOM 的兜底计时器残留。
+     */
+    function clearCommentLikeActionState(container: HTMLElement): void {
+        Array.from(walineLikeReleaseTimers.keys()).forEach((button) => {
+            if (container.contains(button)) {
+                releaseCommentLikeButton(button, false);
+            }
+        });
+    }
+
 
     /**
      * 为 Waline 评论区挂载输入增强：
@@ -300,9 +394,38 @@ const serializedRequiredMeta = JSON.stringify(comment.requiredMeta);
             }
         };
 
+        /**
+         * 在捕获阶段拦截未完成的点赞按钮点击，并按奇偶记录后续切换意图。
+         * 第一笔请求完成后再补发一次切换，避免并发请求把“取消点赞”误变成重复加赞。
+         */
+        const handleLikeClick = (event: Event) => {
+            const target = event.target;
+            if (!(target instanceof Element)) {
+                return;
+            }
+
+            const likeButton = target.closest<HTMLButtonElement>(".wl-like");
+            if (!likeButton) {
+                return;
+            }
+
+            if (likeButton.dataset.pending === "true") {
+                const hasQueuedToggle = likeButton.dataset.queuedToggle === "true";
+
+                likeButton.dataset.queuedToggle = String(!hasQueuedToggle);
+                likeButton.classList.toggle("has-queued-toggle", !hasQueuedToggle);
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+                return;
+            }
+
+            lockCommentLikeButton(likeButton);
+        };
+
         const handleClick = (event: Event) => {
             const target = event.target;
-            if (!(target instanceof HTMLElement)) {
+            if (!(target instanceof Element)) {
                 return;
             }
 
@@ -366,22 +489,40 @@ const serializedRequiredMeta = JSON.stringify(comment.requiredMeta);
                 safelySyncPanels();
             }
 
-            if (mutations.some((mutation) => mutation.type === "childList" || mutation.type === "attributes")) {
+            if (
+                mutations.some(
+                    (mutation) =>
+                        mutation.type === "childList" ||
+                        mutation.type === "attributes" ||
+                        mutation.type === "characterData",
+                )
+            ) {
                 refreshAdminActionState(container);
+                refreshCommentLikeActionState(container);
             }
         });
 
         container.addEventListener("input", handleInput);
         container.addEventListener("focusout", handleBlur);
+        container.addEventListener("click", handleLikeClick, true);
         container.addEventListener("click", handleClick);
-        observer.observe(container, { childList: true, subtree: true, attributes: true, attributeFilter: ["disabled", "class"] });
+        observer.observe(container, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            characterData: true,
+            attributeFilter: ["disabled", "class", "title"],
+        });
         safelySyncPanels();
         refreshAdminActionState(container);
+        refreshCommentLikeActionState(container);
 
         return () => {
             window.clearTimeout(walineToastTimeout);
+            clearCommentLikeActionState(container);
             container.removeEventListener("input", handleInput);
             container.removeEventListener("focusout", handleBlur);
+            container.removeEventListener("click", handleLikeClick, true);
             container.removeEventListener("click", handleClick);
             observer.disconnect();
         };
@@ -680,6 +821,19 @@ const serializedRequiredMeta = JSON.stringify(comment.requiredMeta);
         position: relative;
         z-index: 1;
     }
+
+    .comments-container .wl-card .wl-like.is-pending,
+    .comments-container .wl-card .wl-like:disabled {
+        opacity: 0.55;
+        cursor: progress;
+        filter: saturate(0.75);
+    }
+
+    .comments-container .wl-card .wl-like.has-queued-toggle {
+        opacity: 0.8;
+        color: var(--c-accent);
+    }
+
     .comments-container .wl-card .wl-admin-actions .wl-btn {
         position: relative;
         min-width: 4.5rem;
