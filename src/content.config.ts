@@ -1,6 +1,51 @@
 import { defineCollection, z } from 'astro:content';
 import { glob } from 'astro/loaders';
 
+/**
+ * 将 Obsidian/frontmatter 中常见的空值统一视为缺失值，避免 null 或空字符串触发错误校验。
+ */
+function normalizeOptionalValue(value: unknown): unknown {
+	if (value === null || value === '') {
+		return undefined;
+	}
+
+	return value;
+}
+
+/**
+ * 解析文章发布状态；缺失、null 或空字符串时默认不发布。
+ */
+function normalizePublished(value: unknown): unknown {
+	if (value === undefined || value === null || value === '') {
+		return false;
+	}
+
+	if (typeof value === 'string') {
+		const normalized = value.trim().toLowerCase();
+
+		if (normalized === 'true') {
+			return true;
+		}
+
+		if (normalized === 'false') {
+			return false;
+		}
+	}
+
+	return value;
+}
+
+/**
+ * 将可选数组字段的空值兜底为空数组，保持页面侧可以直接遍历。
+ */
+function normalizeArrayValue(value: unknown): unknown {
+	if (value === undefined || value === null || value === '') {
+		return [];
+	}
+
+	return value;
+}
+
 const blog = defineCollection({
 	loader: glob({
 		base: './src/content/blog',
@@ -22,12 +67,12 @@ const blog = defineCollection({
 		},
 	}),
 	schema: z.object({
-		创建时间: z.coerce.date().optional(),
-		更新时间: z.coerce.date().optional(),
-		tags: z.array(z.string()).default([]),
-		mediaRefs: z.array(z.string().url()).default([]),
-		music: z.string().url().optional(),
-		published: z.boolean().default(true),
+		创建时间: z.preprocess(normalizeOptionalValue, z.coerce.date().optional()),
+		更新时间: z.preprocess(normalizeOptionalValue, z.coerce.date().optional()),
+		tags: z.preprocess(normalizeArrayValue, z.array(z.string()).default([])),
+		mediaRefs: z.preprocess(normalizeArrayValue, z.array(z.string().url()).default([])),
+		music: z.preprocess(normalizeOptionalValue, z.string().url().optional()),
+		published: z.preprocess(normalizePublished, z.boolean()),
 	}),
 });
 
