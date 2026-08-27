@@ -72,6 +72,7 @@ const blog = defineCollection({
 		tags: z.preprocess(normalizeArrayValue, z.array(z.string()).default([])),
 		mediaRefs: z.preprocess(normalizeArrayValue, z.array(z.string().url()).default([])),
 		music: z.preprocess(normalizeOptionalValue, z.string().url().optional()),
+		封面图: z.preprocess(normalizeOptionalValue, z.string().url().optional()),
 		published: z.preprocess(normalizePublished, z.boolean()),
 	}),
 });

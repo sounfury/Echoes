@@ -30,6 +30,7 @@ const title = getTitleFromId(post.id);
 const category = getCategoryFromId(post.id);
 const color = getCategoryColor(category);
 const tags = post.data.tags;
+const cover = post.data.封面图;
 const readingMinutes = getReadingTime(content);
 const articleWordCount = getArticleWordCount(content);
 const excerpt = getExcerpt(content);
@@ -59,6 +60,7 @@ const metaGridColumnsClass = shouldShowSoundtrack ? "md:grid-cols-6" : "md:grid-
                     "@type": "BlogPosting",
                     headline: title,
                     description: excerpt,
+                    ...(cover ? { image: cover } : {}),
                     author: { "@type": "Person", name: config.site.author },
                     datePublished: post.data.创建时间?.toISOString(),
                     dateModified: (
@@ -83,6 +85,22 @@ const metaGridColumnsClass = shouldShowSoundtrack ? "md:grid-cols-6" : "md:grid-
                 >
                     {title}
                 </h1>
+
+                {
+                    cover && (
+                        <figure class="relative mb-6 border border-eva-ink/20 dark:border-white/20">
+                            <img
+                                src={cover}
+                                alt=""
+                                class="block w-full max-h-80 object-cover"
+                                onerror="this.parentElement.hidden = true"
+                            />
+                            <figcaption class="absolute bottom-0 left-0 bg-eva-ink dark:bg-white text-white dark:text-eva-dark px-2 py-0.5 text-[10px] font-mono font-bold tracking-wider">
+                                EXHIBIT
+                            </figcaption>
+                        </figure>
+                    )
+                }
 
                 <!-- Meta Grid -->
                 <div

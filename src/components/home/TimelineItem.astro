@@ -17,6 +17,7 @@ const category = getCategoryFromId(post.id);
 const categoryMeta = getCategoryMeta(category);
 const title = getTitleFromId(post.id);
 const color = categoryMeta.color;
+const cover = post.data.封面图;
 
 const createDate = post.data.创建时间;
 const updateDate = post.data.更新时间;
@@ -34,10 +35,25 @@ const excerpt = getExcerpt(post.body ?? "");
 ---
 
 <article
-    class="timeline-item relative pl-8 md:pl-12 group cursor-pointer"
+    class:list={[
+        "timeline-item relative pl-8 md:pl-12 group cursor-pointer",
+        cover && "has-cover",
+    ]}
     style={`--item-color: ${color};`}
 >
-    <a href={`/posts/${post.id}`} class="no-underline block">
+    {
+        cover && (
+            <div class="cover-wipe" aria-hidden="true">
+                <img
+                    src={cover}
+                    alt=""
+                    onerror="this.parentElement.hidden = true"
+                />
+                <span class="cover-wipe-scrim"></span>
+            </div>
+        )
+    }
+    <a href={`/posts/${post.id}`} class="no-underline block relative z-[1]">
         <!-- Node Circle -->
         <span
             class="absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 transition-colors z-10 bg-eva-paper dark:bg-eva-dark"
@@ -102,5 +118,41 @@ const excerpt = getExcerpt(post.body ?? "");
 <style>
     .timeline-item:hover [data-node] {
         background-color: var(--item-color) !important;
+    }
+
+    .cover-wipe {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        pointer-events: none;
+        clip-path: inset(0 0 0 100%);
+        transition: clip-path 0.5s ease-out;
+    }
+
+    .cover-wipe img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        filter: saturate(0.85);
+    }
+
+    .cover-wipe-scrim {
+        position: absolute;
+        inset: 0;
+        background: color-mix(in srgb, var(--c-bg) 28%, transparent);
+    }
+
+    @media (hover: hover) {
+        .timeline-item.has-cover:hover .cover-wipe,
+        .timeline-item.has-cover:focus-within .cover-wipe {
+            clip-path: inset(0 0 0 0);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .cover-wipe {
+            transition: none;
+        }
     }
 </style>
