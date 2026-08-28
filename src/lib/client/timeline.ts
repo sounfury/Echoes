@@ -7,7 +7,6 @@ const TIMELINE_STATE_KEY = 'echoes:timeline:state';
 type TimelineState = {
     path: string;
     visibleCount: number;
-    autoLoadedOnce: boolean;
 };
 
 function renderEndIndicator(footer: HTMLElement) {
@@ -43,7 +42,6 @@ function readTimelineState(pathname: string): TimelineState | null {
         return {
             path: pathname,
             visibleCount: Math.floor(parsed.visibleCount),
-            autoLoadedOnce: Boolean(parsed.autoLoadedOnce),
         };
     } catch {
         return null;
@@ -54,7 +52,7 @@ function writeTimelineState(state: TimelineState) {
     try {
         sessionStorage.setItem(TIMELINE_STATE_KEY, JSON.stringify(state));
     } catch {
-        // ignore storage write failures (private mode / quota)
+        // 忽略存储写入失败（无痕模式/配额满等）
     }
 }
 
@@ -77,14 +75,13 @@ export function initTimeline(): Cleanup {
     const currentPath = window.location.pathname;
 
     let visibleCount = initialVisible;
-    let autoLoadedOnce = false;
+    let isLoading = false;
     let observer: IntersectionObserver | null = null;
 
     const persistState = () => {
         writeTimelineState({
             path: currentPath,
             visibleCount,
-            autoLoadedOnce,
         });
     };
 
@@ -130,17 +127,28 @@ export function initTimeline(): Cleanup {
         visibleCount = clampedVisible;
         updateFooter();
         persistState();
+
+        if (visibleCount >= total && observer) {
+            observer.disconnect();
+            observer = null;
+        }
     };
 
     const loadMore = () => {
-        if (visibleCount >= total) {
+        if (isLoading || visibleCount >= total) {
             updateFooter();
             persistState();
             return;
         }
 
+        isLoading = true;
         const nextVisibleCount = Math.min(visibleCount + pageSize, total);
         applyVisibleCount(nextVisibleCount, true);
+
+        // 简短延迟防止在同一次滚动中重复连续触发
+        window.setTimeout(() => {
+            isLoading = false;
+        }, 150);
     };
 
     const onFooterClick = (event: Event) => {
@@ -155,25 +163,23 @@ export function initTimeline(): Cleanup {
     const restoredState = readTimelineState(currentPath);
     if (restoredState) {
         visibleCount = clamp(restoredState.visibleCount, initialVisible, total);
-        autoLoadedOnce = restoredState.autoLoadedOnce;
     }
     applyVisibleCount(visibleCount, false);
 
-    if (!autoLoadedOnce && sentinel && typeof IntersectionObserver !== 'undefined') {
+    if (visibleCount < total && sentinel && typeof IntersectionObserver !== 'undefined') {
         observer = new IntersectionObserver(
             (entries) => {
                 entries.forEach((entry) => {
                     if (!entry.isIntersecting) return;
-                    if (visibleCount >= total || autoLoadedOnce) return;
-
-                    autoLoadedOnce = true;
+                    if (visibleCount >= total) {
+                        observer?.disconnect();
+                        observer = null;
+                        return;
+                    }
                     loadMore();
-                    observer?.disconnect();
-                    observer = null;
-                    persistState();
                 });
             },
-            { rootMargin: '200px' },
+            { rootMargin: '300px' },
         );
         observer.observe(sentinel);
     }
@@ -181,6 +187,7 @@ export function initTimeline(): Cleanup {
     return () => {
         footer?.removeEventListener('click', onFooterClick);
         observer?.disconnect();
+        observer = null;
         persistState();
     };
 }
