@@ -43,7 +43,7 @@ navigation:
     path: /archive
     icon: lucide:database
   - name: Universe
-    path: https://github.com/sounfury
+    path: https://sounfury.top
     external: true
 
 # 4. 时间轴
@@ -58,7 +58,7 @@ category:
     desc: "技术与编程"
   review:
     label: "[REVIEW]"
-    color: "#39ff14"
+    color: "#10B981"
     desc: "书/影/音/游"
   life:
     label: "[LIFE]"

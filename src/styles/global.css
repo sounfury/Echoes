@@ -8,7 +8,7 @@
 @theme {
 	/* EVA Brand Colors — 固定品牌色，引用配置源变量 */
 	--color-eva-purple: var(--c-accent);
-	--color-eva-green: #39ff14;
+	--color-eva-green: #10B981;
 	--color-eva-red: #F90000;
 	--color-eva-orange: #FF9900;
 	--color-eva-dark: var(--c-bg-dark);
