@@ -50,7 +50,7 @@ const metaGridColumnsClass = shouldShowSoundtrack ? "md:grid-cols-6" : "md:grid-
 
 <BaseLayout title={`${title} | Echoes`} description={excerpt} playerSource={postPlayerSource}>
     <TableOfContents headings={headings} charCount={content.length} />
-    <main class="pt-24 pb-20 max-w-4xl mx-auto px-4">
+    <main class="pt-24 pb-20 max-w-4xl mx-auto px-4 md:px-10 bg-[var(--c-paper)] transition-colors duration-500">
         <article>
             <!-- JSON-LD 结构化数据 -->
             <script

@@ -77,6 +77,8 @@
 	--c-text: var(--c-text-light);
 	--c-text-secondary: var(--c-text-secondary-light);
 	--c-border: var(--c-border-light);
+	/* 长文阅读区底色：比页面底色更亮，遮住网格背景 */
+	--c-paper: color-mix(in srgb, var(--c-bg) 40%, #fff);
 }
 
 .dark {
@@ -85,6 +87,7 @@
 	--c-text: var(--c-text-dark);
 	--c-text-secondary: var(--c-text-secondary-dark);
 	--c-border: var(--c-border-dark);
+	--c-paper: var(--c-bg);
 }
 
 
