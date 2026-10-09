@@ -1,13 +1,17 @@
 /**
- * 惠惠主题 JS 效果：点击页面任意位置，在 decor-front 的 canvas 里炸开一小团「爆裂魔法」火花。
+ * 惠惠主题 JS 效果：
+ * - decor-back 右下角画一座分层旋转的爆裂魔法阵（见 ./magicCircle.ts）
+ * - 点击页面任意位置，在 decor-front 的 canvas 里炸开一小团「爆裂魔法」火花，同时法阵闪光加速
  *
  * 遵守接口约定（../_contract.md 第 6 节）：
- * - 只在 decor-front 里放一个 canvas，不碰任何业务 DOM（点击只是被动监听，不拦截、不阻止默认行为）
- * - 返回的清理函数会移除 canvas、监听器、rAF
- * - prefers-reduced-motion 时什么都不做
+ * - 只在装饰位里放节点（decor-back 的法阵、decor-front 的 canvas），不碰任何业务 DOM
+ *   （点击只是被动监听，不拦截、不阻止默认行为）
+ * - 返回的清理函数会移除法阵、canvas、监听器、rAF
+ * - prefers-reduced-motion 时只画静态法阵，没有火花
  * - 只有粒子存活时才跑 rAF，空闲时零开销
  */
 import type { ThemeEffects } from '../../lib/themes/types';
+import { mountMagicCircle } from './magicCircle';
 
 interface Particle {
     x: number;
@@ -25,7 +29,8 @@ const MAX_PARTICLES = 240;
 
 const effects: ThemeEffects = {
     mount(ctx) {
-        if (ctx.reducedMotion) return;
+        const circle = mountMagicCircle(ctx.decor.back, ctx.reducedMotion);
+        if (ctx.reducedMotion) return circle.destroy;
 
         const canvas = document.createElement('canvas');
         canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;';
@@ -33,7 +38,7 @@ const effects: ThemeEffects = {
         const g = canvas.getContext('2d');
         if (!g) {
             canvas.remove();
-            return;
+            return circle.destroy;
         }
 
         let particles: Particle[] = [];
@@ -101,12 +106,14 @@ const effects: ThemeEffects = {
         const onPointerDown = (e: PointerEvent) => {
             if (e.pointerType === 'mouse' && e.button !== 0) return;
             burst(e.clientX, e.clientY);
+            circle.surge();
         };
 
         window.addEventListener('pointerdown', onPointerDown, { passive: true });
         window.addEventListener('resize', resize, { passive: true });
         ctx.on<{ hidden: boolean }>('visibility-change', ({ hidden }) => {
             if (hidden) particles = [];
+            circle.setPaused(hidden);
         });
 
         return () => {
@@ -115,6 +122,7 @@ const effects: ThemeEffects = {
             if (raf) cancelAnimationFrame(raf);
             particles = [];
             canvas.remove();
+            circle.destroy();
         };
     },
 };

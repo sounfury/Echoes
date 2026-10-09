@@ -43,8 +43,7 @@ const excerpt = getExcerpt(post.body ?? "");
     <!-- Node Circle (精确吸附在时间轴竖线上) -->
     <span
         data-ui="timeline-node"
-        class="absolute left-0 -translate-x-1/2 top-1.5 w-4 h-4 rounded-full border-2 transition-all duration-300 z-20 bg-canvas group-hover:bg-[var(--item-color)] group-hover:scale-125"
-        style={`border-color: ${color};`}
+        class="absolute left-0 -translate-x-1/2 top-1.5 w-4 h-4 rounded-full border-2 border-[var(--item-color)] transition-all duration-300 z-20 bg-canvas group-hover:bg-[var(--item-color)] group-hover:scale-125"
         data-node></span>
 
     <!-- Date Label (桌面端绝对定位在时间轴左侧，防止换行) -->
@@ -88,8 +87,7 @@ const excerpt = getExcerpt(post.body ?? "");
             <div class="flex items-center gap-2 mb-2">
                 <span
                     data-ui="category-badge"
-                    class="text-[10px] font-mono px-1 py-0.5 text-on-accent"
-                    style={`background-color: ${color};`}
+                    class="text-[10px] font-mono px-1 py-0.5 text-on-accent bg-[var(--item-color)]"
                 >
                     {categoryMeta.label}
                 </span>
