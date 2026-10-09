@@ -406,6 +406,31 @@
 		letter-spacing: 0.05em;
 	}
 
+	[data-ui="post-card-title"] {
+		color: var(--mg-crimson-deep);
+		letter-spacing: 0.01em;
+		transition: color 0.3s ease;
+	}
+
+	/* 标题下方一道短金线，悬停时展开 */
+	[data-ui="post-card-title"]::after {
+		content: "";
+		display: block;
+		width: 2.5rem;
+		height: 1px;
+		margin-top: 0.45rem;
+		background: linear-gradient(to right, var(--mg-gold), transparent);
+		transition: width 0.4s ease;
+	}
+
+	[data-ui="timeline-item"]:hover [data-ui="post-card-title"] {
+		color: var(--mg-crimson);
+	}
+
+	[data-ui="timeline-item"]:hover [data-ui="post-card-title"]::after {
+		width: 6rem;
+	}
+
 	[data-ui="post-card-excerpt"] {
 		opacity: 0.85;
 	}
@@ -481,16 +506,138 @@
 	}
 
 	/* ── 文章 ─────────────────────────────────────────────── */
+	/* 文章头：斜角金边的羊皮纸扉页，上下各一道带星芒的金色饰线 */
 	[data-ui="post-header"] {
-		border-top-color: var(--mg-crimson);
+		border-top: 0;
+		margin-bottom: 3rem;
+		padding: 2.75rem 1rem 2.4rem;
+		text-align: center;
+		border-radius: 14px;
+		corner-shape: bevel;
+		background:
+			radial-gradient(ellipse at 50% 0%, rgb(255 252 244 / 0.95), transparent 70%),
+			linear-gradient(170deg, #fbf3e4, #f1e0c4);
+		box-shadow:
+			inset 0 0 0 1px var(--mg-gold),
+			inset 0 0 0 4px rgb(251 243 228 / 0.6),
+			inset 0 0 0 5px rgb(217 164 65 / 0.45),
+			0 10px 24px -14px rgb(122 15 31 / 0.45);
 	}
 
-	/* 印章文字由 theme.json 的 copy 替换为「EXPLOSION!」 */
-	[data-ui="post-stamp"] {
+	[data-ui="post-header"]::before,
+	[data-ui="post-header"]::after {
+		position: absolute;
+		left: 50%;
+		translate: -50% 0;
+		width: min(18rem, 70%);
+		font-size: 0.75rem;
+		line-height: 1;
+		letter-spacing: 0.4em;
+		text-indent: 0.4em;
+		color: var(--mg-gold);
+		background: linear-gradient(to right,
+				transparent, rgb(217 164 65 / 0.9) 25% 38%, transparent 38% 62%, rgb(217 164 65 / 0.9) 62% 75%, transparent)
+			center / 100% 1px no-repeat;
+	}
+
+	[data-ui="post-header"]::before {
+		content: "✦❖✦";
+		top: 1.1rem;
+	}
+
+	[data-ui="post-header"]::after {
+		content: "✧✦✧";
+		bottom: 0.9rem;
+	}
+
+	[data-ui="post-title"] {
+		margin-bottom: 1.25rem;
+		letter-spacing: 0.02em;
+		text-wrap: balance;
+	}
+
+	/* 元信息：题记式的一行小字，金色细线上下夹住 */
+	[data-ui="post-meta"] {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 0.75rem 2rem;
+		border-block: 0;
+		padding: 0.9rem 0.5rem;
+		font-family: "Megumin Display", var(--font-serif);
+		font-size: 0.7rem;
+		letter-spacing: 0.12em;
+		color: var(--mg-crimson-deep);
+		opacity: 1;
+		background:
+			linear-gradient(to right, transparent, rgb(217 164 65 / 0.8), transparent) top / 100% 1px no-repeat,
+			linear-gradient(to right, transparent, rgb(217 164 65 / 0.8), transparent) bottom / 100% 1px no-repeat;
+	}
+
+	/* 分类：斜角朱印 */
+	[data-ui="category-link"] {
+		display: inline-block;
+		padding: 0.1rem 0.55rem;
+		border: 1px solid var(--mg-crimson);
+		border-radius: 6px;
+		corner-shape: bevel;
+		background: rgb(200 36 58 / 0.07);
+		color: var(--mg-crimson);
+		transition: background-color 0.25s ease, color 0.25s ease;
+	}
+
+	[data-ui="category-link"]:hover,
+	[data-ui="category-link"]:focus-visible {
 		background: var(--mg-crimson);
 		color: var(--c-on-accent);
-		letter-spacing: 0.12em;
-		box-shadow: 3px 3px 0 var(--mg-crimson-deep);
+	}
+
+	[data-ui="post-meta"] [data-ui="tag"] {
+		padding: 0 0.45rem;
+		border: 1px solid rgb(217 164 65 / 0.7);
+		border-radius: 999px;
+		color: var(--mg-crimson-deep);
+	}
+
+	[data-ui="post-meta"] [data-ui="tag"]:hover {
+		color: var(--mg-crimson);
+		border-color: var(--mg-crimson);
+	}
+
+	/* 印章：火漆封蜡（文字由 theme.json 的 copy 替换为「EXPLOSION!」） */
+	[data-ui="post-stamp"] {
+		top: -1.1rem;
+		right: -0.4rem;
+		display: grid;
+		place-items: center;
+		width: 4.4rem;
+		height: 4.4rem;
+		padding: 0;
+		border-radius: 50%;
+		font-family: "Megumin Display", var(--font-serif);
+		font-size: 0.55rem;
+		letter-spacing: 0.06em;
+		color: #fff3e6;
+		text-shadow: 0 1px 0 rgb(60 5 15 / 0.6);
+		background: radial-gradient(circle at 35% 30%, #e45468, var(--mg-crimson) 45%, var(--mg-crimson-deep));
+		box-shadow:
+			inset 0 0 0 3px rgb(122 15 31 / 0.55),
+			inset 0 0 0 5px rgb(255 220 200 / 0.3),
+			0 4px 10px rgb(60 10 20 / 0.45);
+		rotate: -12deg;
+	}
+
+	@media (min-width: 48rem) {
+		[data-ui="post-header"] {
+			padding-inline: 2rem;
+		}
+
+		[data-ui="post-stamp"] {
+			right: -1rem;
+			width: 5rem;
+			height: 5rem;
+			font-size: 0.6rem;
+		}
 	}
 
 	[data-ui="post-body"] h2 {
@@ -505,6 +652,10 @@
 		left: 0;
 		color: var(--mg-crimson);
 		text-shadow: 0 0 8px rgb(200 36 58 / 0.6);
+	}
+
+	[data-ui="post-body"] h3 {
+		color: var(--mg-crimson-deep);
 	}
 
 	[data-ui="post-body"] a {

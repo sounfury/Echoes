@@ -315,6 +315,18 @@
 		margin-bottom: 1rem;
 	}
 
+	/*
+	 * h3 之前没有任何样式（被 preflight 重置成正文大小、正文字体、零外边距，看起来像普通段落）。
+	 * 给一个比 h2 低一级、但能和正文区分开的样式。
+	 */
+	.prose-eva h3 {
+		font-family: var(--font-serif);
+		font-weight: 700;
+		line-height: 1.5;
+		margin-top: 1.75rem;
+		margin-bottom: 0.75rem;
+	}
+
 	.prose-eva p {
 		margin-bottom: 1.5rem;
 		line-height: 1.8;
