@@ -18,10 +18,8 @@ export default defineConfig({
 	},
 	markdown: {
 		shikiConfig: {
-			themes: {
-				light: 'github-light',
-				dark: 'dracula',
-			},
+			// 代码高亮颜色交给主题：token 颜色来自 --shiki-token-* / --shiki-foreground / --shiki-background
+			theme: 'css-variables',
 		},
 	},
 });

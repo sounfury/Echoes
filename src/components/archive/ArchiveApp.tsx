@@ -177,22 +177,22 @@ export default function ArchiveApp({
     // ─── Render ───────────────────────────────────────────────────
 
     return (
-        <main className="pt-24 pb-20 max-w-4xl mx-auto px-4 min-h-screen">
+        <main data-ui="main" className="pt-24 pb-20 max-w-4xl mx-auto px-4 min-h-screen">
             {/* ── Header & Search ── */}
-            <header className="mb-10 border-b-2 border-eva-ink dark:border-white pb-6">
+            <header data-ui="page-header" className="mb-10 border-b-2 border-ink pb-6">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                     <div>
-                        <h1 className="text-4xl md:text-5xl font-serif font-black mb-2 tracking-tight">
+                        <h1 data-ui="page-title" className="text-4xl md:text-5xl font-serif font-black mb-2 tracking-tight">
                             ARCHIVE_DB
                         </h1>
-                        <p className="font-mono text-xs opacity-60 tracking-widest">
+                        <p data-ui="page-kicker" className="font-mono text-xs opacity-60 tracking-widest">
                             ACCESS_LEVEL: PUBLIC // TOTAL_RECORDS: {totalCount}
                         </p>
                     </div>
 
                     {/* Search */}
-                    <div className="w-full md:w-[280px] relative" ref={wrapperRef}>
-                        <div className="flex items-center gap-2 bg-gray-100 dark:bg-white/5 border border-gray-400 focus-within:border-[var(--c-accent)] px-2 py-2 rounded-sm transition-colors cursor-text group">
+                    <div data-ui="search" data-state={showTagWall ? 'open' : 'closed'} className="w-full md:w-[280px] relative" ref={wrapperRef}>
+                        <div data-ui="search-field" className="flex items-center gap-2 bg-field border border-line-strong focus-within:border-[var(--c-accent)] px-2 py-2 rounded-sm transition-colors cursor-text group">
                             <svg
                                 className="w-4 h-4 opacity-50 group-focus-within:text-[var(--c-accent)] shrink-0"
                                 fill="none"
@@ -212,7 +212,8 @@ export default function ArchiveApp({
                                 {activeTags.map((tag) => (
                                     <span
                                         key={tag}
-                                        className="bg-eva-ink text-white dark:bg-white dark:text-eva-dark text-[10px] font-mono px-1 py-0.5 whitespace-nowrap flex items-center gap-1 cursor-pointer"
+                                        data-ui="search-chip"
+                                        className="bg-ink text-on-ink text-[10px] font-mono px-1 py-0.5 whitespace-nowrap flex items-center gap-1 cursor-pointer"
                                         onClick={() => removeTag(tag)}
                                     >
                                         TAG:{tag.toUpperCase()}
@@ -224,8 +225,9 @@ export default function ArchiveApp({
                             <input
                                 ref={searchRef}
                                 type="text"
+                                data-ui="search-input"
                                 placeholder="Search... (# for tags)"
-                                className="bg-transparent outline-none w-full font-mono text-xs placeholder-gray-500"
+                                className="bg-transparent outline-none w-full font-mono text-xs placeholder-muted"
                                 autoComplete="off"
                                 onChange={handleSearchInput}
                                 onFocus={handleSearchFocus}
@@ -238,7 +240,7 @@ export default function ArchiveApp({
 
                         {/* Tag Wall */}
                         {showTagWall && (
-                            <div className="absolute top-full left-0 right-0 mt-1 bg-white/90 dark:bg-[#1a1a2e]/95 backdrop-blur-md border border-gray-300 dark:border-white/10 rounded-sm shadow-lg z-50 max-h-48 overflow-y-auto animate-fadeIn">
+                            <div data-ui="tag-wall" className="absolute top-full left-0 right-0 mt-1 bg-popover backdrop-blur-md border border-line-muted rounded-sm shadow-lg z-50 max-h-48 overflow-y-auto animate-fadeIn">
                                 <div className="p-3">
                                     <div className="text-[9px] font-mono opacity-40 uppercase tracking-wider mb-2">
                                         Available Tags
@@ -247,7 +249,8 @@ export default function ArchiveApp({
                                         {allTags.map(({ tag, count }) => (
                                             <button
                                                 key={tag}
-                                                className="text-[10px] font-mono px-1.5 py-0.5 border border-gray-300 dark:border-white/20 hover:border-[var(--c-accent)] hover:text-[var(--c-accent)] transition-colors cursor-pointer"
+                                                data-ui="tag"
+                                                className="text-[10px] font-mono px-1.5 py-0.5 border border-line-chip hover:border-[var(--c-accent)] hover:text-[var(--c-accent)] transition-colors cursor-pointer"
                                                 onClick={() => addTag(tag)}
                                             >
                                                 #{tag}
@@ -263,11 +266,15 @@ export default function ArchiveApp({
             </header>
 
             {/* ── Category Tabs ── */}
-            <div className="flex gap-2 mb-8 overflow-x-auto no-scrollbar border-b border-gray-200 dark:border-white/10 pb-4">
+            <div data-ui="archive-tabs" role="tablist" className="flex gap-2 mb-8 overflow-x-auto no-scrollbar border-b border-line pb-4">
                 <button
+                    data-ui="archive-tab"
+                    data-state={activeCategory === 'all' ? 'active' : undefined}
+                    role="tab"
+                    aria-selected={activeCategory === 'all'}
                     className={`archive-tab flex items-center gap-2 border px-4 py-1.5 font-mono text-xs transition-all whitespace-nowrap cursor-pointer ${activeCategory === 'all'
-                        ? 'active border-gray-400 text-gray-500'
-                        : 'border-gray-400 text-gray-500 hover:border-[var(--c-accent)] hover:text-[var(--c-accent)]'
+                        ? 'active'
+                        : 'border-line-strong text-muted hover:border-[var(--c-accent)] hover:text-[var(--c-accent)]'
                         }`}
                     onClick={() => setActiveCategory('all')}
                 >
@@ -277,14 +284,19 @@ export default function ArchiveApp({
                 {categories.map((cat) => (
                     <button
                         key={cat.slug}
+                        data-ui="archive-tab"
+                        data-state={activeCategory === cat.slug ? 'active' : undefined}
+                        data-category={cat.slug}
+                        role="tab"
+                        aria-selected={activeCategory === cat.slug}
                         className={`archive-tab flex items-center gap-2 border px-4 py-1.5 font-mono text-xs transition-all whitespace-nowrap group cursor-pointer ${activeCategory === cat.slug
-                            ? 'active border-gray-400 text-gray-500'
-                            : 'border-gray-400 text-gray-500'
+                            ? 'active'
+                            : 'border-line-strong text-muted'
                             }`}
                         style={{ '--tab-color': cat.color } as React.CSSProperties}
                         onClick={() => setActiveCategory(cat.slug)}
                     >
-                        <div className="w-2 h-2 bg-gray-400 rounded-none transition-colors group-hover:bg-[var(--tab-color)]" />
+                        <div className="w-2 h-2 bg-line-strong rounded-none transition-colors group-hover:bg-[var(--tab-color)]" />
                         <span>{cat.label}</span>
                         <span className="opacity-60 text-[10px]">[{cat.count}]</span>
                     </button>
@@ -293,24 +305,24 @@ export default function ArchiveApp({
 
             {/* ── Post List ── */}
             {yearGroups.length > 0 ? (
-                <div className="space-y-10">
+                <div data-ui="archive-list" className="space-y-10">
                     {yearGroups.map(([year, groupPosts]) => (
-                        <div key={year} className="relative">
+                        <div key={year} data-ui="archive-year" className="relative">
                             {/* 年份水印 */}
-                            <h3 className="text-6xl font-black text-eva-ink/10 dark:text-white/10 absolute -z-10 select-none transform -translate-y-6 font-mono tracking-tighter pointer-events-none">
+                            <h3 data-ui="archive-year-label" className="text-6xl font-black text-ink/10 absolute -z-10 select-none transform -translate-y-6 font-mono tracking-tighter pointer-events-none">
                                 {year}
                             </h3>
 
                             <div className="relative z-0 pl-2">
                                 {/* 表头 */}
-                                <div className="hidden md:flex py-2 border-b border-eva-ink/10 dark:border-white/10 text-xs font-mono opacity-40 uppercase tracking-wider">
+                                <div className="hidden md:flex py-2 border-b border-ink/10 text-xs font-mono opacity-40 uppercase tracking-wider">
                                     <div className="w-20">Date</div>
                                     <div className="w-24">Type</div>
                                     <div className="flex-1">Subject</div>
                                     <div className="w-48 text-right">Tags</div>
                                 </div>
 
-                                <div className="divide-y divide-gray-100 dark:divide-gray-800/50">
+                                <div className="divide-y divide-divider">
                                     {groupPosts.map((post) => (
                                         <PostRow key={post.slug} post={post} />
                                     ))}
@@ -320,7 +332,7 @@ export default function ArchiveApp({
                     ))}
                 </div>
             ) : (
-                <div className="text-center py-20 opacity-50 font-mono text-sm">
+                <div data-ui="empty-state" className="text-center py-20 opacity-50 font-mono text-sm">
                     NO MATCHING RECORDS FOUND
                 </div>
             )}
@@ -334,6 +346,8 @@ function PostRow({ post }: { post: ArchivePost }) {
     return (
         <a
             href={`/posts/${post.slug}`}
+            data-ui="archive-item"
+            data-category={post.category}
             className="archive-item group flex flex-col md:flex-row md:items-center py-3 cursor-pointer transition-all px-2 -mx-2 relative overflow-hidden no-underline"
             style={{ '--item-color': post.categoryColor } as React.CSSProperties}
         >
@@ -351,6 +365,7 @@ function PostRow({ post }: { post: ArchivePost }) {
             {/* 分类标签 */}
             <div className="w-24 hidden md:block">
                 <span
+                    data-ui="category-badge"
                     className="text-[10px] font-mono border px-1.5 py-0.5"
                     style={{ borderColor: post.categoryColor, color: post.categoryColor }}
                 >
@@ -370,6 +385,7 @@ function PostRow({ post }: { post: ArchivePost }) {
                 {post.tags.map((tag) => (
                     <span
                         key={tag}
+                        data-ui="tag"
                         className="text-[10px] font-mono opacity-40 group-hover:opacity-100 group-hover:text-[var(--item-color)] uppercase whitespace-nowrap transition-colors"
                     >
                         #{tag}

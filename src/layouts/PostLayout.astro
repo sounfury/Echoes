@@ -3,6 +3,7 @@ import BaseLayout from "./BaseLayout.astro";
 import type { CollectionEntry } from "astro:content";
 import type { MarkdownHeading } from "astro";
 import TableOfContents from "../components/post/TableOfContents.astro";
+import Comments from "../components/post/Comments.astro";
 import {
     getReadingTime,
     getCategoryFromId,
@@ -24,6 +25,8 @@ const category = getCategoryFromId(post.id);
 const color = getCategoryColor(category);
 const tags = post.data.tags;
 const readingMinutes = getReadingTime(content);
+// md / mdx：写到 data-ui-variant，主题可以区分两类文章
+const variant = post.filePath?.endsWith(".mdx") ? "mdx" : "md";
 
 const createdDate = post.data.创建时间
     ? formatDateFull(post.data.创建时间)
@@ -33,21 +36,28 @@ const updatedDate = post.data.更新时间
     : "";
 ---
 
-<BaseLayout title={`${title} | Echoes`} description={title}>
+<BaseLayout title={`${title} | Echoes`} description={title} page="post">
     <TableOfContents headings={headings} charCount={content.length} />
-    <main class="pt-24 pb-20 max-w-4xl mx-auto px-4">
-        <article>
+    <main data-ui="main" class="pt-24 pb-20 max-w-4xl mx-auto px-4">
+        <article
+            data-ui="post"
+            data-ui-variant={variant}
+            data-category={category}
+        >
             <!-- Dossier Header -->
             <header
-                class="mb-12 relative border-t-4 border-eva-ink dark:border-white pt-6"
+                data-ui="post-header"
+                class="mb-12 relative border-t-4 border-ink pt-6"
             >
                 <div
-                    class="absolute top-0 right-0 bg-eva-ink dark:bg-white text-white dark:text-eva-dark px-2 py-1 text-xs font-mono font-bold"
+                    data-ui="post-stamp"
+                    class="absolute top-0 right-0 bg-ink text-on-ink px-2 py-1 text-xs font-mono font-bold"
                 >
                     CONFIDENTIAL
                 </div>
 
                 <h1
+                    data-ui="post-title"
                     class="text-3xl md:text-5xl font-serif font-black mb-6 leading-tight"
                 >
                     {title}
@@ -55,14 +65,16 @@ const updatedDate = post.data.更新时间
 
                 <!-- Meta Grid -->
                 <div
-                    class="grid grid-cols-2 md:grid-cols-5 gap-4 border-y border-dashed border-gray-400 py-4 font-mono text-xs opacity-80"
+                    data-ui="post-meta"
+                    class="grid grid-cols-2 md:grid-cols-5 gap-4 border-y border-dashed border-line-strong py-4 font-mono text-xs opacity-80"
                 >
                     <div>
                         <span class="block opacity-50 mb-1">CATEGORY</span>
                         <a
                             href={`/archive/?category=${encodeURIComponent(category.toLowerCase())}`}
                             data-astro-reload
-                            class="no-underline text-eva-ink/80 dark:text-white/80 hover:text-[var(--cat-color)] transition-colors font-bold"
+                            data-ui="category-link"
+                            class="no-underline text-ink/80 hover:text-[var(--cat-color)] transition-colors font-bold"
                             style={`--cat-color: ${color}`}
                         >
                             {getCategoryLabel(category)}
@@ -88,7 +100,8 @@ const updatedDate = post.data.更新时间
                                     <a
                                         href={`/archive/?tag=${encodeURIComponent(t.toLowerCase())}`}
                                         data-astro-reload
-                                        class="no-underline text-eva-ink/60 dark:text-white/60 hover:text-[var(--tag-hover)] hover:scale-105 transition-all duration-200 inline-block"
+                                        data-ui="tag"
+                                        class="no-underline text-ink/60 hover:text-[var(--tag-hover)] hover:scale-105 transition-all duration-200 inline-block"
                                         style={`--tag-hover: ${color}`}
                                     >
                                         #{t.toUpperCase()}
@@ -101,9 +114,11 @@ const updatedDate = post.data.更新时间
             </header>
 
             <!-- Article Content -->
-            <div class="prose-eva max-w-none text-lg">
+            <div data-ui="post-body" class="prose-eva max-w-none text-lg">
                 <slot />
             </div>
         </article>
+
+        <Comments />
     </main>
 </BaseLayout>

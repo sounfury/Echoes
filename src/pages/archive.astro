@@ -75,7 +75,7 @@ const initialCategory =
 const initialTag = url.searchParams.get("tag")?.toLowerCase() ?? undefined;
 ---
 
-<BaseLayout title="Archive | Echoes">
+<BaseLayout title="Archive | Echoes" page="archive">
     <ArchiveApp
         client:load
         posts={posts}
@@ -88,33 +88,31 @@ const initialTag = url.searchParams.get("tag")?.toLowerCase() ?? undefined;
 </BaseLayout>
 
 <style>
-    /* 活跃 Tab 样式 */
-    :global(.archive-tab.active) {
-        border-color: var(--c-text, #111) !important;
-        background-color: var(--c-text, #111) !important;
-        color: var(--c-bg, #fff) !important;
-        font-weight: 700;
-        box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 0.15);
-    }
+    @layer components {
+        /* 活跃 Tab 样式（状态走 data-state，颜色走变量；不用 !important，主题可在 skin 层覆盖） */
+        :global([data-ui="archive-tab"][data-state="active"]) {
+            border-color: var(--c-ink);
+            background-color: var(--c-ink);
+            color: var(--c-bg);
+            font-weight: 700;
+            box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 0.15);
+        }
 
-    :global(.dark .archive-tab.active) {
-        border-color: #fff !important;
-        background-color: #fff !important;
-        color: #0a0a0c !important;
-    }
-
-    /* 行触控友好 (Mobile) */
-    @media (max-width: 480px) {
-        :global(.archive-item) {
-            min-height: 44px;
-            padding-top: 0.75rem;
-            padding-bottom: 0.75rem;
+        /* fadeIn animation for tag wall */
+        :global(.animate-fadeIn) {
+            animation: fadeIn 0.15s ease-out;
         }
     }
 
-    /* fadeIn animation for tag wall */
-    :global(.animate-fadeIn) {
-        animation: fadeIn 0.15s ease-out;
+    /* 行触控友好 (Mobile)：需要压过 py-3 工具类，放在 utilities 层 */
+    @layer utilities {
+        @media (max-width: 480px) {
+            :global(.archive-item) {
+                min-height: 44px;
+                padding-top: 0.75rem;
+                padding-bottom: 0.75rem;
+            }
+        }
     }
 
     @keyframes fadeIn {

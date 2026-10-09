@@ -6,6 +6,7 @@ const END_OF_TRANSMISSIONS_TEXT = '[ END OF TRANSMISSIONS ]';
 function renderEndIndicator(footer: HTMLElement) {
     footer.textContent = '';
     const endLabel = document.createElement('span');
+    endLabel.dataset.ui = 'timeline-end';
     endLabel.className = 'text-sm font-mono opacity-50 uppercase tracking-wider';
     endLabel.textContent = END_OF_TRANSMISSIONS_TEXT;
     footer.append(endLabel);

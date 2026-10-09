@@ -32,6 +32,8 @@ const siteConfigSchema = z.object({
         timezone: z.string(),
     }),
     theme: z.object({
+        /** 默认主题包 id（src/themes/<id>），缺省为 default */
+        defaultTheme: z.string().default('default'),
         defaultMode: z.enum(['light', 'dark']),
         colors: z.object({
             accent: z.string(),
@@ -56,6 +58,17 @@ const siteConfigSchema = z.object({
     }),
     navigation: z.array(navItemSchema),
     category: z.record(categoryConfigSchema),
+    comments: z
+        .object({
+            waline: z
+                .object({
+                    enabled: z.boolean().default(false),
+                    serverURL: z.string().url().optional(),
+                    lang: z.string().default('zh-CN'),
+                })
+                .optional(),
+        })
+        .default({}),
     bgm: z.object({
         enabled: z.boolean(),
         playlistApi: z.string().url().optional(),

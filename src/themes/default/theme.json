@@ -1,0 +1,10 @@
+{
+  "id": "default",
+  "name": "初号机 · 默认",
+  "nameEn": "EVA-01 · Default",
+  "api": 1,
+  "schemes": ["light", "dark"],
+  "meta": {
+    "themeColor": "#6528F7"
+  }
+}

@@ -13,7 +13,8 @@ site:
 
 # 2. 视觉与主题
 theme:
-  defaultMode: "light" # light | dark
+  defaultTheme: "default" # 主题包 id，对应 src/themes/<id>/
+  defaultMode: "light" # light | dark（主题只支持一种模式时以主题为准）
   colors:
     accent: "#6528F7"
     terminal: "#00FF00"
@@ -59,14 +60,20 @@ category:
     color: "#F90000"
     desc: "随笔与生活"
 
-# 5. 全局播放器
+# 5. 评论（Waline）— 填写 serverURL 并开启后，文章页底部渲染评论区
+comments:
+  waline:
+    enabled: false
+    # serverURL: https://your-waline-server.example.com
+
+# 6. 全局播放器
 bgm:
   enabled: true
   playlistApi: https://api.injahow.cn/meting/?type=playlist&id=17763697831
   defaultPlaylist:
     - https://music.163.com/playlist?id=17763697831
 
-# 6. 运维通知
+# 7. 运维通知
 ops:
   bark:
     enabled: true

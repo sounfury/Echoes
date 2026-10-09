@@ -1,0 +1,60 @@
+---
+import { getSiteConfig } from "../../lib/config";
+
+const waline = getSiteConfig().comments.waline;
+const enabled = Boolean(waline?.enabled && waline.serverURL);
+---
+
+{
+    enabled && (
+        <section
+            data-ui="comments"
+            data-provider="waline"
+            class="max-w-4xl mx-auto mt-16 pt-8 border-t border-dashed border-line-strong"
+            aria-label="Comments"
+        >
+            <h2
+                data-ui="comments-title"
+                class="font-mono text-xs tracking-widest opacity-60 uppercase mb-6"
+            >
+                Comms_Channel
+            </h2>
+            <div
+                id="waline"
+                data-server-url={waline!.serverURL}
+                data-lang={waline!.lang}
+            />
+        </section>
+    )
+}
+
+<style is:global>
+    /* Waline 自带样式放进 components 层，主题的 skin 层可直接覆盖 [data-ui="comments"] .wl-* */
+    @import "@waline/client/waline.css" layer(components);
+</style>
+
+<script>
+    type WalineInstance = { destroy: () => void } | null;
+    let instance: WalineInstance = null;
+
+    async function mountComments() {
+        const el = document.getElementById("waline");
+        if (!el?.dataset.serverUrl) return;
+        const { init } = await import("@waline/client");
+        instance?.destroy();
+        instance = init({
+            el,
+            serverURL: el.dataset.serverUrl,
+            lang: el.dataset.lang,
+            path: window.location.pathname,
+            // 颜色全部由 [data-ui="comments"] 上的 --waline-* ← --c-* 映射提供
+            dark: false,
+        });
+    }
+
+    document.addEventListener("astro:page-load", () => void mountComments());
+    document.addEventListener("astro:before-swap", () => {
+        instance?.destroy();
+        instance = null;
+    });
+</script>
