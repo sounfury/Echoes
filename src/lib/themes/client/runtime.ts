@@ -76,6 +76,23 @@ function applyThemeColor(doc: Document, theme: string) {
     if (meta && color) meta.content = color;
 }
 
+/**
+ * 可替换文案：把带 data-copy 的锚点文本换成主题文案；主题没有对应文案时恢复 data-ui-default。
+ * 查找顺序：copy["<anchor>@<page>"] → copy["<anchor>"] → data-ui-default。
+ * 首屏由 BaseLayout 内联脚本（同样的逻辑）在绘制前完成，这里负责切换主题和 ClientRouter 新文档。
+ */
+export function applyCopy(doc: Document, theme: string): void {
+    const copy = getThemeItem(theme)?.copy ?? {};
+    const page = doc.documentElement.dataset.page ?? '';
+    doc.querySelectorAll<HTMLElement>('[data-copy]').forEach((el) => {
+        const key = el.dataset.ui ?? '';
+        const value = copy[`${key}@${page}`] ?? copy[key] ?? el.dataset.uiDefault;
+        if (value == null) return;
+        if (el.textContent !== value) el.textContent = value;
+        if (el.dataset.text !== undefined) el.dataset.text = value;
+    });
+}
+
 function themeLinks(): HTMLLinkElement[] {
     return Array.from(document.querySelectorAll<HTMLLinkElement>(THEME_LINK_SELECTOR));
 }
@@ -152,6 +169,7 @@ async function doSwitch(id: string, requestedMode?: ThemeMode) {
         });
         applyAttrs(document.documentElement, themeId, mode);
         applyThemeColor(document, themeId);
+        applyCopy(document, themeId);
     });
 
     writeStoredTheme({ theme: themeId, mode: preferred });
@@ -207,6 +225,7 @@ export function initThemeRuntime(): void {
         const { theme, mode } = getCurrentTheme();
         applyAttrs(newDoc.documentElement, theme, mode);
         applyThemeColor(newDoc, theme);
+        applyCopy(newDoc, theme);
         // 新文档 head 里放入同 href 的 link，Astro 的 head 对比会保留现有节点，不会重新下载
         newDoc.head.querySelectorAll(THEME_LINK_SELECTOR).forEach((l) => l.remove());
         themeLinks().forEach((l) => newDoc.head.appendChild(newDoc.importNode(l, true)));

@@ -134,6 +134,24 @@
 		--c-selection-text: #fff;
 		--c-scrollbar: #333;
 
+		/* 布局（接口约定 v2）：主题可以改成多栏、侧栏、不同内容宽度 */
+		--layout-columns: minmax(0, 1fr);
+		--layout-areas: "content";
+		--layout-aside-display: none;
+		--layout-max-w: 56rem;
+		--layout-gutter: 1rem;
+		--layout-header-max-w: var(--layout-max-w);
+
+		/* 文章卡片（时间轴 post-card）：默认无底色、无内边距 */
+		--card-pad-x: 0px;
+		--card-pad-y: 0px;
+		--card-radius: 0px;
+		--card-bg: transparent;
+		--card-bg-hover: var(--card-bg);
+		--card-shadow: none;
+		--card-shadow-hover: var(--card-shadow);
+		--card-lift: none;
+
 		/* Shiki css-variables 主题的兜底色（默认主题会覆盖） */
 		--shiki-foreground: var(--c-text);
 		--shiki-background: var(--c-bg-secondary);
@@ -236,6 +254,60 @@
    ================================================ */
 
 @layer components {
+	/* ── 布局骨架（接口约定 v2）────────────────────────────── */
+	[data-ui="shell"] {
+		display: grid;
+		grid-template-columns: var(--layout-columns);
+		grid-template-areas: var(--layout-areas);
+	}
+
+	[data-ui="aside"] {
+		grid-area: aside;
+		display: var(--layout-aside-display);
+		min-width: 0;
+	}
+
+	[data-ui="content"] {
+		grid-area: content;
+		min-width: 0;
+	}
+
+	[data-ui="main"] {
+		max-width: var(--layout-max-w);
+		margin-inline: auto;
+		padding-inline: var(--layout-gutter);
+	}
+
+	[data-ui="header-inner"] {
+		max-width: var(--layout-header-max-w);
+		margin-inline: auto;
+		padding-inline: var(--layout-gutter);
+	}
+
+	/* ── 文章卡片钩子 ─────────────────────────────────────── */
+	[data-ui="post-card"] {
+		padding: var(--card-pad-y) var(--card-pad-x);
+		margin: calc(var(--card-pad-y) * -1) calc(var(--card-pad-x) * -1);
+		border-radius: var(--card-radius);
+		background: var(--card-bg);
+		box-shadow: var(--card-shadow);
+		transition: background 0.35s ease, box-shadow 0.35s ease, translate 0.35s ease;
+	}
+
+	[data-ui="post-card"]:hover,
+	[data-ui="post-card"]:focus-visible {
+		background: var(--card-bg-hover);
+		box-shadow: var(--card-shadow-hover);
+		translate: var(--card-lift);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		[data-ui="post-card"] {
+			transition: none;
+			translate: none !important;
+		}
+	}
+
 	/* 文章正文基础排版（装饰性的标题竖条、首字下沉、行内代码配色由主题负责） */
 	.prose-eva h2 {
 		font-family: var(--font-serif);

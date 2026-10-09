@@ -124,6 +124,52 @@ const themeDefaults = {
                     var m = document.querySelector('meta[name="theme-color"]');
                     if (m) m.setAttribute("content", t.themeColor);
                 }
+                /*
+                 * 可替换文案（无闪烁）：此时 <body> 还没解析，无法直接改文本。
+                 * 用 MutationObserver 监听解析器插入的节点：MO 回调是微任务，在解析器每个任务结束、
+                 * 浏览器有机会绘制之前就会执行，所以带 data-copy 的元素在首次绘制前就已换成主题文案。
+                 * Header / 页面内容之后还各有一次同步调用 __applyThemeCopy() 兜底；DOMContentLoaded 后停止监听。
+                 */
+                var C = t.copy || null;
+                function copyOf(el) {
+                    var k = el.getAttribute("data-ui");
+                    var p = h.getAttribute("data-page");
+                    if (C && C[k + "@" + p] != null) return C[k + "@" + p];
+                    if (C && C[k] != null) return C[k];
+                    return el.getAttribute("data-ui-default");
+                }
+                function applyEl(el) {
+                    var v = copyOf(el);
+                    if (v == null) return;
+                    if (el.textContent !== v) el.textContent = v;
+                    if (el.hasAttribute("data-text")) el.setAttribute("data-text", v);
+                }
+                window.__applyThemeCopy = function () {
+                    if (!C) return;
+                    var list = document.querySelectorAll("[data-copy]");
+                    for (var i = 0; i < list.length; i++) applyEl(list[i]);
+                };
+                if (C && window.MutationObserver) {
+                    var mo = new MutationObserver(function (recs) {
+                        for (var i = 0; i < recs.length; i++) {
+                            var added = recs[i].addedNodes;
+                            for (var j = 0; j < added.length; j++) {
+                                var n = added[j];
+                                if (n.nodeType === 3) n = n.parentNode;
+                                if (!n || n.nodeType !== 1) continue;
+                                if (n.hasAttribute("data-copy")) applyEl(n);
+                                var inner = n.querySelectorAll("[data-copy]");
+                                for (var k = 0; k < inner.length; k++) applyEl(inner[k]);
+                            }
+                        }
+                    });
+                    mo.observe(h, { childList: true, subtree: true });
+                    document.addEventListener("DOMContentLoaded", function () {
+                        mo.disconnect();
+                        window.__applyThemeCopy();
+                    });
+                }
+
                 if (document.querySelector("link[data-theme-css]")) return;
                 t.css.forEach(function (u) {
                     if (document.readyState === "loading") {
@@ -160,9 +206,24 @@ const themeDefaults = {
 
         <!-- Global Navigation -->
         <Header />
+        <script is:inline>
+            window.__applyThemeCopy && window.__applyThemeCopy();
+        </script>
 
-        <!-- Page Content -->
-        <slot />
+        <!--
+            布局骨架（接口约定 v2）：shell 是 grid，默认只有 content 一栏；
+            aside 默认为空且隐藏，主题通过 --layout-* 变量把它变成侧栏 / 横幅。
+        -->
+        <div data-ui="shell">
+            <aside data-ui="aside" aria-hidden="true"></aside>
+            <div data-ui="content">
+                <!-- Page Content -->
+                <slot />
+            </div>
+        </div>
+        <script is:inline>
+            window.__applyThemeCopy && window.__applyThemeCopy();
+        </script>
 
         <div data-ui="decor-front" aria-hidden="true" transition:persist="decor-front">
         </div>

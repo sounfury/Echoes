@@ -35,7 +35,10 @@ const currentPath = Astro.url.pathname;
     data-ui="header"
     class="fixed top-0 w-full z-50 border-b-2 border-ink/10 backdrop-blur-md  transition-all duration-300"
 >
-    <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+    <div
+        data-ui="header-inner"
+        class="h-16 flex items-center justify-between"
+    >
         <!-- Logo -->
         <a
             href="/"
@@ -55,6 +58,8 @@ const currentPath = Astro.url.pathname;
             <div class="flex flex-col">
                 <span
                     data-ui="brand-title"
+                    data-copy
+                    data-ui-default={config.site.logoText}
                     class="font-black tracking-tighter text-lg leading-none font-sans uppercase"
                 >
                     {config.site.logoText}
@@ -62,6 +67,8 @@ const currentPath = Astro.url.pathname;
                 <span
                     id="site-subtitle"
                     data-ui="brand-subtitle"
+                    data-copy
+                    data-ui-default={config.site.subtitle}
                     class="text-[9px] font-mono tracking-[0.2em] opacity-60 inline-flex items-center"
                     data-text={config.site.subtitle}
                 >
@@ -406,6 +413,14 @@ const currentPath = Astro.url.pathname;
             }
         };
         const unsubscribe = $themeId.subscribe(syncSwitcher);
+        // 主题文案可能替换副标题：切换主题时停止打字机，直接显示新文案
+        const unlistenCopy = $themeId.listen(() => {
+            const subtitle = document.getElementById("site-subtitle");
+            if (!subtitle) return;
+            cleanupTypewriter?.();
+            cleanupTypewriter = null;
+            subtitle.textContent = subtitle.dataset.text ?? subtitle.textContent;
+        });
 
         mobileToggle?.addEventListener("click", () => {
             const open = mobileMenu?.classList.toggle("hidden") === false;
@@ -425,6 +440,7 @@ const currentPath = Astro.url.pathname;
             "astro:before-swap",
             () => {
                 unsubscribe();
+                unlistenCopy();
                 document.removeEventListener("click", closeOnOutside);
                 document.removeEventListener("keydown", closeOnEscape);
             },

@@ -25,9 +25,11 @@ Use TypeScript, Astro, and React functional components. Match the existing forma
 Keep design tokens and global rules in `src/styles/global.css`; keep component-specific behavior in component files.
 
 ### Theme System
-Themes live in `src/themes/<id>/` and target the interface contract in `src/themes/_contract.md` (currently `api: 1`), never component source. When editing components:
+Themes live in `src/themes/<id>/` and target the interface contract in `src/themes/_contract.md` (currently `api: 2`), never component source. When editing components:
 - Colors must go through semantic utilities backed by `--c-*` variables (`bg-ink`, `text-on-ink`, `border-line-strong`, `text-accent` ...). Do not add `dark:` color variants or hard-coded palette colors; light/dark differences belong in variables.
 - Keep `data-ui` anchors and `data-state` / `aria-*` state attributes intact. Renaming or removing a `data-ui` value is a breaking contract change: bump `CONTRACT_VERSION` (`src/lib/themes/schema.ts`), the version in `_contract.md`, and every `theme.json` `api`. New anchors must be documented in `_contract.md`.
+- Page width/padding come from the layout shell (`data-ui="shell"` / `aside` / `content`) and `--layout-*` variables; do not hard-code `max-w-4xl mx-auto px-4` on `main` or the header. Timeline cards consume `--card-*` variables.
+- Text that themes may replace (theme.json `copy`) carries `data-copy data-ui-default="..."`; keep the default text and the attribute in sync, and never put `data-copy` on React-hydrated nodes.
 - Component `<style>` blocks go inside `@layer components { ... }` (unlayered CSS would override theme `@layer skin`).
 - `pnpm build` / `pnpm astro check` run the theme contract check (`integrations/themeContract.ts`) and warn about unknown anchors; `pnpm dev` serves the theme playground at `/dev/themes`.
 

@@ -59,6 +59,26 @@ export function collectSourceAnchors(): Map<string, string[]> {
     return anchors;
 }
 
+const PAGES = ['home', 'archive', 'post', 'playground', 'other'];
+
+/** 可替换文案的锚点：源码里同一个标签上同时带 data-ui="x" 和 data-copy 的 x */
+export function collectCopyAnchors(): Set<string> {
+    const out = new Set<string>();
+    const files = walk(
+        SRC,
+        (f) => SOURCE_EXT.test(f) && !f.startsWith(THEMES_DIR) && !f.startsWith(path.join(SRC, 'dev')),
+    );
+    for (const file of files) {
+        const text = fs.readFileSync(file, 'utf-8');
+        for (const tag of text.matchAll(/<[a-zA-Z][^<>]*>/g)) {
+            if (!/\sdata-copy\b/.test(tag[0])) continue;
+            const ui = tag[0].match(/data-ui=["']([a-z0-9-]+)["']/)?.[1];
+            if (ui) out.add(ui);
+        }
+    }
+    return out;
+}
+
 /** _contract.md 第 3 节里写明的锚点 */
 function collectDocumentedAnchors(doc: string): Set<string> {
     const start = doc.indexOf('## 3.');
@@ -101,6 +121,7 @@ export function checkThemeContract(): ContractReport {
 
     const sourceAnchors = collectSourceAnchors();
     const documented = collectDocumentedAnchors(doc);
+    const copyAnchors = collectCopyAnchors();
 
     for (const anchor of sourceAnchors.keys()) {
         if (doc && !documented.has(anchor)) {
@@ -133,6 +154,16 @@ export function checkThemeContract(): ContractReport {
                 errors.push(
                     `主题 "${id}" 的 theme.json 声明 api=${meta.api}，当前接口约定版本是 ${CONTRACT_VERSION}`,
                 );
+            }
+            for (const key of Object.keys(meta.copy ?? {})) {
+                const [anchor, page] = key.split('@');
+                if (!copyAnchors.has(anchor)) {
+                    warnings.push(
+                        `主题 "${id}" 的 copy 键 "${key}" 不是可替换文案锚点（可用：${[...copyAnchors].sort().join(', ')}），会被忽略`,
+                    );
+                } else if (page !== undefined && !PAGES.includes(page)) {
+                    warnings.push(`主题 "${id}" 的 copy 键 "${key}" 页面限定未知（可用：${PAGES.join(', ')}）`);
+                }
             }
         } catch (err) {
             errors.push(`src/themes/${id}/theme.json 不是合法 JSON：${(err as Error).message}`);

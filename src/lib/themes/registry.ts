@@ -90,6 +90,10 @@ function buildRegistry(): ThemeEntry[] {
         entries.push({
             ...meta,
             chain: chain.map((m) => m.id),
+            // 文案沿 extends 链合并：子主题覆盖父主题
+            copy: chain.some((m) => m.copy)
+                ? Object.assign({}, ...chain.map((m) => m.copy ?? {}))
+                : undefined,
             css: chain.map((m) => cssUrls[`${THEMES_ROOT}${m.id}/theme.css`]),
             hasEffects: chain.some((m) => `${THEMES_ROOT}${m.id}/effects.ts` in effectLoaders),
             previewUrl,
@@ -118,6 +122,7 @@ export function getThemeManifest(): ThemeManifest {
                 schemes: t.schemes,
                 themeColor: t.meta.themeColor,
                 hasEffects: t.hasEffects,
+                copy: t.copy,
             },
         ]),
     );

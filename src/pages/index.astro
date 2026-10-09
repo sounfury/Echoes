@@ -15,16 +15,24 @@ const PAGE_SIZE = 5;
 ---
 
 <BaseLayout page="home">
-	<main data-ui="main" class="pt-24 pb-20 max-w-4xl mx-auto px-4 min-h-screen">
+	<main data-ui="main" class="pt-24 pb-20 min-h-screen">
 		<!-- System Status Header -->
 		<header
 			data-ui="page-header"
 			class="mb-12 border-b-2 border-ink/10 pb-4"
 		>
-			<h1 data-ui="page-kicker" class="text-xs font-mono tracking-widest opacity-60 uppercase">
-				System Status: Online
-			</h1>
-			<p data-ui="page-title" class="text-4xl font-serif font-bold mt-2">Transmissions</p>
+			<h1
+				data-ui="page-kicker"
+				data-copy
+				data-ui-default="System Status: Online"
+				class="text-xs font-mono tracking-widest opacity-60 uppercase"
+			>System Status: Online</h1>
+			<p
+				data-ui="page-title"
+				data-copy
+				data-ui-default="Transmissions"
+				class="text-4xl font-serif font-bold mt-2"
+			>Transmissions</p>
 		</header>
 
 		<!-- Vertical Timeline -->

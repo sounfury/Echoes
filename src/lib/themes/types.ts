@@ -18,6 +18,8 @@ export interface ThemeMeta {
     extends?: string;
     /** 预览图（相对主题目录），构建期解析为 URL */
     preview?: string;
+    /** 主题文案（data-ui 锚点 → 文本），见 _contract.md「可替换文案」 */
+    copy?: Record<string, string>;
     meta: {
         themeColor?: string;
     };
@@ -42,6 +44,8 @@ export interface ThemeManifestItem {
     schemes: ThemeMode[];
     themeColor?: string;
     hasEffects: boolean;
+    /** 按 extends 链合并后的文案 */
+    copy?: Record<string, string>;
 }
 
 export type ThemeManifest = Record<string, ThemeManifestItem>;

@@ -177,7 +177,7 @@ export default function ArchiveApp({
     // ─── Render ───────────────────────────────────────────────────
 
     return (
-        <main data-ui="main" className="pt-24 pb-20 max-w-4xl mx-auto px-4 min-h-screen">
+        <main data-ui="main" className="pt-24 pb-20 min-h-screen">
             {/* ── Header & Search ── */}
             <header data-ui="page-header" className="mb-10 border-b-2 border-ink pb-6">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">

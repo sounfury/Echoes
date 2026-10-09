@@ -38,7 +38,7 @@ const updatedDate = post.data.更新时间
 
 <BaseLayout title={`${title} | Echoes`} description={title} page="post">
     <TableOfContents headings={headings} charCount={content.length} />
-    <main data-ui="main" class="pt-24 pb-20 max-w-4xl mx-auto px-4">
+    <main data-ui="main" class="pt-24 pb-20">
         <article
             data-ui="post"
             data-ui-variant={variant}
@@ -51,6 +51,8 @@ const updatedDate = post.data.更新时间
             >
                 <div
                     data-ui="post-stamp"
+                    data-copy
+                    data-ui-default="CONFIDENTIAL"
                     class="absolute top-0 right-0 bg-ink text-on-ink px-2 py-1 text-xs font-mono font-bold"
                 >
                     CONFIDENTIAL

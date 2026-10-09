@@ -94,8 +94,8 @@ const tocItems = headings.filter((h) => {
             display: none;
             position: fixed;
             top: 20vh;
-            /* max-w-4xl = 56rem, half = 28rem, + 1rem gap */
-            left: calc(50% + 29rem);
+            /* 正文宽度的一半 + 1rem 间距（--layout-max-w 默认 56rem） */
+            left: calc(50% + var(--layout-max-w) / 2 + 1rem);
             right: 1rem;
             max-width: 14rem;
             z-index: 30;

@@ -1,10 +1,10 @@
 # Echoes 主题接口约定
 
-**接口版本：`api: 1`**（与 `src/lib/themes/schema.ts` 中的 `CONTRACT_VERSION` 保持一致）
+**接口版本：`api: 2`**（与 `src/lib/themes/schema.ts` 中的 `CONTRACT_VERSION` 保持一致）
 
 主题对接的是这份"接口约定"，而不是组件源码。主题**只能**使用下面列出的四类接口：
 
-1. CSS 变量（`--c-*` / `--font-*` / `--radius-*` / `--shiki-*`）
+1. CSS 变量（`--c-*` / `--font-*` / `--radius-*` / `--shiki-*` / `--layout-*` / `--card-*`）
 2. 结构锚点 `data-ui="..."`（以及 `data-ui-variant`）
 3. 状态属性 `data-theme` / `data-mode` / `data-schemes` / `data-page` / `data-state` / `data-category` / `aria-*`
 4. 装饰位 `[data-ui="decor-back"]` / `[data-ui="decor-front"]`
@@ -112,7 +112,62 @@ Markdown 代码块使用 Shiki 的 `css-variables` 主题，颜色全部由变�
 
 （Astro 实际输出的是 `--astro-code-*`，base 层在 `.astro-code` 上做了桥接，主题只需设置 `--shiki-*`。）
 
-### 2.5 第三方：Waline 评论
+### 2.5 布局 `--layout-*`（v2）
+
+页面骨架是一个 grid：
+
+```html
+<body>
+  …header（fixed）…
+  <div data-ui="shell">                 <!-- display:grid -->
+    <aside data-ui="aside"></aside>     <!-- 默认为空、隐藏，纯装饰位（aria-hidden） -->
+    <div data-ui="content">             <!-- 页面内容 -->
+      <main data-ui="main">…</main>
+    </div>
+  </div>
+</body>
+```
+
+| 变量 | 作用于 | 默认 |
+| --- | --- | --- |
+| `--layout-columns` | `shell` 的 `grid-template-columns` | `minmax(0, 1fr)` |
+| `--layout-areas` | `shell` 的 `grid-template-areas`（区域名只能用 `aside` / `content`） | `"content"` |
+| `--layout-aside-display` | `aside` 的 `display` | `none` |
+| `--layout-max-w` | `main` 最大宽度；目录 `toc` 也按它定位 | `56rem` |
+| `--layout-gutter` | `main` / `header-inner` 左右内边距 | `1rem` |
+| `--layout-header-max-w` | 头部内容 `header-inner` 最大宽度 | `var(--layout-max-w)` |
+
+例：左侧 38% 立绘栏、右侧内容
+
+```css
+@media (min-width: 64rem) {
+  :root {
+    --layout-columns: 38vw minmax(0, 1fr);
+    --layout-areas: "aside content";
+    --layout-aside-display: block;
+  }
+  [data-ui="aside"] { position: sticky; top: 0; height: 100vh; background: url(./assets/art.webp) center / cover; }
+}
+```
+
+`aside` 里没有任何内容，主题用 `background` / `::before` / `::after` 填充；它在文档流里，能真正占据宽度
+（`decor-*` 是 fixed 叠层，不占位置）。时间轴的线与节点直接用 `timeline` / `timeline-node` 锚点改造
+（例如 `[data-ui="timeline"]::before` 画轴线、`border-color: transparent` 隐藏默认线）。
+
+### 2.6 文章卡片 `--card-*`（v2）
+
+`post-card`（时间轴卡片链接）在 base 层消费以下变量，主题改变量即可得到"卡片化"外观，
+内边距会以等量负外边距抵消，因此文字位置不变、悬停底色不会贴边：
+
+| 变量 | 默认 |
+| --- | --- |
+| `--card-pad-x` / `--card-pad-y` | `0px` |
+| `--card-radius` | `0px` |
+| `--card-bg` / `--card-bg-hover` | `transparent` / 同 `--card-bg` |
+| `--card-shadow` / `--card-shadow-hover` | `none` / 同 `--card-shadow` |
+| `--card-lift` | 悬停位移（`translate` 值），默认 `none`；`prefers-reduced-motion` 时强制无位移 |
+
+### 2.7 第三方：Waline 评论
 
 `[data-ui="comments"]` 上已把 Waline 的 `--waline-*` 变量映射到 `--c-*`，换主题会自动跟随。
 需要更细的定制时可以写 `[data-ui="comments"] .wl-*`（Waline 官方类名，视为第三方稳定接口）。
@@ -122,6 +177,7 @@ Markdown 代码块使用 Shiki 的 `css-variables` 主题，颜色全部由变�
 | 锚点 | 位置 / 说明 |
 | --- | --- |
 | `header` | 顶部固定导航栏 |
+| `header-inner` | 导航栏内容容器（宽度由 `--layout-header-max-w` 决定） |
 | `brand` / `brand-logo` / `brand-title` / `brand-subtitle` | 站点标识（链接、Logo 方块、标题、打字机副标题） |
 | `nav` | 桌面端导航链接容器 |
 | `nav-link` | 导航链接（桌面 + 移动菜单）；当前页带 `data-state="active"` 与 `aria-current="page"` |
@@ -132,14 +188,15 @@ Markdown 代码块使用 Shiki 的 `css-variables` 主题，颜色全部由变�
 | `theme-option` | 菜单项（`data-theme-id`，选中项 `aria-checked="true"` + `data-state="active"`） |
 | `mode-toggle` | 明暗切换按钮；主题只支持一种模式时 `disabled` + `data-state="locked"` |
 | `menu-toggle` / `mobile-menu` | 移动端汉堡按钮 / 菜单（`data-state="open|closed"`） |
-| `main` | 每个页面的主内容容器 |
+| `shell` / `aside` / `content` | 页面骨架 grid / 侧栏装饰位（默认隐藏）/ 内容栏，见 2.5 |
+| `main` | 每个页面的主内容容器（在 `content` 内，宽度 `--layout-max-w`） |
 | `page-header` / `page-kicker` / `page-title` | 页面标题区 / 小字眉题 / 大标题（首页、归档页） |
 | `timeline` | 首页时间轴容器 |
 | `timeline-item` | 时间轴条目（带 `data-category`） |
 | `timeline-node` | 时间轴圆点 |
 | `post-card` | 时间轴条目内的文章卡片链接 |
 | `post-card-title` / `post-card-excerpt` | 卡片标题 / 摘要 |
-| `post-date` | 卡片日期 |
+| `timeline-date` / `post-date` | 卡片日期容器（桌面端默认绝对定位在时间轴左侧）/ 日期文字 |
 | `category-badge` | 分类徽标（时间轴、归档） |
 | `tag-list` / `tag` | 标签列表 / 单个标签（时间轴、文章页、归档、标签墙） |
 | `timeline-footer` / `load-more` / `timeline-end` | 时间轴底部 / 加载更多按钮 / 结束标识 |
@@ -161,6 +218,35 @@ Markdown 代码块使用 Shiki 的 `css-variables` 主题，颜色全部由变�
 | `player-toast` / `player-error` | 手势提示 / 错误信息 |
 | `lyrics-panel` / `lyrics-current` | 歌词面板（`data-state="open|closed"`）/ 当前歌词 |
 | `decor-back` / `decor-front` | 装饰位，见第 5 节 |
+
+### 3.1 可替换文案 `copy`
+
+`theme.json` 可以带 `copy` 字段替换部分界面文字（纯文本，不支持 HTML）：
+
+```json
+"copy": {
+  "brand-subtitle": "吾乃红魔族第一的魔法师！",
+  "page-title@home": "爆裂日记"
+}
+```
+
+- 键是 `data-ui` 锚点名，可以加 `@<page>` 只在某个页面生效（`<page>` 取 `data-page` 的值），
+  页面限定键优先于通用键。
+- **只有下面这些锚点允许替换**（源码里带 `data-copy` 属性，并在 `data-ui-default` 里保存默认文字）：
+
+| 锚点 | 默认文字（来源） |
+| --- | --- |
+| `brand-title` | `site.config.yaml` → `site.logoText` |
+| `brand-subtitle` | `site.config.yaml` → `site.subtitle`（打字机效果打出的就是替换后的文字） |
+| `page-kicker` | 首页 `System Status: Online` |
+| `page-title` | 首页 `Transmissions`（归档页标题由 React 渲染，暂不支持替换） |
+| `post-stamp` | 文章页 `CONFIDENTIAL` |
+| `comments-title` | `Comms_Channel` |
+
+- 未知键：契约校验给出警告，运行时忽略。
+- 首屏无闪烁：`<head>` 内联脚本在解析阶段用 `MutationObserver` 于首次绘制前替换；切换主题、ClientRouter 换页时
+  由运行时替换；切到没有 `copy` 的主题时恢复 `data-ui-default`。
+- 想让新元素可替换：在源码里给它加 `data-copy data-ui-default="默认文字"`（需是纯文本元素，且不能是 React 水合的节点），并更新上表。
 
 > 尚未提供：`footer`（站点目前没有页脚）。将来新增页脚时会以 `data-ui="footer"` 提供，属于兼容性新增。
 
@@ -240,11 +326,12 @@ src/themes/<id>/
   "id": "megumin",             // 必须与目录名一致，小写字母/数字/连字符
   "name": "爆裂魔导 · 惠惠",
   "nameEn": "Explosion · Megumin",
-  "api": 1,                    // 必须等于当前接口版本，否则构建失败
+  "api": 2,                    // 必须等于当前接口版本，否则构建失败
   "schemes": ["light"],        // ["light","dark"] 或只支持一种（强制该模式，明暗按钮被锁定）
   "extends": "default",        // 可选：先加载父主题 CSS，再加载本主题
   "preview": "./preview.png",  // 可选
-  "meta": { "themeColor": "#c8243a" }  // 可选：<meta name="theme-color">
+  "meta": { "themeColor": "#c8243a" },  // 可选：<meta name="theme-color">
+  "copy": { "brand-subtitle": "…" }      // 可选：可替换文案，见 3.1
 }
 ```
 
@@ -254,6 +341,7 @@ src/themes/<id>/
 
 - 用 zod 校验 `theme.json`，`api` 不一致直接报错；
 - 把每个 `theme.css` 单独产出成带哈希的文件（不打进主样式包），按 `extends` 展开成有序 URL 列表；
+- 检查 `copy` 的键是否属于可替换文案锚点，未知键给出警告；
 - 扫描主题 CSS 中引用的 `[data-ui="..."]`，与源码中实际存在的锚点对比，未知锚点给出警告（`astro check` / `astro build` / `astro dev` 都会执行）。
 
 开发时访问 `/dev/themes`（仅 `pnpm dev` 可用，不会进入生产构建）可以看到所有锚点在不同状态下的样子，并切换主题 / 模式。
@@ -263,3 +351,11 @@ src/themes/<id>/
 ## 变更记录
 
 - **v1**（初版）：定义 `--c-*` / `--font-*` / `--radius-sm` / `--shiki-*` 变量、上表全部 `data-ui` 锚点、状态属性、两个装饰位、`effects.ts` 生命周期接口和 `echoes:theme-change` 事件。
+- **v2**：布局纳入接口约定。
+  - 新增页面骨架 `shell` / `aside` / `content`，`main` 现在位于 `content` 内（层级变化，因此升版本）；
+    `main` / 头部的宽度与左右内边距改由 `--layout-max-w` / `--layout-gutter` / `--layout-header-max-w` 控制，
+    不再是固定的 `max-w-4xl px-4`。新增 `header-inner` 锚点。
+  - 新增 `--card-*` 卡片钩子（`post-card` 的内边距、底色、阴影、悬停位移）。
+  - 新增 `theme.json` 的 `copy` 字段与可替换文案锚点（见 3.1）。
+  - 迁移：把 `theme.json` 的 `api` 改成 `2`；若 v1 主题曾用负外边距 + 内边距给 `post-card` 做悬停底色，改用 `--card-*` 变量；
+    若曾用 `font-size: 0` + `::after` 改写文字（如印章），改用 `copy`。

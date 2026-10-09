@@ -2,7 +2,7 @@
   "id": "default",
   "name": "初号机 · 默认",
   "nameEn": "EVA-01 · Default",
-  "api": 1,
+  "api": 2,
   "schemes": ["light", "dark"],
   "meta": {
     "themeColor": "#6528F7"
