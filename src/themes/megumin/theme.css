@@ -272,6 +272,15 @@
 		white-space: nowrap;
 	}
 
+	/* 窄屏头部放不下整句副标题：限宽裁掉，避免压到搜索按钮 */
+	@media (max-width: 47.99rem) {
+		[data-ui="brand-subtitle"] {
+			display: block;
+			max-width: 8.5rem;
+			overflow: hidden;
+		}
+	}
+
 	[data-ui="nav-link"] {
 		font-family: "Megumin Display", var(--font-mono);
 		letter-spacing: 0.08em;
