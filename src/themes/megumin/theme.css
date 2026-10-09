@@ -1,0 +1,351 @@
+/*
+ * 爆裂魔导 · 惠惠（Explosion · Megumin）
+ * 《为美好的世界献上祝福！》风格主题：羊皮纸底 + 深红 / 漆黑，法阵与呼吸光全部为纯 CSS。
+ * 接口约定见 ../_contract.md（api: 1）。只依赖 --c-* / data-ui / 状态属性 / 装饰位。
+ *
+ * 角色立绘：./assets/art.webp（可直接替换为你自己的图片，保持文件名即可，见 README.md）
+ *   当前图片来源：「Megumin Render」by chiyochans（DeviantArt）
+ *   https://www.deviantart.com/chiyochans/art/Megumin-Render-662303446
+ *   角色版权归《この素晴らしい世界に祝福を！》原作方所有，仅用于个人非商业博客。
+ *
+ * 字体：Cinzel Decorative（SIL Open Font License 1.1），仅含拉丁字符子集，
+ * 只有挂载本主题时才会下载。
+ */
+
+@font-face {
+	font-family: "Megumin Display";
+	src: url(./fonts/cinzel-decorative-700.woff2) format("woff2");
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+
+@layer skin {
+	/* ── 变量 ─────────────────────────────────────────────── */
+	:root {
+		--mg-crimson: #c8243a;
+		--mg-crimson-deep: #7a0f1f;
+		--mg-gold: #d9a441;
+		--mg-rune: color-mix(in srgb, var(--mg-crimson) 55%, transparent);
+
+		--c-bg: #f6eee4;
+		--c-bg-secondary: #eee0d0;
+		--c-text: #1d1013;
+		--c-text-secondary: #6b4a4f;
+		--c-border: #e2cfc0;
+
+		--c-accent: var(--mg-crimson);
+		--c-on-accent: #fff7ef;
+		--c-ink: #1a0b0e;
+		--c-on-ink: #f6eee4;
+		--c-surface: #fffaf4;
+		--c-popover: rgb(255 250 244 / 0.94);
+		--c-field: #f0e2d4;
+		--c-shadow: var(--mg-crimson-deep);
+		--c-line: #e6d3c3;
+		--c-line-strong: #b88e84;
+		--c-line-muted: #dcc3b4;
+		--c-line-chip: #d4b5a6;
+		--c-divider: #efdfd2;
+		--c-muted: #8a676c;
+		--c-caret: var(--mg-crimson);
+		--c-selection-bg: var(--mg-crimson);
+		--c-selection-text: #fff7ef;
+		--c-scrollbar: var(--mg-crimson);
+		--c-signal-green: var(--mg-gold);
+		--c-signal-red: var(--mg-crimson);
+		--c-signal-orange: #ff7a1a;
+
+		--font-serif: "Megumin Display", "Noto Serif SC", "Georgia", serif;
+		--radius-sm: 2px;
+
+		/* 代码高亮：暖色羊皮纸 */
+		--shiki-foreground: #2b1a1d;
+		--shiki-background: #fbf3ea;
+		--shiki-token-constant: #a1452b;
+		--shiki-token-string: #5b7b2b;
+		--shiki-token-comment: #9a8378;
+		--shiki-token-keyword: #c8243a;
+		--shiki-token-parameter: #b86a14;
+		--shiki-token-function: #7a2e8c;
+		--shiki-token-string-expression: #5b7b2b;
+		--shiki-token-punctuation: #6b4a4f;
+		--shiki-token-link: #c8243a;
+	}
+
+	/* ── 装饰位：暖光底色 + 法阵（左下）+ 角色立绘（右下）──────── */
+	[data-ui="decor-back"] {
+		overflow: hidden;
+		background-image:
+			radial-gradient(ellipse at 80% -10%, rgb(200 36 58 / 0.10), transparent 55%),
+			radial-gradient(ellipse at 0% 110%, rgb(122 15 31 / 0.10), transparent 50%);
+	}
+
+	[data-ui="decor-back"]::before {
+		content: "";
+		position: absolute;
+		left: -14vmin;
+		bottom: -18vmin;
+		width: min(78vmin, 760px);
+		aspect-ratio: 1;
+		border-radius: 50%;
+		opacity: 0.55;
+		background-image:
+			radial-gradient(circle closest-side, transparent 0 98.6%, var(--mg-rune) 99% 100%, transparent 100%),
+			radial-gradient(circle closest-side, transparent 0 91.5%, var(--mg-rune) 92% 92.6%, transparent 93%),
+			radial-gradient(circle closest-side, transparent 0 80%, var(--mg-rune) 80.4% 81.2%, transparent 81.6%),
+			radial-gradient(circle closest-side, transparent 0 37.6%, var(--mg-rune) 38% 39%, transparent 39.4%),
+			radial-gradient(circle closest-side, transparent 0 14%, var(--mg-rune) 14.4% 15%, transparent 15.4%),
+			repeating-conic-gradient(from 3deg, var(--mg-rune) 0 0.7deg, transparent 0.7deg 7.5deg),
+			conic-gradient(from 0deg,
+				transparent 0 28deg, var(--mg-rune) 28deg 30deg, transparent 30deg 88deg,
+				var(--mg-rune) 88deg 90deg, transparent 90deg 148deg, var(--mg-rune) 148deg 150deg,
+				transparent 150deg 208deg, var(--mg-rune) 208deg 210deg, transparent 210deg 268deg,
+				var(--mg-rune) 268deg 270deg, transparent 270deg 328deg, var(--mg-rune) 328deg 330deg,
+				transparent 330deg);
+		-webkit-mask-image: radial-gradient(circle closest-side, #000 0 39.5%, transparent 40% 79.5%, #000 80% 100%, transparent 100%);
+		mask-image: radial-gradient(circle closest-side, #000 0 39.5%, transparent 40% 79.5%, #000 80% 100%, transparent 100%);
+		filter: drop-shadow(0 0 6px rgb(200 36 58 / 0.45));
+		animation: mg-spin 140s linear infinite;
+	}
+
+	[data-ui="decor-back"]::after {
+		content: "";
+		position: absolute;
+		right: 0;
+		bottom: 0;
+		width: min(30vw, 460px);
+		height: min(92vh, 760px);
+		background: url(./assets/art.webp) no-repeat right bottom / contain;
+		opacity: 0.14;
+		-webkit-mask-image: linear-gradient(to top, transparent 0, #000 12%);
+		mask-image: linear-gradient(to top, transparent 0, #000 12%);
+		filter: drop-shadow(-6px 0 18px rgb(200 36 58 / 0.25));
+	}
+
+	/* 宽屏两侧有留白时，立绘完整显示 */
+	@media (min-width: 1280px) {
+		[data-ui="decor-back"]::after {
+			opacity: 0.92;
+		}
+	}
+
+	/* 文章页正文较长，立绘再淡一些，避免干扰阅读 */
+	:root[data-page="post"] [data-ui="decor-back"]::after {
+		opacity: 0.35;
+	}
+
+	@keyframes mg-spin {
+		to {
+			rotate: 360deg;
+		}
+	}
+
+	@keyframes mg-breathe {
+		0%, 100% {
+			text-shadow: 0 0 0 transparent;
+		}
+		50% {
+			text-shadow: 0 0 14px rgb(200 36 58 / 0.55), 0 0 2px rgb(217 164 65 / 0.6);
+		}
+	}
+
+	@keyframes mg-breathe-box {
+		0%, 100% {
+			box-shadow: 0 0 0 0 rgb(200 36 58 / 0);
+		}
+		50% {
+			box-shadow: 0 0 14px 2px rgb(200 36 58 / 0.45);
+		}
+	}
+
+	/* ── 头部 ─────────────────────────────────────────────── */
+	[data-ui="header"] {
+		background: linear-gradient(to bottom, rgb(246 238 228 / 0.85), rgb(246 238 228 / 0.6));
+		border-bottom-color: color-mix(in srgb, var(--mg-crimson) 35%, transparent);
+	}
+
+	[data-ui="brand-title"] {
+		font-family: "Megumin Display", var(--font-sans);
+		letter-spacing: 0.04em;
+		color: var(--mg-crimson-deep);
+	}
+
+	[data-ui="brand-logo"] {
+		border-radius: 50%;
+		box-shadow: 0 0 0 2px var(--c-bg), 0 0 0 3px var(--mg-crimson);
+		animation: mg-breathe-box 4s ease-in-out infinite;
+	}
+
+	[data-ui="nav-link"][data-state="active"] {
+		text-shadow: 0 0 10px rgb(200 36 58 / 0.35);
+	}
+
+	[data-ui="theme-menu"] {
+		border-color: var(--mg-crimson-deep);
+	}
+
+	/* ── 页面标题 ─────────────────────────────────────────── */
+	[data-ui="page-title"],
+	[data-ui="post-title"] {
+		color: var(--mg-crimson-deep);
+		animation: mg-breathe 5s ease-in-out infinite;
+	}
+
+	[data-ui="page-kicker"] {
+		color: var(--mg-crimson);
+		opacity: 0.85;
+	}
+
+	[data-ui="page-header"] {
+		border-bottom-color: color-mix(in srgb, var(--mg-crimson) 40%, transparent);
+	}
+
+	/* ── 时间轴 ───────────────────────────────────────────── */
+	[data-ui="timeline"] {
+		border-left-color: color-mix(in srgb, var(--mg-crimson) 35%, transparent);
+	}
+
+	/* 圆点变成菱形魔晶 */
+	[data-ui="timeline-node"] {
+		border-radius: 2px;
+		rotate: 45deg;
+		background-color: var(--c-bg);
+		box-shadow: 0 0 8px rgb(200 36 58 / 0.35);
+	}
+
+	[data-ui="post-card"] {
+		border-radius: 4px;
+		transition: background-color 0.3s ease, box-shadow 0.3s ease;
+	}
+
+	[data-ui="post-card"]:hover {
+		background-color: rgb(255 250 244 / 0.7);
+		box-shadow: 0 0 0 1px rgb(200 36 58 / 0.15), 0 8px 24px -12px rgb(122 15 31 / 0.45);
+	}
+
+	[data-ui="category-badge"] {
+		border-radius: 2px;
+		letter-spacing: 0.05em;
+	}
+
+	/* ── 文章 ─────────────────────────────────────────────── */
+	[data-ui="post-header"] {
+		border-top-color: var(--mg-crimson);
+	}
+
+	/* 「CONFIDENTIAL」印章换成爆裂魔法咏唱 */
+	[data-ui="post-stamp"] {
+		font-size: 0;
+		background: var(--mg-crimson);
+		color: var(--c-on-accent);
+		box-shadow: 3px 3px 0 var(--mg-crimson-deep);
+	}
+
+	[data-ui="post-stamp"]::after {
+		content: "EXPLOSION!";
+		font-size: 0.75rem;
+		letter-spacing: 0.12em;
+	}
+
+	[data-ui="post-body"] h2 {
+		position: relative;
+		padding-left: 1.75rem;
+		color: var(--mg-crimson-deep);
+	}
+
+	[data-ui="post-body"] h2::before {
+		content: "✦";
+		position: absolute;
+		left: 0;
+		color: var(--mg-crimson);
+		text-shadow: 0 0 8px rgb(200 36 58 / 0.6);
+	}
+
+	[data-ui="post-body"] a {
+		color: var(--mg-crimson);
+		text-decoration-color: color-mix(in srgb, var(--mg-crimson) 40%, transparent);
+	}
+
+	[data-ui="post-body"] :not(pre) > code {
+		background: rgb(200 36 58 / 0.08);
+		color: var(--mg-crimson-deep);
+		padding: 0.15rem 0.35rem;
+		border-radius: 2px;
+	}
+
+	[data-ui="post-body"] pre {
+		border: 1px solid var(--c-line);
+		border-left: 3px solid var(--mg-crimson);
+		border-radius: 4px;
+		padding: 1rem;
+	}
+
+	[data-ui="post-body"] blockquote {
+		border-left: 3px solid var(--mg-crimson);
+		background: rgb(200 36 58 / 0.05);
+		padding: 0.5rem 1rem;
+		font-style: normal;
+	}
+
+	/* 首字：深红魔导书风格 */
+	[data-ui="post-body"] > p:first-of-type::first-letter {
+		float: left;
+		font-family: var(--font-serif);
+		font-size: 2.6rem;
+		line-height: 2.6rem;
+		font-weight: 700;
+		margin: 0.1em 0.5rem 0 0;
+		color: var(--mg-crimson);
+		text-shadow: 0 0 10px rgb(200 36 58 / 0.35);
+	}
+
+	[data-ui="toc-link"][data-state="active"] {
+		text-shadow: 0 0 8px rgb(200 36 58 / 0.4);
+	}
+
+	/* ── 归档 / 搜索 ──────────────────────────────────────── */
+	[data-ui="archive-tab"][data-state="active"] {
+		border-color: var(--mg-crimson);
+		background-color: var(--mg-crimson);
+		color: var(--c-on-accent);
+		box-shadow: 3px 3px 0 var(--mg-crimson-deep);
+	}
+
+	[data-ui="search-field"]:focus-within {
+		box-shadow: 0 0 0 3px rgb(200 36 58 / 0.15);
+	}
+
+	[data-ui="archive-year-label"] {
+		color: rgb(200 36 58 / 0.1);
+		font-family: var(--font-serif);
+	}
+
+	/* ── 播放器 ───────────────────────────────────────────── */
+	[data-ui="player"] {
+		border-color: var(--mg-crimson-deep);
+	}
+
+	[data-ui="player"][data-state="playing"] [data-ui="player-cover"] {
+		box-shadow: 0 0 0 2px var(--mg-gold), 0 0 12px rgb(200 36 58 / 0.6);
+	}
+
+	[data-ui="lyrics-current"] {
+		text-shadow: 0 0 10px rgb(200 36 58 / 0.35);
+	}
+
+	/* ── 评论 ─────────────────────────────────────────────── */
+	[data-ui="comments"] .wl-btn.primary {
+		box-shadow: 2px 2px 0 var(--mg-crimson-deep);
+	}
+
+	/* ── 减少动态效果 ─────────────────────────────────────── */
+	@media (prefers-reduced-motion: reduce) {
+		[data-ui="decor-back"]::before,
+		[data-ui="brand-logo"],
+		[data-ui="page-title"],
+		[data-ui="post-title"] {
+			animation: none;
+		}
+	}
+}
