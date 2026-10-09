@@ -318,7 +318,7 @@ base 层按 `data-mode` 使用 light / dark。主题想要自己的配色时，�
 | `data-theme` | `<html>` | 当前主题 id |
 | `data-mode` | `<html>` | `light` / `dark`（同时同步 `.dark` 类，供 Tailwind 使用；**主题请用 `data-mode`**） |
 | `data-schemes` | `<html>` | 当前主题支持的模式，空格分隔，如 `light dark` |
-| `data-page` | `<html>` | `home` / `archive` / `post` / `playground` / `other` |
+| `data-page` | `<html>` | `home` / `archive` / `post` / `playground` / `404` / `other`（取值清单见 `src/lib/themes/schema.ts` 的 `THEME_PAGES`；`404` 页没有头部、布局骨架，只有装饰位） |
 | `data-state` | 各锚点 | `active` / `open` / `closed` / `locked` / `playing` / `paused` / `loading` / `error` / `visible` / `hidden`（见锚点表） |
 | `data-category` | 条目 | 分类 slug（`tech` / `review` / `life` …） |
 | `aria-*` | 交互元素 | `aria-current`、`aria-checked`、`aria-selected`、`aria-expanded`、`[disabled]` |
@@ -430,3 +430,4 @@ src/themes/<id>/
     - 新增变量：`--c-paper`、`--c-contrast`、`--c-info`、`--c-search-*`、`--comments-label`、`--comments-error-color`；
       `--c-signal-green` 默认值随 dev 改为 `#10B981`。新增可替换文案：`post-cover-caption`、`comments-hint`；`comments-title` 默认文字改为 `评论`。
     - 文章正文排版由 `src/styles/article.scss`（components 层）提供；默认主题不再自带 `post-body` 排版规则。
+  - 新增 `data-page="404"`：404 页接入主题（加载主题 CSS、装饰位与 effects），兼容变更，不升版本。

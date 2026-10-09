@@ -10,7 +10,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { AstroIntegration, AstroIntegrationLogger } from 'astro';
-import { CONTRACT_VERSION } from '../src/lib/themes/schema';
+import { CONTRACT_VERSION, THEME_PAGES } from '../src/lib/themes/schema';
 
 const ROOT = process.cwd();
 const SRC = path.join(ROOT, 'src');
@@ -59,7 +59,7 @@ export function collectSourceAnchors(): Map<string, string[]> {
     return anchors;
 }
 
-const PAGES = ['home', 'archive', 'post', 'playground', 'other'];
+const PAGES: readonly string[] = THEME_PAGES;
 
 /** 可替换文案的锚点：源码里同一个标签上同时带 data-ui="x" 和 data-copy 的 x */
 export function collectCopyAnchors(): Set<string> {

@@ -9,7 +9,7 @@
  * 本模块只在服务端（Astro frontmatter）使用；浏览器端只读 window.__THEMES__。
  */
 import { CONTRACT_VERSION, themeMetaSchema } from './schema';
-import type { ThemeEntry, ThemeManifest, ThemeMeta } from './types';
+import type { ThemeEntry, ThemeManifest, ThemeMeta, ThemeMode } from './types';
 
 const THEMES_ROOT = '/src/themes/';
 
@@ -22,7 +22,8 @@ const cssUrls = import.meta.glob<string>('/src/themes/*/theme.css', {
     query: '?url',
     import: 'default',
 });
-const previewUrls = import.meta.glob<string>('/src/themes/*/*.{png,jpg,jpeg,webp,svg,avif}', {
+// 预览图可以放在主题目录的子目录里（如 ./assets/art.webp），所以用 ** 匹配
+const previewUrls = import.meta.glob<string>('/src/themes/*/**/*.{png,jpg,jpeg,webp,svg,avif}', {
     eager: true,
     query: '?url',
     import: 'default',
@@ -109,6 +110,22 @@ export const themes: ThemeEntry[] = buildRegistry();
 
 export function getTheme(id: string): ThemeEntry | undefined {
     return themes.find((t) => t.id === id);
+}
+
+/**
+ * 站点默认主题 / 模式（window.__THEME_DEFAULTS__）：
+ * 配置的主题不存在时回退到默认主题，配置的模式不被支持时使用主题的第一种模式。
+ */
+export function resolveThemeDefaults(
+    themeId: string,
+    mode: ThemeMode,
+): { theme: string; mode: ThemeMode; entry: ThemeEntry } {
+    const entry = getTheme(themeId) ?? getTheme(DEFAULT_THEME_ID)!;
+    return {
+        theme: entry.id,
+        mode: entry.schemes.includes(mode) ? mode : entry.schemes[0],
+        entry,
+    };
 }
 
 /** 生成 window.__THEMES__，给首屏内联脚本使用 */

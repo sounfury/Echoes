@@ -8,6 +8,10 @@ export const CONTRACT_VERSION = 2;
 
 export const themeModeSchema = z.enum(['light', 'dark']);
 
+/** <html data-page> 的取值（属于接口约定的状态属性） */
+export const THEME_PAGES = ['home', 'archive', 'post', 'playground', '404', 'other'] as const;
+export type ThemePage = (typeof THEME_PAGES)[number];
+
 export const themeMetaSchema = z
     .object({
         id: z.string().regex(/^[a-z0-9][a-z0-9-]*$/, 'id 只能包含小写字母、数字和连字符'),
@@ -23,7 +27,7 @@ export const themeMetaSchema = z
          */
         copy: z
             .record(
-                z.string().regex(/^[a-z0-9-]+(@[a-z]+)?$/, 'copy 键格式应为 "<data-ui>" 或 "<data-ui>@<page>"'),
+                z.string().regex(/^[a-z0-9-]+(@[a-z0-9]+)?$/, 'copy 键格式应为 "<data-ui>" 或 "<data-ui>@<page>"'),
                 z.string().max(200),
             )
             .optional(),

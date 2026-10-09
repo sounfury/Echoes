@@ -62,13 +62,26 @@ export async function mountEffects(themeId: string, mode: ThemeMode): Promise<vo
     active = state;
 
     for (const mod of modules) {
+        let cleanup: void | (() => void) = undefined;
         try {
-            const cleanup = await mod.default.mount(ctx);
-            if (typeof cleanup === 'function') state.cleanups.push(cleanup);
+            cleanup = await mod.default.mount(ctx);
         } catch (err) {
             console.error(`[themes] effects of "${themeId}" failed to mount`, err);
         }
-        if (token !== generation) return; // mount 期间被卸载
+        if (token !== generation) {
+            // mount 期间被卸载：unmountEffects 已经跑完，这次的清理函数没人会调用，在这里补上
+            if (typeof cleanup === 'function') runCleanup(cleanup, themeId);
+            return;
+        }
+        if (typeof cleanup === 'function') state.cleanups.push(cleanup);
+    }
+}
+
+function runCleanup(cleanup: () => void, themeId: string) {
+    try {
+        cleanup();
+    } catch (err) {
+        console.error(`[themes] effects cleanup of "${themeId}" failed`, err);
     }
 }
 
@@ -77,13 +90,7 @@ export async function unmountEffects(): Promise<void> {
     const current = active;
     active = null;
     if (current) {
-        for (const cleanup of current.cleanups.reverse()) {
-            try {
-                cleanup();
-            } catch (err) {
-                console.error(`[themes] effects cleanup of "${current.theme}" failed`, err);
-            }
-        }
+        for (const cleanup of current.cleanups.reverse()) runCleanup(cleanup, current.theme);
         current.listeners.clear();
     }
     // 兜底：保证装饰位恢复为空

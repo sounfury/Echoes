@@ -157,6 +157,29 @@ export function getSiteConfig(): SiteConfig {
     return cachedConfig;
 }
 
+/**
+ * site.config.yaml 的配色 → <html> 内联的 --cfg-* 变量（global.css 的 base 层再映射成 --c-*）。
+ */
+export function buildCfgStyle(config = getSiteConfig()): string {
+    const { accent, terminal, warning, light, dark } = config.theme.colors;
+    const vars: Record<string, string> = {
+        accent,
+        terminal,
+        warning,
+        'bg-light': light.bg,
+        'bg-secondary-light': light.bgSecondary,
+        'text-light': light.text,
+        'text-secondary-light': light.textSecondary,
+        'border-light': light.border,
+        'bg-dark': dark.bg,
+        'bg-secondary-dark': dark.bgSecondary,
+        'text-dark': dark.text,
+        'text-secondary-dark': dark.textSecondary,
+        'border-dark': dark.border,
+    };
+    return Object.entries(vars).map(([key, value]) => `--cfg-${key}:${value}`).join(';');
+}
+
 const DEFAULT_METING_API_ORIGIN = 'https://api.injahow.cn/meting/';
 
 /**
