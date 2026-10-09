@@ -40,6 +40,8 @@ const siteConfigSchema = z.object({
         icp: z.string().optional(),
     }),
     theme: z.object({
+        /** 默认主题包 id（src/themes/<id>），缺省为 default */
+        defaultTheme: z.string().default('default'),
         defaultMode: z.enum(['light', 'dark']),
         colors: z.object({
             accent: z.string(),

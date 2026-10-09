@@ -51,7 +51,16 @@ export function initToc(): Cleanup {
         if (slug === currentActiveSlug) return;
         currentActiveSlug = slug;
         tocItems.forEach(({ link, slug: itemSlug }) => {
-            link.classList.toggle('active', itemSlug === slug);
+            const isActive = itemSlug === slug;
+            link.classList.toggle('active', isActive);
+            // 主题接口约定：状态用 data-state / aria-*，主题不依赖 .active 类名
+            if (isActive) {
+                link.dataset.state = 'active';
+                link.setAttribute('aria-current', 'location');
+            } else {
+                delete link.dataset.state;
+                link.removeAttribute('aria-current');
+            }
         });
     };
 

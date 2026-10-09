@@ -1,5 +1,4 @@
 ---
-import "@waline/client/style";
 import { getSiteConfig } from "../../lib/config";
 
 interface Props {
@@ -14,15 +13,29 @@ const serializedRequiredMeta = JSON.stringify(comment.requiredMeta);
 
 {
     comment.enabled && (
-        <section class="comments-section" aria-label="评论区">
-            <div class="comments-header">
-                <h2 class="comments-title">评论</h2>
-                <p class="comments-hint">
-                    留下你的想法、补充、纠错，或者只是打个招呼。
-                </p>
+        <section
+            data-ui="comments"
+            data-provider="waline"
+            class="comments-section"
+            aria-label="评论区"
+        >
+            <div data-ui="comments-header" class="comments-header">
+                <h2
+                    data-ui="comments-title"
+                    data-copy
+                    data-ui-default="评论"
+                    class="comments-title"
+                >评论</h2>
+                <p
+                    data-ui="comments-hint"
+                    data-copy
+                    data-ui-default="留下你的想法、补充、纠错，或者只是打个招呼。"
+                    class="comments-hint"
+                >留下你的想法、补充、纠错，或者只是打个招呼。</p>
             </div>
 
             <div
+                data-ui="comments-body"
                 class="comments-container"
                 data-comment-root
                 data-comment-path={path}
@@ -204,6 +217,7 @@ const serializedRequiredMeta = JSON.stringify(comment.requiredMeta);
 
         toast = document.createElement("div");
         toast.className = "comment-feedback-toast";
+        toast.setAttribute("data-ui", "comments-toast");
         toast.setAttribute("aria-live", "polite");
         container.append(toast);
 
@@ -597,327 +611,340 @@ const serializedRequiredMeta = JSON.stringify(comment.requiredMeta);
 </script>
 
 <style is:global>
-    .comments-section {
-        margin-top: 5rem;
-        padding-top: 4rem;
-        position: relative;
-    }
+    /*
+     * Waline 自带样式放进 components 的子层：仍然压过 Tailwind preflight（base 层），
+     * 但会被下面直接写在 components 层的覆盖规则、以及主题的 skin 层盖过。
+     */
+    @import "@waline/client/style" layer(components.waline);
 
-    /* 评论区与正文的分割标识 */
-    .comments-section::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: var(--c-border);
-    }
-
-    .comments-section::after {
-        content: "COMMENTS";
-        position: absolute;
-        top: 0;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: var(--c-bg);
-        padding: 0 1rem;
-        font-family: var(--font-sans);
-        color: var(--c-text-secondary);
-        font-size: 0.75rem;
-        letter-spacing: 0.2em;
-        text-transform: uppercase;
-        opacity: 0.6;
-    }
-
-    .comments-header {
-        margin-bottom: 2.5rem;
-    }
-
-    .comments-title {
-        margin: 0;
-        font-family: var(--font-serif);
-        font-size: 1.5rem;
-        font-weight: 500;
-        color: var(--c-text);
-        line-height: 1.2;
-    }
-
-    .comments-hint {
-        margin: 0.5rem 0 0;
-        color: var(--c-text-secondary);
-        font-size: 0.95rem;
-    }
-
-    .comments-container {
-        --waline-font-size: 0.95rem;
-        --waline-theme-color: var(--c-text);
-        --waline-active-color: var(--c-text);
-        --waline-color: var(--c-text);
-        --waline-bg-color: transparent;
-        --waline-bg-color-light: transparent;
-        --waline-bg-color-hover: color-mix(in srgb, var(--c-bg-secondary) 50%, transparent);
-        --waline-border-color: var(--c-border);
-        --waline-disable-bg-color: var(--c-bg-secondary);
-        --waline-disable-color: var(--c-text-secondary);
-        --waline-info-bg-color: var(--c-bg-secondary);
-        --waline-info-color: var(--c-text-secondary);
-        --waline-light-grey: var(--c-text-secondary);
-        --waline-dark-grey: var(--c-text);
-        --waline-bq-color: var(--c-border);
-        --waline-border: 1px solid var(--c-border);
-        --waline-box-shadow: none;
-        --waline-avatar-radius: 50%;
-        --waline-code-bg-color: var(--c-bg-secondary);
-    }
-
-    /* Reset some default borders */
-    .comments-container [data-waline] * {
-        box-sizing: border-box;
-    }
-
-    .comments-container .wl-panel {
-        margin: 0;
-        border: 1px solid var(--c-border);
-        border-radius: 8px;
-        background: transparent;
-        position: relative; /* 确保弹出框相对于 panel 定位 */
-        overflow: visible; /* 必须设为 visible，否则表情弹出层会被裁剪隐藏 */
-    }
-
-    .comments-container .wl-header {
-        border-bottom: 1px solid var(--c-border);
-        padding: 0;
-    }
-
-    .comments-container .wl-header input,
-    .comments-container .wl-editor,
-    .comments-container .wl-card .wl-content,
-    .comments-container .wl-preview .wl-content {
-        font-family: var(--font-sans);
-    }
-
-    /* 修复表单 Label 与输入框的垂直、水平对齐问题 */
-    .comments-container .wl-header-item {
-        display: flex;
-        align-items: center;
-        padding: 0 1rem;
-    }
-
-    .comments-container .wl-header label {
-        position: static;
-        color: var(--c-text-secondary);
-        font-size: 0.85rem;
-        margin-right: 0.5rem;
-        white-space: nowrap;
-    }
-
-    .comments-container .wl-header input {
-        flex: 1;
-        padding: 0.8rem 0;
-        font-size: 0.9rem;
-        background: transparent;
-        border: none;
-        outline: none;
-    }
-
-    .comments-container .wl-editor {
-        padding: 1rem;
-        min-height: 8rem;
-        background: color-mix(in srgb, var(--c-bg-secondary) 40%, transparent);
-        border-radius: 0;
-    }
-
-    .comments-container .wl-footer {
-        padding: 0.5rem 1rem;
-        background: transparent;
-    }
-
-    /* 修复左侧操作图标（Markdown, Emoji 等）的对齐和大小 */
-    .comments-container .wl-actions {
-        display: flex;
-        align-items: center;
-    }
-
-    .comments-container .wl-action {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .comments-container .wl-action svg {
-        width: 1.3rem;
-        height: 1.3rem;
-        vertical-align: middle;
-    }
-
-    /* 修复表情包下拉框透明导致重叠的问题：加入毛玻璃质感、半透明底色与轻微阴影 */
-    .comments-container .wl-emoji-popup {
-        background: color-mix(in srgb, var(--c-bg) 85%, transparent);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid var(--c-border);
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-        z-index: 999;
-    }
-
-    .comments-container .wl-btn {
-        padding: 0.4rem 1rem;
-        border-radius: 6px;
-        font-size: 0.85rem;
-        background: transparent;
-        color: var(--c-text);
-        border: 1px solid var(--c-border);
-        transition: all 0.2s ease;
-    }
-
-    .comments-container .wl-btn.primary {
-        background: var(--c-text);
-        color: var(--c-bg);
-        border-color: var(--c-text);
-    }
-
-    .comments-container .wl-btn:not(:disabled):hover {
-        opacity: 0.8;
-        background: var(--c-bg-secondary);
-    }
-    
-    .comments-container .wl-btn.primary:not(:disabled):hover {
-        opacity: 0.9;
-        background: var(--c-text);
-    }
-
-    .comments-container .wl-card-item {
-        padding: 1.5rem 0;
-    }
-
-    .comments-container .wl-card {
-        border-bottom: 1px solid color-mix(in srgb, var(--c-border) 40%, transparent);
-    }
-
-    .comments-container .wl-card:last-child {
-        border-bottom: none;
-    }
-    
-    .comments-container .wl-card .wl-head .wl-nick {
-        font-weight: 500;
-    }
-
-    .comments-container .wl-card .wl-meta {
-        display: flow-root;
-        font-family: var(--font-sans);
-        font-size: 0.8rem;
-        color: var(--c-text-secondary);
-    }
-
-    /* Waline 的管理操作按钮（通过/待审核/垃圾/置顶）依赖右浮动布局。
-       这里若把 .wl-meta 改成纯 inline 内容容器，会让右侧按钮区域没有可点击宽度，
-       表现为按钮“看得到但点不动”。改为建立独立格式化上下文，保留右浮动可点击区域。 */
-    .comments-container .wl-card .wl-comment-actions {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        position: relative;
-        z-index: 1;
-    }
-
-    .comments-container .wl-card .wl-like.is-pending,
-    .comments-container .wl-card .wl-like:disabled {
-        opacity: 0.55;
-        cursor: progress;
-        filter: saturate(0.75);
-    }
-
-    .comments-container .wl-card .wl-like.has-queued-toggle {
-        opacity: 0.8;
-        color: var(--c-accent);
-    }
-
-    .comments-container .wl-card .wl-admin-actions .wl-btn {
-        position: relative;
-        min-width: 4.5rem;
-    }
-
-    .comments-container .wl-card .wl-admin-actions .wl-btn.is-disabled,
-    .comments-container .wl-card .wl-admin-actions .wl-btn:disabled {
-        opacity: 0.45;
-        filter: saturate(0.7);
-        cursor: not-allowed;
-    }
-
-    .comments-container .wl-card .wl-admin-actions .wl-btn[data-pending="true"] {
-        opacity: 0.7;
-    }
-
-    .comments-container .wl-card .wl-admin-actions .wl-btn[data-pending="true"]::after {
-        content: "";
-        position: absolute;
-        top: 50%;
-        right: 0.55rem;
-        width: 0.7rem;
-        height: 0.7rem;
-        margin-top: -0.35rem;
-        border: 2px solid currentColor;
-        border-right-color: transparent;
-        border-radius: 50%;
-        animation: comment-action-spin 0.7s linear infinite;
-    }
-
-    .comments-container .comment-feedback-toast {
-        position: sticky;
-        bottom: 1rem;
-        margin-left: auto;
-        width: fit-content;
-        max-width: min(18rem, 100%);
-        padding: 0.6rem 0.9rem;
-        border: 1px solid var(--c-border);
-        border-radius: 999px;
-        background: color-mix(in srgb, var(--c-bg) 88%, transparent);
-        color: var(--c-text);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-        font-size: 0.85rem;
-        line-height: 1.2;
-        opacity: 0;
-        transform: translateY(0.5rem);
-        pointer-events: none;
-        transition: opacity 0.2s ease, transform 0.2s ease;
-        z-index: 5;
-    }
-
-    .comments-container .comment-feedback-toast[data-state="visible"] {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
-    .comments-container .comment-feedback-toast[data-type="error"] {
-        color: #c0392b;
-        border-color: color-mix(in srgb, #c0392b 35%, var(--c-border));
-    }
-
-    @keyframes comment-action-spin {
-        to {
-            transform: rotate(360deg);
-        }
-    }
-
-    .comments-container .wl-empty {
-        padding: 3rem 0;
-        color: var(--c-text-secondary);
-        font-size: 0.95rem;
-        text-align: center;
-    }
-
-    @media (max-width: 768px) {
+    @layer components {
         .comments-section {
-            margin-top: 3rem;
-            padding-top: 2rem;
+            margin-top: 5rem;
+            padding-top: 4rem;
+            position: relative;
+        }
+
+        /* 评论区与正文的分割标识 */
+        .comments-section::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--c-border);
+        }
+
+        .comments-section::after {
+            content: var(--comments-label, "COMMENTS");
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--c-bg);
+            padding: 0 1rem;
+            font-family: var(--font-sans);
+            color: var(--c-text-secondary);
+            font-size: 0.75rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            opacity: 0.6;
         }
 
         .comments-header {
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .comments-title {
+            margin: 0;
+            font-family: var(--font-serif);
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--c-text);
+            line-height: 1.2;
+        }
+
+        .comments-hint {
+            margin: 0.5rem 0 0;
+            color: var(--c-text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /*
+         * Waline 变量全部接到接口约定的 --c-*，写在 [data-ui="comments"] 上，
+         * 主题可以在 @layer skin 里对同一个锚点覆盖 --waline-*（或用 [data-ui="comments"] .wl-* 细调）。
+         * 明暗切换：Waline 用 html.dark 判断暗色，运行时会同步 .dark 类；颜色都来自变量，切主题无需重挂载。
+         */
+        [data-ui="comments"] {
+            --waline-font-size: 0.95rem;
+            --waline-theme-color: var(--c-text);
+            --waline-active-color: var(--c-text);
+            --waline-color: var(--c-text);
+            --waline-bg-color: transparent;
+            --waline-bg-color-light: transparent;
+            --waline-bg-color-hover: color-mix(in srgb, var(--c-bg-secondary) 50%, transparent);
+            --waline-border-color: var(--c-border);
+            --waline-disable-bg-color: var(--c-bg-secondary);
+            --waline-disable-color: var(--c-text-secondary);
+            --waline-info-bg-color: var(--c-bg-secondary);
+            --waline-info-color: var(--c-text-secondary);
+            --waline-light-grey: var(--c-text-secondary);
+            --waline-dark-grey: var(--c-text);
+            --waline-bq-color: var(--c-border);
+            --waline-border: 1px solid var(--c-border);
+            --waline-box-shadow: none;
+            --waline-avatar-radius: 50%;
+            --waline-code-bg-color: var(--c-bg-secondary);
+        }
+
+        /* Reset some default borders */
+        .comments-container [data-waline] * {
+            box-sizing: border-box;
+        }
+
+        .comments-container .wl-panel {
+            margin: 0;
+            border: 1px solid var(--c-border);
+            border-radius: 8px;
+            background: transparent;
+            position: relative; /* 确保弹出框相对于 panel 定位 */
+            overflow: visible; /* 必须设为 visible，否则表情弹出层会被裁剪隐藏 */
+        }
+
+        .comments-container .wl-header {
+            border-bottom: 1px solid var(--c-border);
+            padding: 0;
+        }
+
+        .comments-container .wl-header input,
+        .comments-container .wl-editor,
+        .comments-container .wl-card .wl-content,
+        .comments-container .wl-preview .wl-content {
+            font-family: var(--font-sans);
+        }
+
+        /* 修复表单 Label 与输入框的垂直、水平对齐问题 */
+        .comments-container .wl-header-item {
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+        }
+
+        .comments-container .wl-header label {
+            position: static;
+            color: var(--c-text-secondary);
+            font-size: 0.85rem;
+            margin-right: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .comments-container .wl-header input {
+            flex: 1;
+            padding: 0.8rem 0;
+            font-size: 0.9rem;
+            background: transparent;
+            border: none;
+            outline: none;
+        }
+
+        .comments-container .wl-editor {
+            padding: 1rem;
+            min-height: 8rem;
+            background: color-mix(in srgb, var(--c-bg-secondary) 40%, transparent);
+            border-radius: 0;
+        }
+
+        .comments-container .wl-footer {
+            padding: 0.5rem 1rem;
+            background: transparent;
+        }
+
+        /* 修复左侧操作图标（Markdown, Emoji 等）的对齐和大小 */
+        .comments-container .wl-actions {
+            display: flex;
+            align-items: center;
+        }
+
+        .comments-container .wl-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .comments-container .wl-action svg {
+            width: 1.3rem;
+            height: 1.3rem;
+            vertical-align: middle;
+        }
+
+        /* 修复表情包下拉框透明导致重叠的问题：加入毛玻璃质感、半透明底色与轻微阴影 */
+        .comments-container .wl-emoji-popup {
+            background: color-mix(in srgb, var(--c-bg) 85%, transparent);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--c-border);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+            z-index: 999;
+        }
+
+        .comments-container .wl-btn {
+            padding: 0.4rem 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            background: transparent;
+            color: var(--c-text);
+            border: 1px solid var(--c-border);
+            transition: all 0.2s ease;
+        }
+
+        .comments-container .wl-btn.primary {
+            background: var(--c-text);
+            color: var(--c-bg);
+            border-color: var(--c-text);
+        }
+
+        .comments-container .wl-btn:not(:disabled):hover {
+            opacity: 0.8;
+            background: var(--c-bg-secondary);
+        }
+    
+        .comments-container .wl-btn.primary:not(:disabled):hover {
+            opacity: 0.9;
+            background: var(--c-text);
+        }
+
+        .comments-container .wl-card-item {
+            padding: 1.5rem 0;
+        }
+
+        .comments-container .wl-card {
+            border-bottom: 1px solid color-mix(in srgb, var(--c-border) 40%, transparent);
+        }
+
+        .comments-container .wl-card:last-child {
+            border-bottom: none;
+        }
+    
+        .comments-container .wl-card .wl-head .wl-nick {
+            font-weight: 500;
+        }
+
+        .comments-container .wl-card .wl-meta {
+            display: flow-root;
+            font-family: var(--font-sans);
+            font-size: 0.8rem;
+            color: var(--c-text-secondary);
+        }
+
+        /* Waline 的管理操作按钮（通过/待审核/垃圾/置顶）依赖右浮动布局。
+           这里若把 .wl-meta 改成纯 inline 内容容器，会让右侧按钮区域没有可点击宽度，
+           表现为按钮“看得到但点不动”。改为建立独立格式化上下文，保留右浮动可点击区域。 */
+        .comments-container .wl-card .wl-comment-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .comments-container .wl-card .wl-like.is-pending,
+        .comments-container .wl-card .wl-like:disabled {
+            opacity: 0.55;
+            cursor: progress;
+            filter: saturate(0.75);
+        }
+
+        .comments-container .wl-card .wl-like.has-queued-toggle {
+            opacity: 0.8;
+            color: var(--c-accent);
+        }
+
+        .comments-container .wl-card .wl-admin-actions .wl-btn {
+            position: relative;
+            min-width: 4.5rem;
+        }
+
+        .comments-container .wl-card .wl-admin-actions .wl-btn.is-disabled,
+        .comments-container .wl-card .wl-admin-actions .wl-btn:disabled {
+            opacity: 0.45;
+            filter: saturate(0.7);
+            cursor: not-allowed;
+        }
+
+        .comments-container .wl-card .wl-admin-actions .wl-btn[data-pending="true"] {
+            opacity: 0.7;
+        }
+
+        .comments-container .wl-card .wl-admin-actions .wl-btn[data-pending="true"]::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            right: 0.55rem;
+            width: 0.7rem;
+            height: 0.7rem;
+            margin-top: -0.35rem;
+            border: 2px solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: comment-action-spin 0.7s linear infinite;
+        }
+
+        .comments-container .comment-feedback-toast {
+            position: sticky;
+            bottom: 1rem;
+            margin-left: auto;
+            width: fit-content;
+            max-width: min(18rem, 100%);
+            padding: 0.6rem 0.9rem;
+            border: 1px solid var(--c-border);
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--c-bg) 88%, transparent);
+            color: var(--c-text);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            font-size: 0.85rem;
+            line-height: 1.2;
+            opacity: 0;
+            transform: translateY(0.5rem);
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 5;
+        }
+
+        .comments-container .comment-feedback-toast[data-state="visible"] {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .comments-container .comment-feedback-toast[data-type="error"] {
+            color: var(--comments-error-color, #c0392b);
+            border-color: color-mix(in srgb, var(--comments-error-color, #c0392b) 35%, var(--c-border));
+        }
+
+        @keyframes comment-action-spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .comments-container .wl-empty {
+            padding: 3rem 0;
+            color: var(--c-text-secondary);
+            font-size: 0.95rem;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .comments-section {
+                margin-top: 3rem;
+                padding-top: 2rem;
+            }
+
+            .comments-header {
+                margin-bottom: 2rem;
+            }
         }
     }
 </style>

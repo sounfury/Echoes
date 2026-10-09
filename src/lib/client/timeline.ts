@@ -12,6 +12,7 @@ type TimelineState = {
 function renderEndIndicator(footer: HTMLElement) {
     footer.textContent = '';
     const endLabel = document.createElement('span');
+    endLabel.dataset.ui = 'timeline-end';
     endLabel.className = 'text-sm font-mono opacity-50 uppercase tracking-wider';
     endLabel.textContent = END_OF_TRANSMISSIONS_TEXT;
     footer.append(endLabel);
@@ -21,7 +22,8 @@ function renderLoadMoreButton(footer: HTMLElement) {
     footer.textContent = '';
     const button = document.createElement('button');
     button.id = 'load-more-btn';
-    button.className = 'text-sm font-mono opacity-50 hover:text-eva-purple hover:opacity-100 transition-all uppercase tracking-wider cursor-pointer';
+    button.dataset.ui = 'load-more';
+    button.className = 'text-sm font-mono opacity-50 hover:text-accent hover:opacity-100 transition-all uppercase tracking-wider cursor-pointer';
     button.textContent = '[ Load More Data ]';
     footer.append(button);
 }

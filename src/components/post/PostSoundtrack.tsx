@@ -58,5 +58,5 @@ export default function PostSoundtrack({ sourceApi }: Props) {
 
     const label = resolveSoundtrackLabel(sourceApi, currentSource, currentTrack, playerStatus);
 
-    return <span>{label}</span>;
+    return <span data-ui="post-soundtrack">{label}</span>;
 }

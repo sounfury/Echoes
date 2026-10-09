@@ -16,7 +16,7 @@ const { accent, terminal, warning, light, dark: darkColors } = colors;
 <!doctype html>
 <html
     lang="zh-CN"
-    style={`--c-accent:${accent};--c-terminal:${terminal};--c-warning:${warning};--c-bg-light:${light.bg};--c-bg-secondary-light:${light.bgSecondary};--c-text-light:${light.text};--c-text-secondary-light:${light.textSecondary};--c-border-light:${light.border};--c-bg-dark:${darkColors.bg};--c-bg-secondary-dark:${darkColors.bgSecondary};--c-text-dark:${darkColors.text};--c-text-secondary-dark:${darkColors.textSecondary};--c-border-dark:${darkColors.border}`}
+    style={`--cfg-accent:${accent};--cfg-terminal:${terminal};--cfg-warning:${warning};--cfg-bg-light:${light.bg};--cfg-bg-secondary-light:${light.bgSecondary};--cfg-text-light:${light.text};--cfg-text-secondary-light:${light.textSecondary};--cfg-border-light:${light.border};--cfg-bg-dark:${darkColors.bg};--cfg-bg-secondary-dark:${darkColors.bgSecondary};--cfg-text-dark:${darkColors.text};--cfg-text-secondary-dark:${darkColors.textSecondary};--cfg-border-dark:${darkColors.border}`}
 >
     <head>
         <meta charset="utf-8" />
@@ -41,7 +41,11 @@ const { accent, terminal, warning, light, dark: darkColors } = colors;
 
         <script is:inline define:vars={{ defaultThemeMode }}>
             (function () {
-                var stored = localStorage.getItem("theme-mode");
+                // 与主题运行时共用存储（src/lib/themes/client/runtime.ts）；兼容旧的 theme-mode
+                var stored = null;
+                try {
+                    stored = (JSON.parse(localStorage.getItem("echoes:theme") || "{}") || {}).mode || localStorage.getItem("theme-mode");
+                } catch (e) {}
                 var isDark = (stored || defaultThemeMode) === "dark";
                 document.documentElement.classList.toggle("dark", isDark);
             })();

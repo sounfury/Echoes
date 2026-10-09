@@ -15,7 +15,8 @@ site:
 
 # 2. 视觉与主题
 theme:
-  defaultMode: "light" # light | dark
+  defaultTheme: "default" # 主题包 id，对应 src/themes/<id>/
+  defaultMode: "light" # light | dark（主题只支持一种模式时以主题为准）
   colors:
     accent: "#6528F7"
     terminal: "#00FF00"

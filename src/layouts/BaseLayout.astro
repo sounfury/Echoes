@@ -6,12 +6,19 @@ import Header from "../components/common/Header.astro";
 import GlobalPlayer from "../components/player/GlobalPlayer";
 import type { PlayerSource } from "../stores/player";
 import QuickSearchLauncher from "../components/search/QuickSearchLauncher.astro";
+import {
+    DEFAULT_THEME_ID,
+    getTheme,
+    getThemeManifest,
+} from "../lib/themes/registry";
 import "../styles/global.css";
 
 interface Props {
     title?: string;
     description?: string;
     playerSource?: PlayerSource | null;
+    /** 写到 <html data-page>，属于主题接口约定的状态属性 */
+    page?: "home" | "archive" | "post" | "playground" | "other";
 }
 
 const config = getSiteConfig();
@@ -19,6 +26,7 @@ const {
     title = config.site.title,
     description = config.site.description,
     playerSource: pagePlayerSource = null,
+    page = "other",
 } = Astro.props;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 const playerSource = pagePlayerSource ?? getDefaultPlayerSource(config);
@@ -27,6 +35,19 @@ const playerSourcePayload = JSON.stringify(playerSource);
 const { colors, defaultMode: defaultThemeMode } = config.theme;
 const { accent, terminal, warning, light, dark: darkColors } = colors;
 
+// 主题清单（构建期由 src/lib/themes/registry.ts 扫描 src/themes/* 生成）
+const themeManifest = getThemeManifest();
+const defaultThemeId = getTheme(config.theme.defaultTheme)
+    ? config.theme.defaultTheme
+    : DEFAULT_THEME_ID;
+const defaultTheme = getTheme(defaultThemeId)!;
+const themeDefaults = {
+    theme: defaultThemeId,
+    mode: defaultTheme.schemes.includes(defaultThemeMode)
+        ? defaultThemeMode
+        : defaultTheme.schemes[0],
+};
+
 const ogImage = `${config.site.url}/covers/og-default.jpg`;
 ---
 
@@ -34,11 +55,26 @@ const ogImage = `${config.site.url}/covers/og-default.jpg`;
 <html
     lang="zh-CN"
     class="scroll-smooth"
-    style={`--c-accent:${accent};--c-terminal:${terminal};--c-warning:${warning};--c-bg-light:${light.bg};--c-bg-secondary-light:${light.bgSecondary};--c-text-light:${light.text};--c-text-secondary-light:${light.textSecondary};--c-border-light:${light.border};--c-bg-dark:${darkColors.bg};--c-bg-secondary-dark:${darkColors.bgSecondary};--c-text-dark:${darkColors.text};--c-text-secondary-dark:${darkColors.textSecondary};--c-border-dark:${darkColors.border}`}
+    data-page={page}
+    data-theme={themeDefaults.theme}
+    data-mode={themeDefaults.mode}
+    style={`--cfg-accent:${accent};--cfg-terminal:${terminal};--cfg-warning:${warning};--cfg-bg-light:${light.bg};--cfg-bg-secondary-light:${light.bgSecondary};--cfg-text-light:${light.text};--cfg-text-secondary-light:${light.textSecondary};--cfg-border-light:${light.border};--cfg-bg-dark:${darkColors.bg};--cfg-bg-secondary-dark:${darkColors.bgSecondary};--cfg-text-dark:${darkColors.text};--cfg-text-secondary-dark:${darkColors.textSecondary};--cfg-border-dark:${darkColors.border}`}
 >
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <!--
+            层叠顺序：必须早于任何样式表，保证主题的 @layer skin 永远在最后。
+            transition:persist：ClientRouter 换页时保留这个节点（否则内联 style 会被移到 head 末尾，
+            而保留下来的主题 <link> 会排到它前面，导致 skin 变成第一个、优先级最低的层）。
+        -->
+        <style is:inline transition:persist="echoes-layer-order">
+            @layer theme, base, components, utilities, skin;
+        </style>
+        <meta
+            name="theme-color"
+            content={defaultTheme.meta.themeColor ?? accent}
+        />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <meta name="generator" content={Astro.generator} />
 
@@ -77,62 +113,164 @@ const ogImage = `${config.site.url}/covers/og-default.jpg`;
 
         <ClientRouter />
 
-        <!-- Theme Init (FOUC prevention) -->
-        <script is:inline define:vars={{ defaultThemeMode }}>
+        <!--
+            Theme Init (FOUC prevention)
+            同步内联脚本：读取 localStorage 'echoes:theme'，确定主题与模式，
+            用 document.write 写入阻塞渲染的主题 <link>，首屏不会先闪默认样式。
+        -->
+        <script
+            is:inline
+            define:vars={{ __themes: themeManifest, __defaults: themeDefaults }}
+        >
             (function () {
-                var stored = localStorage.getItem("theme-mode");
-                var isDark = (stored || defaultThemeMode) === "dark";
-                document.documentElement.classList.toggle("dark", isDark);
+                var T = __themes;
+                var D = __defaults;
+                var h = document.documentElement;
+                var s = {};
+                var legacy = null;
+                window.__THEMES__ = T;
+                window.__THEME_DEFAULTS__ = D;
+                try {
+                    s = JSON.parse(localStorage.getItem("echoes:theme") || "{}") || {};
+                    legacy = localStorage.getItem("theme-mode");
+                } catch (e) {}
+                var id = T[s.theme] ? s.theme : D.theme;
+                var t = T[id];
+                var want = s.mode || legacy || D.mode;
+                var mode = t.schemes.indexOf(want) >= 0 ? want : t.schemes[0];
+                h.dataset.theme = id;
+                h.dataset.mode = mode;
+                h.dataset.schemes = t.schemes.join(" ");
+                h.classList.toggle("dark", mode === "dark");
+                if (t.themeColor) {
+                    var m = document.querySelector('meta[name="theme-color"]');
+                    if (m) m.setAttribute("content", t.themeColor);
+                }
+                /*
+                 * 可替换文案（无闪烁）：此时 <body> 还没解析，无法直接改文本。
+                 * 用 MutationObserver 监听解析器插入的节点：MO 回调是微任务，在解析器每个任务结束、
+                 * 浏览器有机会绘制之前就会执行，所以带 data-copy 的元素在首次绘制前就已换成主题文案。
+                 * Header / 页面内容之后还各有一次同步调用 __applyThemeCopy() 兜底；DOMContentLoaded 后停止监听。
+                 */
+                var C = t.copy || null;
+                function copyOf(el) {
+                    var k = el.getAttribute("data-ui");
+                    var p = h.getAttribute("data-page");
+                    if (C && C[k + "@" + p] != null) return C[k + "@" + p];
+                    if (C && C[k] != null) return C[k];
+                    return el.getAttribute("data-ui-default");
+                }
+                function applyEl(el) {
+                    var v = copyOf(el);
+                    if (v == null) return;
+                    if (el.textContent !== v) el.textContent = v;
+                    if (el.hasAttribute("data-text")) el.setAttribute("data-text", v);
+                }
+                window.__applyThemeCopy = function () {
+                    if (!C) return;
+                    var list = document.querySelectorAll("[data-copy]");
+                    for (var i = 0; i < list.length; i++) applyEl(list[i]);
+                };
+                if (C && window.MutationObserver) {
+                    var mo = new MutationObserver(function (recs) {
+                        for (var i = 0; i < recs.length; i++) {
+                            var added = recs[i].addedNodes;
+                            for (var j = 0; j < added.length; j++) {
+                                var n = added[j];
+                                if (n.nodeType === 3) n = n.parentNode;
+                                if (!n || n.nodeType !== 1) continue;
+                                if (n.hasAttribute("data-copy")) applyEl(n);
+                                var inner = n.querySelectorAll("[data-copy]");
+                                for (var k = 0; k < inner.length; k++) applyEl(inner[k]);
+                            }
+                        }
+                    });
+                    mo.observe(h, { childList: true, subtree: true });
+                    document.addEventListener("DOMContentLoaded", function () {
+                        mo.disconnect();
+                        window.__applyThemeCopy();
+                    });
+                }
+
+                if (document.querySelector("link[data-theme-css]")) return;
+                t.css.forEach(function (u) {
+                    if (document.readyState === "loading") {
+                        document.write(
+                            '<link rel="stylesheet" data-theme-css href="' + u + '">',
+                        );
+                    } else {
+                        var l = document.createElement("link");
+                        l.rel = "stylesheet";
+                        l.href = u;
+                        l.setAttribute("data-theme-css", "");
+                        document.head.appendChild(l);
+                    }
+                });
             })();
         </script>
     </head>
     <body
         class="transition-colors duration-500 min-h-screen relative overflow-x-hidden font-sans"
     >
-        <!-- Background Layers -->
-        <div
-            class="fixed inset-0 -z-10 bg-grid-pattern opacity-50 pointer-events-none"
-        >
-        </div>
-
-        <!-- Decorative EVA Side Text -->
-        <div
-            class="fixed top-20 left-4 text-[10px] font-mono opacity-30 rotate-90 hidden lg:block tracking-widest"
-        >
-            SYSTEM_STATUS: NORMAL // SYNC_RATE: 100%
+        <!--
+            装饰位（主题接口约定）：始终为空，由主题 CSS（::before/::after、背景）
+            （默认主题的网格背景与侧边状态文字就画在 decor-back 上）
+            或主题 effects.ts 填充。transition:persist 让 JS 效果跨页面保留。
+        -->
+        <div data-ui="decor-back" aria-hidden="true" transition:persist="decor-back">
         </div>
 
         <!-- Global Navigation -->
         <Header />
+        <script is:inline>
+            window.__applyThemeCopy && window.__applyThemeCopy();
+        </script>
 
-        <!-- Page Content -->
-        <slot />
+        <!--
+            布局骨架（接口约定 v2）：shell 是 grid，默认只有 content 一栏；
+            aside 默认为空且隐藏，主题通过 --layout-* 变量把它变成侧栏 / 横幅。
+        -->
+        <div data-ui="shell">
+            <aside data-ui="aside" aria-hidden="true"></aside>
+            <div data-ui="content">
+                <!-- Page Content -->
+                <slot />
+
+                <!-- Footer -->
+                <footer
+                    data-ui="footer"
+                    class="py-6 flex flex-col items-center justify-center gap-2 text-xs opacity-50 font-mono"
+                >
+                    <div class="flex items-center gap-2">
+                        <span
+                            >&copy; {new Date().getFullYear()}
+                            {config.site.author}</span
+                        >
+                    </div>
+                    {
+                        config.site.icp && (
+                            <a
+                                href="https://beian.miit.gov.cn/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                data-ui="footer-link"
+                                class="hover:text-accent transition-colors"
+                            >
+                                {config.site.icp}
+                            </a>
+                        )
+                    }
+                </footer>
+            </div>
+        </div>
+        <script is:inline>
+            window.__applyThemeCopy && window.__applyThemeCopy();
+        </script>
+
+        <div data-ui="decor-front" aria-hidden="true" transition:persist="decor-front">
+        </div>
 
         <QuickSearchLauncher />
-
-        <!-- Footer -->
-        <footer
-            class="py-6 flex flex-col items-center justify-center gap-2 text-xs opacity-50 font-mono"
-        >
-            <div class="flex items-center gap-2">
-                <span
-                    >&copy; {new Date().getFullYear()}
-                    {config.site.author}</span
-                >
-            </div>
-            {
-                config.site.icp && (
-                    <a
-                        href="https://beian.miit.gov.cn/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="hover:text-eva-purple transition-colors"
-                    >
-                        {config.site.icp}
-                    </a>
-                )
-            }
-        </footer>
 
         <!-- Global Music Player -->
         {

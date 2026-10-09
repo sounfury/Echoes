@@ -1,45 +1,54 @@
 import { atom, computed } from 'nanostores';
+import type { ThemeMode } from '../lib/themes/types';
+import {
+    getCurrentTheme,
+    initThemeRuntime,
+    onThemeChange,
+    switchTheme as runtimeSwitchTheme,
+    toggleMode,
+} from '../lib/themes/client/runtime';
 
-export type ThemeMode = 'light' | 'dark';
+export type { ThemeMode };
 
 export const $themeMode = atom<ThemeMode>('light');
+export const $themeId = atom<string>('default');
 
 export const $isDark = computed($themeMode, theme => theme === 'dark');
 
+let subscribed = false;
+
 /**
  * 初始化主题 — 在 页面加载 / View Transitions swap 后调用
- * 内联脚本已防 FOUC，这里同步 store 并注册 View Transitions 钩子
+ * 首屏防闪烁由 BaseLayout 内联脚本完成；这里同步 store，并初始化主题运行时
+ * （运行时负责在 astro:before-swap 把主题 <link>、data-theme/data-mode、.dark 搬到新文档）
  */
 export function initTheme() {
     if (typeof window === 'undefined') return;
 
-    const mode: ThemeMode = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    const { theme, mode } = getCurrentTheme();
+    $themeId.set(theme);
     $themeMode.set(mode);
 
-    // View Transitions: 在新文档 swap 前同步 dark class
-    document.addEventListener('astro:before-swap', (e: any) => {
-        const stored = localStorage.getItem('theme-mode') as ThemeMode | null;
-        const isDark = stored ? stored === 'dark' : document.documentElement.classList.contains('dark');
-        e.newDocument.documentElement.classList.toggle('dark', isDark);
-    }, { once: true });
-}
-
-/**
- * 切换主题
- */
-export function toggleTheme() {
-    const current = $themeMode.get();
-    const next: ThemeMode = current === 'dark' ? 'light' : 'dark';
-
-    $themeMode.set(next);
-    applyTheme(next);
-
-    if (typeof window !== 'undefined') {
-        localStorage.setItem('theme-mode', next);
+    initThemeRuntime();
+    if (!subscribed) {
+        subscribed = true;
+        onThemeChange(({ theme: nextTheme, mode: nextMode }) => {
+            $themeId.set(nextTheme);
+            $themeMode.set(nextMode);
+        });
     }
 }
 
-function applyTheme(mode: ThemeMode) {
-    if (typeof window === 'undefined') return;
-    document.documentElement.classList.toggle('dark', mode === 'dark');
+/**
+ * 切换明暗模式（当前主题只支持一种模式时无效）
+ */
+export function toggleTheme() {
+    return toggleMode();
+}
+
+/**
+ * 切换主题包
+ */
+export function switchTheme(id: string, mode?: ThemeMode) {
+    return runtimeSwitchTheme(id, mode);
 }

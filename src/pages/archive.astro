@@ -88,6 +88,7 @@ const tags: TagEntry[] = [...tagFrequency.entries()]
 <BaseLayout
     title="Archive | Echoes"
     description="按分类与标签检索所有文章 — Echoes 归档数据库"
+    page="archive"
 >
     <ArchiveApp
         client:only="react"
@@ -98,9 +99,10 @@ const tags: TagEntry[] = [...tagFrequency.entries()]
     >
         <main
             slot="fallback"
-            class="pt-24 pb-20 max-w-4xl mx-auto px-4 min-h-screen"
+            data-ui="main"
+            class="pt-24 pb-20 min-h-screen"
         >
-            <div class="mb-10 border-b-2 border-eva-ink dark:border-white pb-6">
+            <div data-ui="page-header" class="mb-10 border-b-2 border-ink pb-6">
                 <h1
                     class="text-4xl md:text-5xl font-serif font-black mb-2 tracking-tight"
                 >
@@ -111,7 +113,7 @@ const tags: TagEntry[] = [...tagFrequency.entries()]
                 </p>
             </div>
             <div
-                class="h-24 border border-dashed border-gray-300 dark:border-white/20 animate-pulse"
+                class="h-24 border border-dashed border-line-chip animate-pulse"
             >
             </div>
         </main>
@@ -119,33 +121,31 @@ const tags: TagEntry[] = [...tagFrequency.entries()]
 </BaseLayout>
 
 <style>
-    /* 活跃 Tab 样式 */
-    :global(.archive-tab.active) {
-        border-color: var(--c-text, #111) !important;
-        background-color: var(--c-text, #111) !important;
-        color: var(--c-bg, #fff) !important;
-        font-weight: 700;
-        box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 0.15);
-    }
+    @layer components {
+        /* 活跃 Tab 样式（状态走 data-state，颜色走变量；不用 !important，主题可在 skin 层覆盖） */
+        :global([data-ui="archive-tab"][data-state="active"]) {
+            border-color: var(--c-ink);
+            background-color: var(--c-ink);
+            color: var(--c-bg);
+            font-weight: 700;
+            box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 0.15);
+        }
 
-    :global(.dark .archive-tab.active) {
-        border-color: #fff !important;
-        background-color: #fff !important;
-        color: #0a0a0c !important;
-    }
-
-    /* 行触控友好 (Mobile) */
-    @media (max-width: 480px) {
-        :global(.archive-item) {
-            min-height: 44px;
-            padding-top: 0.75rem;
-            padding-bottom: 0.75rem;
+        /* fadeIn animation for tag wall */
+        :global(.animate-fadeIn) {
+            animation: fadeIn 0.15s ease-out;
         }
     }
 
-    /* fadeIn animation for tag wall */
-    :global(.animate-fadeIn) {
-        animation: fadeIn 0.15s ease-out;
+    /* 行触控友好 (Mobile)：需要压过 py-3 工具类，放在 utilities 层 */
+    @layer utilities {
+        @media (max-width: 480px) {
+            :global(.archive-item) {
+                min-height: 44px;
+                padding-top: 0.75rem;
+                padding-bottom: 0.75rem;
+            }
+        }
     }
 
     @keyframes fadeIn {

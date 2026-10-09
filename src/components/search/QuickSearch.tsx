@@ -129,38 +129,40 @@ export default function QuickSearch({ items }: QuickSearchProps) {
     if (!open) return null;
 
     return (
-        <div className="fixed inset-0 z-[90]" aria-hidden={!open}>
+        <div data-ui="quick-search" data-state="open" className="fixed inset-0 z-[90]" aria-hidden={!open}>
             <button
+                data-ui="quick-search-backdrop"
                 className="absolute inset-0 bg-black/30 backdrop-blur-sm cursor-default"
                 aria-label="Close quick search"
                 onClick={close}
             />
 
-            <div className="absolute inset-x-3 top-[10vh] mx-auto w-auto max-w-2xl rounded-xl border border-black/10 bg-white/92 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-[#0d0d12]/92 md:top-24">
-                <div className="border-b border-black/8 px-4 py-3 dark:border-white/10">
+            <div data-ui="quick-search-panel" className="absolute inset-x-3 top-[10vh] mx-auto w-auto max-w-2xl rounded-xl border border-contrast/10 bg-[var(--c-search-panel)] shadow-2xl backdrop-blur-xl md:top-24">
+                <div className="border-b border-[var(--c-search-divider)] px-4 py-3">
                     <div className="flex items-center gap-3">
                         <svg className="h-4 w-4 shrink-0 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                         <input
                             ref={inputRef}
+                            data-ui="quick-search-input"
                             type="text"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             placeholder="Search posts, tags, or pages..."
-                            className="w-full bg-transparent text-sm outline-none placeholder:text-black/35 dark:placeholder:text-white/30"
+                            className="w-full bg-transparent text-sm outline-none placeholder:text-[var(--c-search-placeholder)]"
                         />
-                        <span className="hidden rounded border border-black/10 px-2 py-0.5 font-mono text-[10px] opacity-50 dark:border-white/15 md:inline-block">
+                        <span className="hidden rounded border border-[var(--c-search-kbd)] px-2 py-0.5 font-mono text-[10px] opacity-50 md:inline-block">
                             ESC
                         </span>
                     </div>
                 </div>
 
-                <div ref={listRef} className="max-h-[65vh] overflow-y-auto p-3">
+                <div ref={listRef} data-ui="quick-search-list" className="max-h-[65vh] overflow-y-auto p-3">
                     {!query.trim() && <SectionLabel label="Recent" />}
 
                     {query.trim() && displayItems.length === 0 ? (
-                        <div className="px-3 py-10 text-center">
+                        <div data-ui="quick-search-empty" className="px-3 py-10 text-center">
                             <div className="font-mono text-sm opacity-60">NO MATCHING RESULTS</div>
                             <a href="/archive" className="mt-4 inline-flex text-xs font-mono text-[var(--c-accent)] no-underline hover:opacity-80">
                                 Go to Archive for advanced search →
@@ -194,7 +196,7 @@ export default function QuickSearch({ items }: QuickSearchProps) {
                     )}
                 </div>
 
-                <div className="flex items-center justify-between gap-4 border-t border-black/8 px-4 py-2 text-[10px] font-mono opacity-55 dark:border-white/10">
+                <div data-ui="quick-search-footer" className="flex items-center justify-between gap-4 border-t border-[var(--c-search-divider)] px-4 py-2 text-[10px] font-mono opacity-55">
                     <span>↑ ↓ navigate</span>
                     <span>Enter open</span>
                     <a href="/archive" className="text-[var(--c-accent)] no-underline hover:opacity-80">Archive advanced search</a>
@@ -226,7 +228,7 @@ function GroupedList({
     setSelectedIndex: React.Dispatch<React.SetStateAction<number>>;
 }) {
     return (
-        <div className="mb-3 last:mb-0">
+        <div data-ui="quick-search-group" className="mb-3 last:mb-0">
             <div className="px-3 pb-2 text-[10px] font-mono uppercase tracking-[0.2em] opacity-35">{title}</div>
             <div className="space-y-1">
                 {items.map((item) => {
@@ -236,9 +238,11 @@ function GroupedList({
                         <button
                             key={item.id}
                             data-index={globalIndex}
+                            data-ui="quick-search-item"
+                            data-state={active ? 'active' : undefined}
                             className={`flex w-full items-start justify-between gap-3 rounded-lg border px-3 py-3 text-left transition-colors ${active
-                                ? 'border-[var(--c-accent)] bg-[color:rgba(101,40,247,0.08)]'
-                                : 'border-transparent hover:border-black/8 hover:bg-black/[0.03] dark:hover:border-white/10 dark:hover:bg-white/[0.03]'
+                                ? 'border-[var(--c-accent)] bg-[color-mix(in_srgb,var(--c-accent)_8%,transparent)]'
+                                : 'border-transparent hover:border-[var(--c-search-divider)] hover:bg-contrast/[0.03]'
                                 }`}
                             onMouseEnter={() => setSelectedIndex(globalIndex)}
                             onClick={() => onSelect(item)}
@@ -294,7 +298,7 @@ function HighlightText({ text, query }: { text: string; query: string }) {
     return (
         <>
             {before}
-            <mark className="bg-[color:rgba(101,40,247,0.16)] px-0.5 text-inherit dark:bg-[color:rgba(101,40,247,0.26)]">
+            <mark data-ui="quick-search-mark" className="bg-[var(--c-search-mark)] px-0.5 text-inherit">
                 {match}
             </mark>
             {after}

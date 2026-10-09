@@ -1,0 +1,325 @@
+---
+/**
+ * /dev/themes — 主题调试页（仅 `pnpm dev` 下由 integrations/themeContract.ts 注入，生产构建不包含）
+ *
+ * 把所有 data-ui 锚点按不同状态铺开，配合主题下拉框和明暗切换检查主题效果。
+ * 能复用真实组件的地方都直接用真实组件；播放器 / 文章页等依赖网络或整页布局的部分用同结构的静态示例。
+ */
+import type { CollectionEntry } from "astro:content";
+import { Code } from "astro:components";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import TimelineItem from "../components/home/TimelineItem.astro";
+import TableOfContents from "../components/post/TableOfContents.astro";
+import CommentSection from "../components/post/CommentSection.astro";
+import { createCssVariablesTheme } from "../lib/shikiCssVariablesTheme.mjs";
+import "../styles/article.scss";
+import ArchiveApp from "../components/archive/ArchiveApp";
+import type { ArchivePost } from "../components/archive/types";
+import { themes } from "../lib/themes/registry";
+import { CONTRACT_VERSION } from "../lib/themes/schema";
+import { getCategoryColor, getCategoryLabel } from "../lib/utils";
+import { collectSourceAnchors } from "../../integrations/themeContract";
+
+const anchors = [...collectSourceAnchors().keys()].sort();
+
+const mockPost = (
+    id: string,
+    tags: string[],
+    created: string,
+    updated?: string,
+): CollectionEntry<"blog"> =>
+    ({
+        id,
+        collection: "blog",
+        body: "这是一段用于预览主题效果的摘要文字，它足够长，可以观察两行截断的表现，以及字体、行高和颜色在不同主题中的样子。",
+        data: {
+            创建时间: new Date(created),
+            更新时间: updated ? new Date(updated) : new Date(created),
+            tags,
+            published: true,
+        },
+    }) as unknown as CollectionEntry<"blog">;
+
+const timelinePosts = [
+    mockPost("tech/主题系统设计笔记", ["astro", "css"], "2026-10-01", "2026-10-08"),
+    mockPost("review/为美好的世界献上祝福", ["anime"], "2026-09-12"),
+    mockPost("life/秋天的散步", [], "2026-08-30"),
+];
+
+const archivePosts: ArchivePost[] = timelinePosts.map((p) => {
+    const category = p.id.split("/")[0];
+    return {
+        slug: p.id,
+        title: p.id.split("/")[1],
+        category,
+        categoryLabel: getCategoryLabel(category),
+        categoryColor: getCategoryColor(category),
+        date: "10.01",
+        year: 2026,
+        tags: p.data.tags,
+        tagsNormalized: p.data.tags.map((t) => t.toLowerCase()),
+    };
+});
+const categories = ["tech", "review", "life"].map((slug) => ({
+    slug,
+    label: getCategoryLabel(slug),
+    color: getCategoryColor(slug),
+    count: 1,
+}));
+
+const sampleCode = `// 爆裂魔法咏唱
+const EXPLOSION = "エクスプロージョン";
+function cast(target: string, mana = 100): boolean {
+    return mana >= 100 && target !== "";
+}`;
+
+const headings = [
+    { depth: 2, slug: "section-a", text: "第一节：变量" },
+    { depth: 2, slug: "section-b", text: "第二节：锚点" },
+    { depth: 2, slug: "section-c", text: "第三节：装饰位" },
+];
+
+const card = "border border-dashed border-line-strong p-4 rounded-sm";
+const label = "font-mono text-[10px] tracking-widest uppercase opacity-60 mb-3";
+---
+
+<BaseLayout title="Theme Playground | Echoes" page="playground">
+    <TableOfContents headings={headings} charCount={100} />
+    <main data-ui="main" class="pt-24 pb-32 space-y-12">
+        <!-- 控制面板 -->
+        <section class={`${card} sticky top-20 z-40 bg-surface`} id="pg-controls">
+            <div class="flex flex-wrap items-center gap-4 font-mono text-xs">
+                <strong>THEME PLAYGROUND · api v{CONTRACT_VERSION}</strong>
+                <label class="flex items-center gap-2">
+                    主题
+                    <select id="pg-theme" class="bg-field border border-line-strong px-2 py-1">
+                        {
+                            themes.map((t) => (
+                                <option value={t.id}>
+                                    {t.name} ({t.id}) [{t.schemes.join("/")}]
+                                </option>
+                            ))
+                        }
+                    </select>
+                </label>
+                <div class="flex items-center gap-1">
+                    模式
+                    <button id="pg-light" class="border border-line-strong px-2 py-1 cursor-pointer disabled:opacity-40">light</button>
+                    <button id="pg-dark" class="border border-line-strong px-2 py-1 cursor-pointer disabled:opacity-40">dark</button>
+                </div>
+                <label class="flex items-center gap-2">
+                    <input type="checkbox" id="pg-outline" /> 描出锚点
+                </label>
+                <span id="pg-status" class="opacity-60"></span>
+            </div>
+        </section>
+
+        <!-- 锚点覆盖情况 -->
+        <section class={card}>
+            <div class={label}>data-ui 覆盖（源码中的锚点 → 本页是否出现）</div>
+            <ul id="pg-anchors" class="flex flex-wrap gap-2 font-mono text-[10px]">
+                {anchors.map((a) => <li data-anchor={a} class="border border-line px-1.5 py-0.5">{a}</li>)}
+            </ul>
+            <p class="font-mono text-[10px] opacity-60 mt-3">
+                header / nav / theme-switcher / decor-* 等全局锚点来自 BaseLayout；toc 在 ≥1280px 时显示于右侧。
+            </p>
+        </section>
+
+        <!-- 状态：头部交互 -->
+        <section class={card}>
+            <div class={label}>头部状态</div>
+            <div class="flex flex-wrap gap-2 font-mono text-xs">
+                <button class="pg-click border border-line-strong px-2 py-1 cursor-pointer" data-target="#theme-menu-toggle">打开/关闭主题菜单 (theme-menu[data-state])</button>
+                <button class="pg-click border border-line-strong px-2 py-1 cursor-pointer" data-target="#mobile-menu-toggle">打开/关闭移动菜单（窄屏）</button>
+            </div>
+        </section>
+
+        <!-- 页面标题 -->
+        <header data-ui="page-header" class="border-b-2 border-ink/10 pb-4">
+            <h1 data-ui="page-kicker" class="text-xs font-mono tracking-widest opacity-60 uppercase">
+                System Status: Online
+            </h1>
+            <p data-ui="page-title" class="text-4xl font-serif font-bold mt-2">Transmissions</p>
+        </header>
+
+        <!-- 时间轴 -->
+        <section>
+            <div class={label}>timeline / timeline-item / post-card（悬停查看 hover 态）</div>
+            <div data-ui="timeline" class="relative border-l border-ink/20 ml-3 md:ml-6 space-y-12">
+                {timelinePosts.map((post) => <TimelineItem post={post} />)}
+            </div>
+            <div data-ui="timeline-footer" class="mt-12 ml-3 md:ml-6 pl-8 md:pl-12 border-l border-dashed border-ink/20 flex gap-6">
+                <button data-ui="load-more" class="text-sm font-mono opacity-50 hover:text-accent hover:opacity-100 transition-all uppercase tracking-wider cursor-pointer">
+                    [ Load More Data ]
+                </button>
+                <span data-ui="timeline-end" class="text-sm font-mono opacity-50 uppercase tracking-wider">
+                    [ END OF TRANSMISSIONS ]
+                </span>
+            </div>
+            <div data-ui="empty-state" class="text-center py-10 opacity-50 font-mono text-sm">
+                NO TRANSMISSIONS FOUND
+            </div>
+        </section>
+
+        <!-- 文章 -->
+        <section>
+            <div class={label}>post（与 PostLayout 同结构的静态示例）</div>
+            <article data-ui="post" data-ui-variant="mdx" data-category="tech">
+                <header data-ui="post-header" class="mb-12 relative border-t-4 border-ink pt-6">
+                    <div data-ui="post-stamp" class="absolute top-0 right-0 bg-ink text-on-ink px-2 py-1 text-xs font-mono font-bold">
+                        CONFIDENTIAL
+                    </div>
+                    <h1 data-ui="post-title" class="text-3xl md:text-5xl font-serif font-black mb-6 leading-tight">
+                        主题系统设计笔记
+                    </h1>
+                    <div data-ui="post-meta" class="grid grid-cols-2 md:grid-cols-5 gap-4 border-y border-dashed border-line-strong py-4 font-mono text-xs opacity-80">
+                        <div>
+                            <span class="block opacity-50 mb-1">CATEGORY</span>
+                            <a href="#" data-ui="category-link" class="no-underline text-ink/80 font-bold">[TECH]</a>
+                        </div>
+                        <div><span class="block opacity-50 mb-1">CREATED</span>2026.10.01</div>
+                        <div><span class="block opacity-50 mb-1">UPDATED</span>2026.10.08</div>
+                        <div><span class="block opacity-50 mb-1">READ_TIME</span>5 MIN</div>
+                        <div>
+                            <span class="block opacity-50 mb-1">TAGS</span>
+                            <a href="#" data-ui="tag" class="no-underline text-ink/60">#ASTRO</a>
+                        </div>
+                    </div>
+                </header>
+                <div data-ui="post-body" class="prose-eva max-w-none text-lg">
+                    <p>主题对接的是一份接口约定，而不是源码。这一段用来观察首字下沉、正文字体和 <a href="#">链接颜色</a>。</p>
+                    <h2 id="section-a">第一节：变量</h2>
+                    <p>行内代码 <code>--c-accent</code> 与 <strong>加粗</strong>、<em>斜体</em>。</p>
+                    <blockquote><p>不分层的样式会压过所有分层样式。</p></blockquote>
+                    <h2 id="section-b">第二节：锚点</h2>
+                    <ul><li>data-ui 写进文档</li><li>改名必须提升版本号</li></ul>
+                    <Code
+                        code={sampleCode}
+                        lang="ts"
+                        themes={{ light: "github-light", dark: "dracula", vars: createCssVariablesTheme({ variablePrefix: "--shiki-" }) }}
+                        defaultColor={false}
+                    />
+                    <h2 id="section-c">第三节：装饰位</h2>
+                    <p>decor-back / decor-front 始终为空，由主题填充。</p>
+                </div>
+            </article>
+        </section>
+
+        <!-- 评论 -->
+        <section>
+            <div class={label}>comments（真实 CommentSection / Waline，读取 site.config.yaml 的 comment 配置）</div>
+            <CommentSection path="/dev/themes" />
+        </section>
+
+        <!-- 播放器 -->
+        <section>
+            <div class={label}>player 各状态（与 GlobalPlayer 同结构的静态示例）</div>
+            <div class="flex flex-wrap gap-6">
+                {
+                    ["playing", "paused", "loading", "error"].map((state) => (
+                        <div class="relative flex items-center gap-0 bg-surface border border-ink shadow-[4px_4px_0px_0px_var(--c-shadow)] rounded-full pr-4 pl-1 py-1" data-ui="player" data-state={state}>
+                            <div data-ui="player-cover" class="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-on-accent border border-black" />
+                            <button data-ui="player-track" class="flex flex-col mx-3 w-24 text-left">
+                                <span class="text-[10px] font-bold font-serif truncate">Track Title</span>
+                                <span class="text-[8px] font-mono truncate opacity-60">{state.toUpperCase()}</span>
+                            </button>
+                            <span data-ui="player-visualizer" class="flex items-end gap-[2px] h-4 mr-2">
+                                <span class="w-1 h-2 bg-accent" />
+                                <span class="w-1 h-3 bg-signal-green" />
+                                <span class="w-1 h-1.5 bg-signal-red" />
+                                <span class="w-1 h-4 bg-signal-orange" />
+                            </span>
+                            <button data-ui="player-toggle" class="hover:text-accent">▶</button>
+                        </div>
+                    ))
+                }
+            </div>
+            <div data-ui="lyrics-panel" data-state="open" class="relative mt-6 w-64 bg-surface border-2 border-ink p-4 shadow-[4px_4px_0px_0px_currentColor]">
+                <div class="text-center font-serif text-sm leading-relaxed">
+                    <p data-ui="lyrics-current" class="font-bold text-accent">当前歌词</p>
+                    <p class="text-xs mt-2 opacity-40">下一句歌词</p>
+                </div>
+                <p data-ui="player-error" class="text-[10px] font-mono text-signal-red mt-3">播放器初始化失败</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- 归档（真实组件，含搜索 / 标签墙 / tab 状态；点击搜索框可展开标签墙） -->
+    <div class="border-t-4 border-double border-line-strong">
+        <ArchiveApp
+            client:load
+            posts={archivePosts}
+            categories={categories}
+            tags={[{ tag: "astro", count: 1 }, { tag: "css", count: 1 }, { tag: "anime", count: 1 }]}
+            totalCount={archivePosts.length}
+        />
+    </div>
+</BaseLayout>
+
+<style is:global>
+    @layer utilities {
+        html.pg-outline [data-ui] {
+            outline: 1px dashed color-mix(in srgb, var(--c-accent) 60%, transparent);
+            outline-offset: 2px;
+        }
+    }
+</style>
+
+<script>
+    import {
+        getCurrentTheme,
+        getThemeItem,
+        onThemeChange,
+        setMode,
+        switchTheme,
+    } from "../lib/themes/client/runtime";
+
+    function init() {
+        const select = document.getElementById("pg-theme") as HTMLSelectElement | null;
+        const light = document.getElementById("pg-light") as HTMLButtonElement | null;
+        const dark = document.getElementById("pg-dark") as HTMLButtonElement | null;
+        const outline = document.getElementById("pg-outline") as HTMLInputElement | null;
+        const status = document.getElementById("pg-status");
+        if (!select || !light || !dark) return;
+
+        const sync = () => {
+            const { theme, mode } = getCurrentTheme();
+            const schemes = getThemeItem(theme)?.schemes ?? [];
+            select.value = theme;
+            light.disabled = !schemes.includes("light");
+            dark.disabled = !schemes.includes("dark");
+            light.style.fontWeight = mode === "light" ? "700" : "";
+            dark.style.fontWeight = mode === "dark" ? "700" : "";
+            if (status) status.textContent = `data-theme=${theme} data-mode=${mode}`;
+        };
+
+        select.addEventListener("change", () => void switchTheme(select.value));
+        light.addEventListener("click", () => void setMode("light"));
+        dark.addEventListener("click", () => void setMode("dark"));
+        outline?.addEventListener("change", () =>
+            document.documentElement.classList.toggle("pg-outline", outline.checked),
+        );
+        document.querySelectorAll<HTMLElement>(".pg-click").forEach((btn) =>
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                document.querySelector<HTMLElement>(btn.dataset.target ?? "")?.click();
+            }),
+        );
+
+        // 锚点覆盖：本页出现的标绿，缺失的标红
+        const markCoverage = () =>
+            document.querySelectorAll<HTMLElement>("#pg-anchors [data-anchor]").forEach((li) => {
+                const found = document.querySelectorAll(`[data-ui="${li.dataset.anchor}"]`).length;
+                li.style.color = found ? "var(--c-text)" : "var(--c-signal-red)";
+                li.style.borderColor = found ? "var(--c-line)" : "var(--c-signal-red)";
+                li.title = `${found} 个`;
+            });
+        setTimeout(markCoverage, 500);
+
+        const off = onThemeChange(sync);
+        sync();
+        document.addEventListener("astro:before-swap", off, { once: true });
+    }
+
+    document.addEventListener("astro:page-load", init);
+</script>

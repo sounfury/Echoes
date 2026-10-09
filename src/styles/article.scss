@@ -2,15 +2,11 @@
    Prose / Typography (文章内容排版)
    ================================================ */
 
-.prose {
-    --tw-prose-body: var(--c-text);
-    --tw-prose-headings: var(--c-text);
-    --tw-prose-links: var(--c-accent);
-    --tw-prose-code: var(--c-accent);
-    --tw-prose-quotes: var(--c-text-secondary);
-    --tw-prose-quote-borders: var(--c-accent);
-}
-
+/*
+ * 整个文件放在 components 层（主题接口约定：组件样式不能是不分层的，否则主题的 @layer skin 无法覆盖）。
+ * 颜色全部走 --c-* 变量；.prose 的颜色变量在 global.css 的 utilities 层（需排在 typography 插件之后）。
+ */
+@layer components {
 .prose-eva {
 
     // 标题 H2
@@ -395,7 +391,7 @@
 
         // 2. Info
         &.callout-info {
-            --callout-info-color: #4f8ff7;
+            --callout-info-color: var(--c-info, #4f8ff7);
             border-left: 4px solid var(--callout-info-color);
             background-color: color-mix(in srgb, var(--callout-info-color) 8%, transparent);
 
@@ -412,11 +408,11 @@
 
         // 3. Warning
         &.callout-warning {
-            border-left: 4px solid var(--color-eva-orange);
-            background-color: color-mix(in srgb, var(--color-eva-orange) 5%, transparent);
+            border-left: 4px solid var(--c-signal-orange);
+            background-color: color-mix(in srgb, var(--c-signal-orange) 5%, transparent);
             .callout-title {
-                background-color: color-mix(in srgb, var(--color-eva-orange) 10%, transparent);
-                color: color-mix(in srgb, var(--color-eva-orange) 80%, var(--c-text));
+                background-color: color-mix(in srgb, var(--c-signal-orange) 10%, transparent);
+                color: color-mix(in srgb, var(--c-signal-orange) 80%, var(--c-text));
                 &::before {
                     -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>');
                     mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>');
@@ -426,11 +422,11 @@
 
         // 4. Danger / Error
         &.callout-danger, &.callout-error {
-            border-left: 4px solid var(--color-eva-red);
-            background-color: color-mix(in srgb, var(--color-eva-red) 5%, transparent);
+            border-left: 4px solid var(--c-signal-red);
+            background-color: color-mix(in srgb, var(--c-signal-red) 5%, transparent);
             .callout-title {
-                background-color: color-mix(in srgb, var(--color-eva-red) 10%, transparent);
-                color: color-mix(in srgb, var(--color-eva-red) 80%, var(--c-text));
+                background-color: color-mix(in srgb, var(--c-signal-red) 10%, transparent);
+                color: color-mix(in srgb, var(--c-signal-red) 80%, var(--c-text));
                 &::before {
                     -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>');
                     mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>');
@@ -461,4 +457,5 @@
             }
         }
     }
+}
 }

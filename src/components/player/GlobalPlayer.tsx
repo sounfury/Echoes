@@ -30,7 +30,7 @@ type PlayerSourceChangeEvent = CustomEvent<PlayerSource>;
 /**
  * 在标题超出容器宽度时启用跑马灯，避免播放器窄宽度下文字被硬截断。
  */
-function ScrollText({ text, className = "" }: { text: string; className?: string }) {
+function ScrollText({ text, className = "", "data-ui": ui }: { text: string; className?: string; "data-ui"?: string }) {
     const [isOverflowing, setIsOverflowing] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const textRef = useRef<HTMLSpanElement>(null);
@@ -51,7 +51,7 @@ function ScrollText({ text, className = "" }: { text: string; className?: string
     }, [text]);
 
     return (
-        <div ref={containerRef} className={`overflow-hidden whitespace-nowrap w-full relative ${className}`}>
+        <div ref={containerRef} data-ui={ui} className={`overflow-hidden whitespace-nowrap w-full relative ${className}`}>
             <div 
                 className={`flex w-max`}
                 style={isOverflowing ? { animation: 'ev-scroll-left 8s linear infinite' } : {}}
@@ -293,14 +293,17 @@ export default function GlobalPlayer({ source }: Props) {
             <div
                 id="global-player"
                 ref={playerRef}
-                className="fixed bottom-6 right-4 z-40 flex items-center gap-0 bg-white dark:bg-zinc-900 border border-eva-ink dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] transition-[width,padding,max-width,opacity] rounded-full p-1 md:pr-2 md:pl-1 md:py-1 touch-none select-none cursor-move"
+                data-ui="player"
+                data-state={playerStatus === 'error' ? 'error' : isTrackBootLoading ? 'loading' : isPlaying ? 'playing' : 'paused'}
+                className="fixed bottom-6 right-4 z-40 flex items-center gap-0 bg-surface border border-ink shadow-[4px_4px_0px_0px_var(--c-shadow)] transition-[width,padding,max-width,opacity] rounded-full p-1 md:pr-2 md:pl-1 md:py-1 touch-none select-none cursor-move"
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerUp}
             >
                 <div
-                    className="w-10 h-10 rounded-full bg-eva-purple flex items-center justify-center text-white animate-spin-slow overflow-hidden border border-black relative group/cover cursor-pointer md:cursor-auto shrink-0"
+                    data-ui="player-cover"
+                    className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-on-accent animate-spin-slow overflow-hidden border border-black relative group/cover cursor-pointer md:cursor-auto shrink-0"
                     style={{ animationPlayState }}
                     onClick={() => {
                         if (hasMovedRef.current) return;
@@ -309,7 +312,7 @@ export default function GlobalPlayer({ source }: Props) {
                 >
                     <div
                         className={`absolute inset-0 bg-cover transition-all duration-300 ${isTrackBootLoading
-                            ? 'opacity-75 scale-100 blur-0 bg-gradient-to-br from-eva-purple/50 to-eva-green/35 animate-pulse'
+                            ? 'opacity-75 scale-100 blur-0 bg-gradient-to-br from-accent/50 to-signal-green/35 animate-pulse'
                             : trackTransitioning
                                 ? 'opacity-45 scale-95 blur-[1px]'
                                 : 'opacity-80 scale-100 blur-0'
@@ -345,7 +348,7 @@ export default function GlobalPlayer({ source }: Props) {
                     className={`flex items-center transition-all duration-300 overflow-hidden ${isMobileExpanded ? 'max-w-[160px] opacity-100 ml-2' : 'max-w-0 opacity-0 ml-0 md:max-w-[400px] md:opacity-100 md:ml-0'}`}
                 >
                     {/* Mobile Basic Controls (Visible only on mobile expanded) */}
-                    <div className="flex md:hidden items-center gap-3 px-1 text-eva-ink dark:text-white pb-0.5">
+                    <div data-ui="player-controls" className="flex md:hidden items-center gap-3 px-1 text-ink pb-0.5">
                         <button 
                             className="hover:opacity-70 transition-opacity" 
                             onClick={(e) => { e.stopPropagation(); controlsRef.current?.playPrev(); }}
@@ -353,7 +356,8 @@ export default function GlobalPlayer({ source }: Props) {
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"></path></svg>
                         </button>
                         <button 
-                            className="hover:text-eva-purple transition-colors disabled:opacity-40" 
+                            data-ui="player-toggle"
+                            className="hover:text-accent transition-colors disabled:opacity-40" 
                             onClick={(e) => { e.stopPropagation(); controlsRef.current?.toggleMusic(); }}
                             disabled={isTrackBootLoading}
                         >
@@ -374,21 +378,24 @@ export default function GlobalPlayer({ source }: Props) {
                     {/* Desktop Full Controls (Hidden on mobile) */}
                     <div className="hidden md:flex items-center">
                         <button
+                            data-ui="player-track"
                             className="flex flex-col mx-2 w-16 md:w-24 overflow-hidden text-left cursor-pointer hover:opacity-70 transition-opacity"
                             onClick={() => toggleLyrics()}
                             aria-label="Toggle lyrics panel"
                         >
                             {isTrackBootLoading ? (
                                 <>
-                                    <span className="block h-[10px] w-14 rounded bg-eva-ink/20 dark:bg-white/20 animate-pulse" />
-                                    <span className="block h-[8px] w-10 rounded mt-1 bg-eva-ink/15 dark:bg-white/15 animate-pulse" />
+                                    <span className="block h-[10px] w-14 rounded bg-ink/20 animate-pulse" />
+                                    <span className="block h-[8px] w-10 rounded mt-1 bg-ink/15 animate-pulse" />
                                 </>
                             ) : (
                                 <>
                                     <ScrollText
+                                        data-ui="player-title"
                                         text={currentTrack?.title ?? 'Loading'} 
                                         className={`text-[10px] font-bold font-serif transition-all duration-300 ${trackTransitioning ? 'opacity-30 translate-y-1' : 'opacity-100 translate-y-0'}`} />
                                     <ScrollText
+                                        data-ui="player-artist"
                                         text={currentTrack?.artist ?? 'NETEASE'} 
                                         className={`text-[8px] font-mono mt-0.5 transition-all duration-300 ${trackTransitioning ? 'opacity-25 translate-y-1' : 'opacity-60 translate-y-0'}`} />
                                 </>
@@ -396,18 +403,20 @@ export default function GlobalPlayer({ source }: Props) {
                         </button>
 
                         <button
+                            data-ui="player-visualizer"
                             className="flex items-end gap-[2px] h-4 mr-2 cursor-pointer hover:opacity-70 transition-opacity"
                             onClick={() => toggleLyrics()}
                             aria-label="Toggle lyrics panel"
                         >
-                            <span className="w-1 bg-eva-purple animate-sound-wave" style={{ animationDelay: '0s', animationPlayState }} />
-                            <span className="w-1 bg-eva-green animate-sound-wave" style={{ animationDelay: '0.2s', animationPlayState }} />
-                            <span className="w-1 bg-eva-red animate-sound-wave" style={{ animationDelay: '0.4s', animationPlayState }} />
-                            <span className="w-1 bg-eva-orange animate-sound-wave" style={{ animationDelay: '0.1s', animationPlayState }} />
+                            <span className="w-1 bg-accent animate-sound-wave" style={{ animationDelay: '0s', animationPlayState }} />
+                            <span className="w-1 bg-signal-green animate-sound-wave" style={{ animationDelay: '0.2s', animationPlayState }} />
+                            <span className="w-1 bg-signal-red animate-sound-wave" style={{ animationDelay: '0.4s', animationPlayState }} />
+                            <span className="w-1 bg-signal-orange animate-sound-wave" style={{ animationDelay: '0.1s', animationPlayState }} />
                         </button>
 
                         <button
-                            className="hover:text-eva-purple transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-wait"
+                            data-ui="player-toggle"
+                            className="hover:text-accent transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-wait"
                             onClick={() => controlsRef.current?.toggleMusic()}
                             aria-label={isPlaying ? 'Pause' : 'Play'}
                             disabled={isTrackBootLoading}
@@ -424,9 +433,9 @@ export default function GlobalPlayer({ source }: Props) {
                             )}
                         </button>
 
-                        <div className="hidden md:flex flex-row items-center group/volume ml-3 mr-1 relative">
+                        <div data-ui="player-volume" className="hidden md:flex flex-row items-center group/volume ml-3 mr-1 relative">
                             <div 
-                                className="text-eva-ink/40 dark:text-white/40 group-hover/volume:text-eva-purple transition-colors flex items-center justify-center cursor-pointer" 
+                                className="text-ink/40 group-hover/volume:text-accent transition-colors flex items-center justify-center cursor-pointer" 
                                 aria-hidden="true" 
                                 onClick={() => setVolume(volume === 0 ? 0.25 : 0)}
                                 title={volume === 0 ? "取消静音" : "静音"}
@@ -448,7 +457,7 @@ export default function GlobalPlayer({ source }: Props) {
                                     step="0.01"
                                     value={volume}
                                     onChange={(e) => setVolume(parseFloat(e.target.value))}
-                                    className="w-full h-[3px] bg-eva-ink/20 dark:bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-eva-purple focus:outline-none transition-transform active:[&::-webkit-slider-thumb]:scale-125 hover:[&::-webkit-slider-thumb]:scale-125"
+                                    className="w-full h-[3px] bg-ink/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent focus:outline-none transition-transform active:[&::-webkit-slider-thumb]:scale-125 hover:[&::-webkit-slider-thumb]:scale-125"
                                     aria-label="Volume Control"
                                     title={`音量: ${Math.round(volume * 100)}%`}
                                 />
@@ -461,25 +470,27 @@ export default function GlobalPlayer({ source }: Props) {
             <div
                 id="lyrics-panel"
                 ref={lyricsPanelRef}
+                data-ui="lyrics-panel"
+                data-state={isLyricsOpen ? 'open' : 'closed'}
                 className={`fixed bottom-24 right-6 z-30 ${isLyricsOpen ? 'hidden md:block' : 'hidden'}`}
             >
                 <div
-                    className={`relative w-64 bg-white dark:bg-zinc-900 border-2 border-eva-ink dark:border-white p-4 shadow-[4px_4px_0px_0px_currentColor] origin-bottom-right ${isLyricsOpen ? 'animate-fade-in' : ''}`}
+                    className={`relative w-64 bg-surface border-2 border-ink p-4 shadow-[4px_4px_0px_0px_currentColor] origin-bottom-right ${isLyricsOpen ? 'animate-fade-in' : ''}`}
                 >
-                    <div className="absolute -bottom-2 right-8 w-4 h-4 bg-white dark:bg-zinc-900 border-r-2 border-b-2 border-eva-ink dark:border-white transform rotate-45" />
+                    <div className="absolute -bottom-2 right-8 w-4 h-4 bg-surface border-r-2 border-b-2 border-ink transform rotate-45" />
                     <div className="text-center font-serif text-sm leading-relaxed h-28 overflow-hidden flex flex-col justify-center items-center">
-                        <p key={`lyrics-current-${lyrics.current}`} className="font-bold text-eva-purple transform scale-105 origin-center animate-fade-in">
+                        <p key={`lyrics-current-${lyrics.current}`} data-ui="lyrics-current" className="font-bold text-accent transform scale-105 origin-center animate-fade-in">
                             {lyrics.current}
                         </p>
                         {lyrics.next && (
-                            <p key={`lyrics-next-${lyrics.next}`} className="text-xs mt-2 opacity-40 animate-fade-in">{lyrics.next}</p>
+                            <p key={`lyrics-next-${lyrics.next}`} data-ui="lyrics-next" className="text-xs mt-2 opacity-40 animate-fade-in">{lyrics.next}</p>
                         )}
                         {lyricsStatus === 'loading' && (
-                            <p className="text-xs opacity-50 font-mono mt-2">SYNCING...</p>
+                            <p data-ui="lyrics-status" className="text-xs opacity-50 font-mono mt-2">SYNCING...</p>
                         )}
                     </div>
                     {playerStatus === 'error' && (
-                        <p className="text-[10px] font-mono text-eva-red mt-3">
+                        <p data-ui="player-error" className="text-[10px] font-mono text-signal-red mt-3">
                             {playerError ?? '播放器初始化失败'}
                         </p>
                     )}
