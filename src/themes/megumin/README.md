@@ -12,13 +12,13 @@
 
 当前图片是一整张带背景的场景插画（惠惠持杖走在星空与火红晚霞下），因此按「背景画」来铺：
 
-- 宽屏（≥1280px）：固定在视口右侧的竖幅画框（`cover`，人物居中偏上），左缘渐隐融入页面，不压正文
-- 窄屏（<1280px）：整屏 `cover` 铺满，上面叠一层羊皮纸色半透明渐变，保证正文可读
+- 宽屏（≥64rem / 1024px）：页面变为两栏，左侧 `clamp(320px, 38vw, 680px)` 宽的立绘栏（`[data-ui="aside"]`，sticky 满高，`cover`），金色斜角内框；文章页的目录作为「魔导书索引」浮在立绘栏底部
+- 窄屏：立绘变为页面顶部横幅（约 40vh，文章页 28vh），底部渐隐到羊皮纸底色
 
 **替换方法**：把你的图片转成 webp 覆盖 `assets/art.webp` 即可（不需要改代码）。建议：
 
 - 竖图（宽:高 ≈ 2:3），宽度 1000–1200px，体积 < 400KB（例如 `cwebp -q 82 -resize 1200 0 in.jpg -o art.webp`）
-- 如果换成透明背景的立绘，需要把 `theme.css` 里 `decor-back::after` 的 `cover` 改为 `contain` 并去掉渐变遮罩
+- 如果换成透明背景的立绘，把 `theme.css` 里 `[data-ui="aside"]` 背景的 `cover` 改为 `contain`
 
 ### 当前图片来源
 
@@ -32,3 +32,11 @@
 `fonts/cinzel-decorative-700.woff2`：Cinzel Decorative Bold（Natanael Gama，SIL Open Font License 1.1），
 只包含拉丁字母、数字和少量符号的子集（约 7KB）。在 `theme.css` 中通过 `@font-face` 声明，
 只有挂载本主题时才会下载；中文仍回落到 Noto Serif SC。
+
+## 结构与文案（接口约定 v2）
+
+- 布局：通过 `--layout-*` 变量启用 `aside` 栏（见 `_contract.md` 2.5），不改任何组件源码
+- 时间轴：`timeline::before` 画成金色锁链轴，`timeline-node` 是旋转的小法阵（`prefers-reduced-motion` 时静止）
+- 卡片：`--card-*` 变量 + `corner-shape: bevel` 做成斜角金边羊皮纸卷轴；日期（`timeline-date`）移入卡片内作为日记落款
+- 头部：悬浮的半透明斜角长条，标题 / 导航用 Cinzel Decorative
+- 文案（`theme.json` → `copy`）：副标题「吾乃红魔族第一的魔法师！」、首页「Explosion Log / 爆裂日记」、印章「EXPLOSION!」、评论标题

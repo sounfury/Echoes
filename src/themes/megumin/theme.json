@@ -2,10 +2,19 @@
   "id": "megumin",
   "name": "爆裂魔导 · 惠惠",
   "nameEn": "Explosion · Megumin",
-  "api": 1,
-  "schemes": ["light"],
+  "api": 2,
+  "schemes": [
+    "light"
+  ],
   "preview": "./assets/art.webp",
   "meta": {
     "themeColor": "#c8243a"
+  },
+  "copy": {
+    "brand-subtitle": "吾乃红魔族第一的魔法师！",
+    "page-kicker@home": "Explosion Log",
+    "page-title@home": "爆裂日记",
+    "post-stamp": "EXPLOSION!",
+    "comments-title": "冒险者公会 · 留言板"
   }
 }
