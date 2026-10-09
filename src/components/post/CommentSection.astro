@@ -60,6 +60,83 @@ const serializedRequiredMeta = JSON.stringify(comment.requiredMeta);
     let walineEnhancementCleanup: (() => void) | null = null;
     let walineToastTimeout = 0;
     const walineLikeReleaseTimers = new Map<HTMLButtonElement, number>();
+    /** 当前已挂载评论区的 Waline path（= data-comment-path），销毁时按它归档草稿 */
+    let mountedCommentPath: string | null = null;
+    /** 取消仍在 await import 的过期 mount（快速连点换页时） */
+    let mountGeneration = 0;
+
+    /*
+     * Waline 把编辑框内容存在全局 localStorage 键 WALINE_COMMENT_BOX_EDITOR（不按文章区分）。
+     * ClientRouter 换页后新挂载会读到上一篇的未提交草稿。这里按 path 拆到 sessionStorage：
+     * 同一篇文章来回跳可恢复，跨文章必须清空。
+     */
+    const WALINE_EDITOR_KEY = "WALINE_COMMENT_BOX_EDITOR";
+    const DRAFT_STORAGE_PREFIX = "echoes:waline-draft:";
+
+    function normalizeCommentPath(path: string | undefined | null): string {
+        if (!path) {
+            return "/";
+        }
+
+        return path.replace(/\/$/, "") || "/";
+    }
+
+    function draftStorageKey(path: string): string {
+        return `${DRAFT_STORAGE_PREFIX}${path}`;
+    }
+
+    function readWalineEditorStorage(): string {
+        try {
+            return localStorage.getItem(WALINE_EDITOR_KEY) ?? "";
+        } catch {
+            return "";
+        }
+    }
+
+    function writeWalineEditorStorage(value: string): void {
+        try {
+            if (value) {
+                localStorage.setItem(WALINE_EDITOR_KEY, value);
+            } else {
+                localStorage.removeItem(WALINE_EDITOR_KEY);
+            }
+        } catch {
+            /* 隐私模式等写不进去时忽略 */
+        }
+    }
+
+    function saveDraftForPath(path: string, draft: string): void {
+        try {
+            const key = draftStorageKey(path);
+
+            if (draft.trim()) {
+                sessionStorage.setItem(key, draft);
+            } else {
+                sessionStorage.removeItem(key);
+            }
+        } catch {
+            /* ignore */
+        }
+    }
+
+    function loadDraftForPath(path: string): string {
+        try {
+            return sessionStorage.getItem(draftStorageKey(path)) ?? "";
+        } catch {
+            return "";
+        }
+    }
+
+    function readLiveEditorDraft(container: HTMLElement | null): string {
+        const editor = container?.querySelector<HTMLTextAreaElement>(".wl-editor");
+
+        if (editor) {
+            return editor.value;
+        }
+
+        return readWalineEditorStorage();
+    }
+
 
     /**
      * 获取当前页面的评论挂载节点。
@@ -405,6 +482,10 @@ const serializedRequiredMeta = JSON.stringify(comment.requiredMeta);
 
             if (target instanceof HTMLTextAreaElement && target.classList.contains("wl-editor")) {
                 renderCharacterCounter(panel);
+                /* 边输入边按 path 落盘，全页刷新 / 来不及跑 before-swap 时也不会丢草稿 */
+                if (mountedCommentPath) {
+                    saveDraftForPath(mountedCommentPath, target.value);
+                }
             }
         };
 
@@ -543,19 +624,32 @@ const serializedRequiredMeta = JSON.stringify(comment.requiredMeta);
     }
 
     /**
-     * 销毁旧的 Waline 实例。
-     * 这样可以避免 Astro View Transitions 下重复挂载同一套评论 DOM。
+     * 销毁旧的 Waline 实例，并把当前编辑框草稿按 path 归档到 sessionStorage。
+     * 随后清空 Waline 的全局草稿键，避免下一篇文章挂载时读到旧内容。
      */
     function destroyWaline() {
+        mountGeneration += 1;
+        const container = getCommentContainer();
+        /*
+         * 按 path 的草稿只在 input 时写入 sessionStorage（见 enhanceWaline）。
+         * before-swap 时编辑框和 WALINE_COMMENT_BOX_EDITOR 经常已被清空，这里再 save
+         * 反而可能用空串/错文覆盖；因此销毁阶段只清 Waline 全局键，不动 sessionStorage。
+         */
+        writeWalineEditorStorage("");
+
+        if (container) {
+            clearCommentLikeActionState(container);
+        }
+
         walineEnhancementCleanup?.();
         walineEnhancementCleanup = null;
 
-        if (!walineInstance) {
-            return;
+        if (walineInstance) {
+            walineInstance.destroy();
+            walineInstance = null;
         }
 
-        walineInstance.destroy();
-        walineInstance = null;
+        mountedCommentPath = null;
     }
 
     /**
@@ -575,15 +669,32 @@ const serializedRequiredMeta = JSON.stringify(comment.requiredMeta);
             return;
         }
 
+        const commentPath = normalizeCommentPath(
+            container.dataset.commentPath || window.location.pathname,
+        );
+
+        /*
+         * 先归档并拆掉旧实例（可能是上一篇文章），再按「即将挂载的 path」把草稿写回
+         * Waline 的全局键，这样 init 时读到的就是本篇文章的草稿（没有则为空）。
+         */
+        destroyWaline();
+        writeWalineEditorStorage(loadDraftForPath(commentPath));
+
+        const generation = (mountGeneration += 1);
+        mountedCommentPath = commentPath;
+
         const { init } = await import("@waline/client");
 
-        destroyWaline();
+        if (generation !== mountGeneration) {
+            return;
+        }
+
         container.innerHTML = "";
 
         walineInstance = init({
             el: container,
             serverURL,
-            path: container.dataset.commentPath || window.location.pathname.replace(/\/$/, "") || "/",
+            path: commentPath,
             lang: container.dataset.lang || "zh-CN",
             meta: parseDatasetJson<WalineMetaField[]>(container.dataset.meta, ["nick", "mail", "link"]),
             requiredMeta: parseDatasetJson<WalineMetaField[]>(container.dataset.requiredMeta, ["nick"]),
@@ -605,9 +716,26 @@ const serializedRequiredMeta = JSON.stringify(comment.requiredMeta);
         walineEnhancementCleanup = enhanceWaline(container);
     }
 
-    mountWaline();
+    /*
+     * 脚本作为模块只执行一次。astro:page-load 在首次进入和每次 ClientRouter 换页后都会触发，
+     * 因此不要在下面再直接调一次 mountWaline（否则会双挂载）。
+     * before-swap：拆掉旧实例并清空 Waline 全局草稿键；真正的按 path 草稿在 input 时已写入 sessionStorage。
+     * pagehide：硬跳转兜底再归档一次非空内容。
+     */
+    function persistDraftOnPageHide() {
+        if (!mountedCommentPath) {
+            return;
+        }
+
+        const draft = readLiveEditorDraft(getCommentContainer()) || readWalineEditorStorage();
+        if (draft.trim()) {
+            saveDraftForPath(mountedCommentPath, draft);
+        }
+    }
+
     document.addEventListener("astro:before-swap", destroyWaline);
     document.addEventListener("astro:page-load", mountWaline);
+    window.addEventListener("pagehide", persistDraftOnPageHide);
 </script>
 
 <style is:global>
