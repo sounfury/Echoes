@@ -1,7 +1,7 @@
 {
   "id": "default",
-  "name": "初号机 · 默认",
-  "nameEn": "EVA-01 · Default",
+  "name": "极简主义",
+  "nameEn": "Minimalism",
   "api": 2,
   "schemes": ["light", "dark"],
   "meta": {

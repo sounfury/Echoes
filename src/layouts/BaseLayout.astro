@@ -63,8 +63,12 @@ const ogImage = `${config.site.url}/covers/og-default.jpg`;
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <!-- 层叠顺序：必须早于任何样式表，保证主题的 @layer skin 永远在最后 -->
-        <style is:inline>
+        <!--
+            层叠顺序：必须早于任何样式表，保证主题的 @layer skin 永远在最后。
+            transition:persist：ClientRouter 换页时保留这个节点（否则内联 style 会被移到 head 末尾，
+            而保留下来的主题 <link> 会排到它前面，导致 skin 变成第一个、优先级最低的层）。
+        -->
+        <style is:inline transition:persist="echoes-layer-order">
             @layer theme, base, components, utilities, skin;
         </style>
         <meta

@@ -6,6 +6,9 @@
  * 配色本身来自 site.config.yaml（base 层把它映射成 --c-*），这里不重复定义，
  * 因此改 site.config.yaml 的颜色依旧生效。
  */
+/* 层叠顺序声明：主题样式表即使先于 global.css 出现，skin 也仍是最后一层（见 _contract.md 第 1 节） */
+@layer theme, base, components, utilities, skin;
+
 @layer skin {
 	/* ── 装饰位：网格背景 + 侧边状态文字 ───────────────────────── */
 	:root {

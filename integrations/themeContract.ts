@@ -175,6 +175,12 @@ export function checkThemeContract(): ContractReport {
         if (!/@layer\s+skin\b/.test(css)) {
             warnings.push(`${rel} 没有使用 @layer skin { ... }，主题样式可能无法正确覆盖`);
         }
+        if (!/@layer\s+theme\s*,\s*base\s*,\s*components\s*,\s*utilities\s*,\s*skin\s*;/.test(css)) {
+            warnings.push(
+                `${rel} 开头缺少层叠顺序声明 "@layer theme, base, components, utilities, skin;"，` +
+                    '样式表加载顺序变化时 skin 可能变成优先级最低的层',
+            );
+        }
 
         const unknown = new Set<string>();
         for (const m of css.matchAll(/\[\s*data-ui\s*[~|^$*]?=\s*["']?([a-z0-9-]+)["']?\s*\]/g)) {

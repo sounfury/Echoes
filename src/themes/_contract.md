@@ -33,6 +33,9 @@
 ```
 
 - 顺序在 `<head>` 最前面以内联 `<style>` 声明，`global.css` 中也有同样声明。
+- **主题 CSS 文件开头必须先写一遍完整的层叠顺序 `@layer theme, base, components, utilities, skin;`**（只是声明，不会改变顺序）。
+  CSS 层的顺序由“第一次出现”决定，主题样式表在某些情况下（例如开发模式下 ClientRouter 换页）可能排到 `global.css` 前面，
+  不写这一行的话 `skin` 会变成第一个、也就是优先级最低的层。缺少时契约校验会给出警告。
 - **主题 CSS 必须整体写在 `@layer skin { ... }` 里**。skin 排在 Tailwind `utilities` 之后，
   所以主题写普通选择器就能盖过工具类，不需要比拼优先级，也不需要 `!important`。
 - 不要写不分层的 CSS：不分层样式会压过所有分层样式（包括 base 的兜底）。
@@ -271,8 +274,9 @@ base 层按 `data-mode` 使用 light / dark。主题想要自己的配色时，�
 | `player` | 全局播放器（`data-state="playing|paused|loading|error"`） |
 | `player-cover` / `player-track` / `player-visualizer` / `player-toggle` | 封面 / 曲目信息 / 频谱 / 播放按钮 |
 | `player-controls` / `player-volume` | 移动端展开的控制条 / 音量按钮 |
+| `player-title` / `player-artist` | 曲名 / 歌手（桌面端，在 `player-track` 内；文字过长时滚动） |
 | `player-error` | 错误信息 |
-| `lyrics-panel` / `lyrics-current` | 歌词面板（`data-state="open|closed"`）/ 当前歌词 |
+| `lyrics-panel` / `lyrics-current` / `lyrics-next` / `lyrics-status` | 歌词面板（`data-state="open|closed"`）/ 当前歌词 / 下一句 / 加载提示（SYNCING…） |
 | `footer` / `footer-link` | 页脚（版权 / 备案）/ 页脚链接 |
 | `decor-back` / `decor-front` | 装饰位，见第 5 节 |
 
@@ -422,7 +426,7 @@ src/themes/<id>/
     - 代码高亮改为 Shiki 多主题（见 2.4）：默认是 github-light / dracula，主题要用 `--shiki-token-*` 配色需显式切到 `--shiki-vars`。
     - 新增锚点：`card-body` / `card-cover` / `card-cover-scrim` / `card-date`、`post-cover*`、`post-meta-item` / `post-meta-label`、
       `post-wordcount`、`post-soundtrack`、`comments-header` / `comments-hint` / `comments-body` / `comments-toast`、`quick-search*`、
-      `player-controls` / `player-volume`、`footer` / `footer-link`。
+      `player-controls` / `player-volume` / `player-title` / `player-artist`、`lyrics-next` / `lyrics-status`、`footer` / `footer-link`。
     - 新增变量：`--c-paper`、`--c-contrast`、`--c-info`、`--c-search-*`、`--comments-label`、`--comments-error-color`；
       `--c-signal-green` 默认值随 dev 改为 `#10B981`。新增可替换文案：`post-cover-caption`、`comments-hint`；`comments-title` 默认文字改为 `评论`。
     - 文章正文排版由 `src/styles/article.scss`（components 层）提供；默认主题不再自带 `post-body` 排版规则。

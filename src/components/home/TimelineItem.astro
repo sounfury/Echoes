@@ -141,7 +141,10 @@ const excerpt = getExcerpt(post.body ?? "");
             transition: clip-path 0.85s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
+        /* 图片绝对定位铺满封面框：高度不依赖百分比高度的解析，封面只会占据本条目卡片（四周各外扩 0.75rem） */
         .cover-wipe img {
+            position: absolute;
+            inset: 0;
             filter: saturate(0.95);
             opacity: 0.92;
         }

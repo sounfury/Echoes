@@ -30,7 +30,7 @@ type PlayerSourceChangeEvent = CustomEvent<PlayerSource>;
 /**
  * 在标题超出容器宽度时启用跑马灯，避免播放器窄宽度下文字被硬截断。
  */
-function ScrollText({ text, className = "" }: { text: string; className?: string }) {
+function ScrollText({ text, className = "", "data-ui": ui }: { text: string; className?: string; "data-ui"?: string }) {
     const [isOverflowing, setIsOverflowing] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const textRef = useRef<HTMLSpanElement>(null);
@@ -51,7 +51,7 @@ function ScrollText({ text, className = "" }: { text: string; className?: string
     }, [text]);
 
     return (
-        <div ref={containerRef} className={`overflow-hidden whitespace-nowrap w-full relative ${className}`}>
+        <div ref={containerRef} data-ui={ui} className={`overflow-hidden whitespace-nowrap w-full relative ${className}`}>
             <div 
                 className={`flex w-max`}
                 style={isOverflowing ? { animation: 'ev-scroll-left 8s linear infinite' } : {}}
@@ -391,9 +391,11 @@ export default function GlobalPlayer({ source }: Props) {
                             ) : (
                                 <>
                                     <ScrollText
+                                        data-ui="player-title"
                                         text={currentTrack?.title ?? 'Loading'} 
                                         className={`text-[10px] font-bold font-serif transition-all duration-300 ${trackTransitioning ? 'opacity-30 translate-y-1' : 'opacity-100 translate-y-0'}`} />
                                     <ScrollText
+                                        data-ui="player-artist"
                                         text={currentTrack?.artist ?? 'NETEASE'} 
                                         className={`text-[8px] font-mono mt-0.5 transition-all duration-300 ${trackTransitioning ? 'opacity-25 translate-y-1' : 'opacity-60 translate-y-0'}`} />
                                 </>
@@ -481,10 +483,10 @@ export default function GlobalPlayer({ source }: Props) {
                             {lyrics.current}
                         </p>
                         {lyrics.next && (
-                            <p key={`lyrics-next-${lyrics.next}`} className="text-xs mt-2 opacity-40 animate-fade-in">{lyrics.next}</p>
+                            <p key={`lyrics-next-${lyrics.next}`} data-ui="lyrics-next" className="text-xs mt-2 opacity-40 animate-fade-in">{lyrics.next}</p>
                         )}
                         {lyricsStatus === 'loading' && (
-                            <p className="text-xs opacity-50 font-mono mt-2">SYNCING...</p>
+                            <p data-ui="lyrics-status" className="text-xs opacity-50 font-mono mt-2">SYNCING...</p>
                         )}
                     </div>
                     {playerStatus === 'error' && (
