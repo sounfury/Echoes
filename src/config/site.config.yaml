@@ -6,10 +6,12 @@
 site:
   title: "Echoes"
   subtitle: "念念不忘，必有回响"
+  description: "Echoes — sounfury 的个人博客，关于技术、书影音游与生活的回响记录。"
   url: https://blog.sounfury.top
   author: sounfury
   logoText: "ECHOES"
   timezone: Asia/Shanghai
+  icp: "鲁ICP备2024121123号-1"
 
 # 2. 视觉与主题
 theme:
@@ -42,10 +44,14 @@ navigation:
     path: /archive
     icon: lucide:database
   - name: Universe
-    path: https://github.com
+    path: https://sounfury.top
     external: true
 
-# 4. 归档分类
+# 4. 时间轴
+timeline:
+  pageSize: 8
+
+# 5. 归档分类
 category:
   tech:
     label: "[TECH]"
@@ -53,32 +59,45 @@ category:
     desc: "技术与编程"
   review:
     label: "[REVIEW]"
-    color: "#39ff14"
+    color: "#10B981"
     desc: "书/影/音/游"
   life:
     label: "[LIFE]"
     color: "#F90000"
     desc: "随笔与生活"
 
-# 5. 评论（Waline）— 填写 serverURL 并开启后，文章页底部渲染评论区
-comments:
-  waline:
-    enabled: false
-    # serverURL: https://your-waline-server.example.com
-
 # 6. 全局播放器
 bgm:
   enabled: true
-  playlistApi: https://api.injahow.cn/meting/?type=playlist&id=17763697831
+  # Meting 兼容接口基址；后续切第三方服务时优先改这里
+  # apiBase: https://api.injahow.cn/meting/
+  apiBase: https://api.qijieya.cn/meting/
+  # 默认歌单支持网易云歌单链接，代码会自动转成上面的 apiBase
   defaultPlaylist:
     - https://music.163.com/playlist?id=17763697831
 
-# 7. 运维通知
+# 7. 评论系统
+comment:
+  enabled: true
+  serverUrl: https://comments.sounfury.top
+  lang: zh-CN
+  meta:
+    - nick
+    - mail
+    - link
+  requiredMeta:
+    - nick
+    - mail
+  login: enable
+  pageSize: 10
+  reaction: false
+
+# 8. 运维通知
 ops:
   bark:
     enabled: true
-    iconUrl: "https://sounfury-blog.oss-cn-beijing.aliyuncs.com/favicon.ico"
-    # 推送模板 — 占位符由 CI 脚本替换
+    iconUrl: "https://sounfury-image.oss-cn-beijing.aliyuncs.com/icon.jpg"
+    # 推送模板 — 占位符由 CI 脚本替换；url 为可选跳转链接
     templates:
       # 模板 1: 无文章变更，仅代码/样式部署
       deployOnly:
@@ -88,7 +107,12 @@ ops:
       batchPublish:
         title: "📚 Echoes 多篇文章发布成功"
         body: "文章更新并部署完成。"
-      # 模板 3: 单篇文章发布
+      # 模板 3: 单篇文章发布（url 由脚本动态生成并覆盖）
       singlePublish:
         title: "🎉 新文章发布成功"
         body: "{postTitle}\n{postUrl}"
+      # 模板 4: 部署失败告警
+      deployFail:
+        title: "❌ Echoes 部署失败"
+        body: "构建或部署过程中出现错误，请检查 Actions 日志。"
+        url: "https://github.com/sounfury/Echoes/actions"

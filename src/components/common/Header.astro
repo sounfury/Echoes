@@ -125,11 +125,12 @@ const currentPath = Astro.url.pathname;
             </div>
 
             <!-- Search Icon -->
-            <a
-                href="/archive"
-                data-ui="search-link"
-                class="hover:text-accent transition-colors"
-                aria-label="Search"
+            <button
+                id="quick-search-trigger"
+                type="button"
+                data-ui="search-trigger"
+                class="hover:text-accent transition-colors cursor-pointer"
+                aria-label="Open quick search"
             >
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -142,7 +143,7 @@ const currentPath = Astro.url.pathname;
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-            </a>
+            </button>
 
             <!-- Theme Switcher: 主题包选择 + 明暗模式 -->
             <div data-ui="theme-switcher" class="relative flex items-center gap-2">
@@ -352,9 +353,20 @@ const currentPath = Astro.url.pathname;
         const themeMenu = document.getElementById("theme-menu");
         const mobileToggle = document.getElementById("mobile-menu-toggle");
         const mobileMenu = document.getElementById("mobile-menu");
+        const quickSearchTrigger = document.getElementById("quick-search-trigger");
 
         toggle?.addEventListener("click", () => {
             toggleTheme();
+        });
+
+        quickSearchTrigger?.addEventListener("click", () => {
+            const isMobile = window.matchMedia("(max-width: 767px)").matches;
+            if (isMobile) {
+                window.location.href = "/archive";
+                return;
+            }
+
+            window.dispatchEvent(new CustomEvent("echoes:quick-search-open"));
         });
 
         // ── 主题菜单 ──

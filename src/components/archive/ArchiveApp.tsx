@@ -17,6 +17,21 @@ function readFiltersFromSearch(search: string): ArchiveFilters {
     };
 }
 
+function areTagListsEqual(a: string[], b: string[]): boolean {
+    return a.length === b.length && a.every((tag, index) => tag === b[index]);
+}
+
+function getInitialFilters(): ArchiveFilters {
+    if (typeof window === 'undefined') {
+        return {
+            category: 'all',
+            tags: [],
+        };
+    }
+
+    return readFiltersFromSearch(window.location.search);
+}
+
 // ─── Main Component ───────────────────────────────────────────────────
 
 export default function ArchiveApp({
@@ -24,21 +39,10 @@ export default function ArchiveApp({
     categories,
     tags: allTags,
     totalCount,
-    initialCategory = 'all',
-    initialTag,
 }: ArchiveAppProps) {
-    const [activeCategory, setActiveCategory] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return readFiltersFromSearch(window.location.search).category;
-        }
-        return initialCategory;
-    });
-    const [activeTags, setActiveTags] = useState<string[]>(() => {
-        if (typeof window !== 'undefined') {
-            return readFiltersFromSearch(window.location.search).tags;
-        }
-        return initialTag ? [initialTag.toLowerCase()] : [];
-    });
+    const initialFilters = useMemo(() => getInitialFilters(), []);
+    const [activeCategory, setActiveCategory] = useState(initialFilters.category);
+    const [activeTags, setActiveTags] = useState<string[]>(initialFilters.tags);
     const [searchKeyword, setSearchKeyword] = useState('');
     const [showTagWall, setShowTagWall] = useState(false);
 
@@ -49,17 +53,18 @@ export default function ArchiveApp({
     useEffect(() => {
         function syncFromUrl() {
             const { category, tags } = readFiltersFromSearch(window.location.search);
-            setActiveCategory(category);
-            setActiveTags(tags);
+            setActiveCategory((prev) => (prev === category ? prev : category));
+            setActiveTags((prev) => (areTagListsEqual(prev, tags) ? prev : tags));
         }
 
-        syncFromUrl();
         window.addEventListener('popstate', syncFromUrl);
         window.addEventListener('pageshow', syncFromUrl);
+        document.addEventListener('astro:page-load', syncFromUrl);
 
         return () => {
             window.removeEventListener('popstate', syncFromUrl);
             window.removeEventListener('pageshow', syncFromUrl);
+            document.removeEventListener('astro:page-load', syncFromUrl);
         };
     }, []);
 

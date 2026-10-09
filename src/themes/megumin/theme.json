@@ -15,6 +15,8 @@
     "page-kicker@home": "Explosion Log",
     "page-title@home": "爆裂日记",
     "post-stamp": "EXPLOSION!",
-    "comments-title": "冒险者公会 · 留言板"
+    "comments-title": "冒险者公会 · 留言板",
+    "comments-hint": "把你的委托、感想、勘误，或者对今日爆裂魔法的评分，钉到公会的留言板上吧！",
+    "post-cover-caption": "RELIC"
   }
 }

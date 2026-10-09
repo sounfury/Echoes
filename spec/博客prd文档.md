@@ -3,9 +3,9 @@
 | **文档信息** |                                         |
 | ------------ | --------------------------------------- |
 | **项目名称** | Sync-Stream (Obsidian 驱动静态博客重写) |
-| **版本号**   | V3.0 (Final Execution)                  |
+| **版本号**   | V3.1 (Quick Search Update)              |
 | **状态**     | **已评审 / 待开发**                     |
-| **最后更新** | 2026-02-13                              |
+| **最后更新** | 2026-04-23                              |
 | **优先级**   | P0 (核心) / P1 (重要) / P2 (次要)       |
 
 ------
@@ -49,6 +49,32 @@
 - **F-NAV-03 移动端适配 (Mobile Layout)**
   - 当屏幕宽度 < 768px 时，导航栏右侧菜单收纳为“汉堡菜单 (Hamburger Menu)”。
   - 点击汉堡菜单，从右侧滑出全屏遮罩层显示导航项。
+- **F-NAV-04 全局快速搜索 / Command Palette**
+  - **定位**：导航栏搜索入口提供 **Quick Search** 能力，用于“快速召回 / 快速跳转”；其职责与 Archive 页的高级检索系统明确区分。
+  - **唤起方式**：
+    - 点击导航栏最右侧搜索图标。
+    - 支持快捷键 `⌘K / Ctrl+K` 呼出。
+    - 支持 `Esc` 关闭。
+  - **表现形式**：
+    - Desktop：居中悬浮 Command Palette / Spotlight 式模态框，带遮罩、毛玻璃或极简边框。
+    - Mobile：优先采用全屏抽屉或全屏弹层，保证输入与点击区域充足。
+  - **搜索范围**：
+    - 文章标题（最高优先级）。
+    - 文章标签（仅作为辅助召回条件，不支持标签组合筛选）。
+    - 页面级导航项（如 `Timeline`、`Archive`、`Universe`）。
+    - 可选补充文章摘要 / description，用于弱匹配。
+  - **结果呈现**：
+    - 建议按 `Posts` / `Pages` 分组展示。
+    - 每条结果展示最少必要信息：标题 + 日期 / 分类 / 标签等轻量元数据。
+    - 支持关键词高亮、上下键切换、Enter 打开目标。
+    - 初始状态可展示最近文章或常用入口，避免空白面板。
+  - **能力边界（核心约束）**：
+    - **不支持** Tag Chip、标签墙、`#` 触发筛选、复合逻辑等 Archive 专属能力。
+    - **不承担** 全量结果浏览与高密度信息探索。
+    - 当用户需要更复杂检索时，面板底部应提供“前往 Archive 高级搜索”的二级入口。
+  - **体验目标**：
+    - 让用户在任意页面中以最低心智负担快速找到文章或页面。
+    - 与 Archive 页形成“快速直达”与“深度检索”的双层结构，避免功能重复。
 
 ### 2.2 首页：时间轴流 (Home - Timeline)
 
@@ -68,7 +94,8 @@
     - `[LIFE]`：随笔/生活
   - **列表区域**：高密度文本列表。仅展示 `Date` + `Title` + `Tags`。按年份 -> 月份折叠或分组。
 - **F-ARCH-02 复合搜索系统 (Advanced Search)**
-  - **入口**：位于归档页顶部（Tab 下方）或点击导航栏搜索图标唤起的模态框。
+  - **入口**：位于归档页顶部（Tab 下方）。
+  - **边界定义**：该系统是 **Archive 专属的深度检索能力**，承担分类浏览、标签探索、复合逻辑筛选与高密度结果浏览；**不与全局导航中的快速搜索入口复用同一套交互壳层**。
   - **输入交互**：
     - 支持输入关键词进行全文/标题模糊匹配。
     - **核心需求**：支持 **“复合逻辑”**，即 `Tag:Java` + `Tag:并发` + `Keyword:锁` = 展示同时满足这三个条件的文章。
@@ -232,6 +259,7 @@
 
 - **[交互]** 首页滚动触发背景切换特效。
 - **[检索]** 归档页的复合搜索功能（标签+关键词）。
+- **[检索]** 全局 Quick Search / Command Palette（标题、页面直达、快捷键唤起）。
 - **[交互]** 开启 View Transitions 实现无刷新跳转。
 - **[媒体]** 全局持久化音乐播放器。
 - **[UI]** 黑白主题切换逻辑。
@@ -239,7 +267,7 @@
 
 ### 🟢 P2: 锦上添花 (Nice to Have - 3.04 或实习后)
 
-- **[互动]** 接入第三方评论系统 (Giscus)。
+- **[互动]** 接入第三方评论系统。
 - **[特效]** 图片灯箱 (Lightbox)。
 - **[SEO]** Sitemap 与 RSS 生成。
 - **[数据]** 归档页增加“文章年度热力图”。
@@ -282,123 +310,3 @@ published: false
 pnpm add nanostores @nanostores/react clsx tailwind-merge class-variance-authority js-yaml astro-seo reading-time shiki
 pnpm add -D @rollup/plugin-yaml @astrojs/sitemap astro-robots-txt astro-pagefind
 ```
-
-
-
-### 第一期
-
-+ 音乐播放器（已落地）：Meting API 拉歌单 + 原生 Audio 渲染，歌词走 `lrc` 字段解析
-
-+ blog元数据解析与按tag和分类的搜索筛选怎么做
-
-+ 构建工作流，怎么触发ios通知（Bark.js?）
-
-+ seo怎么做
-
-+ markdown样式渲染怎么做
-
-+ 哪些是需要做状态管理的
-
-+ 怎么根据配置文件来读取配置并渲染
-
-  一个配置文件样例
-
-  ```yml
-  # =============================================================================
-  # Site Configuration (Phase 1)
-  # =============================================================================
-  
-  # 1. 站点基础信息
-  site:
-    title: SYNC-STREAM
-    subtitle: "Automated & Stylized Digital Garden"
-    url: https://your-domain.com
-    author: 余弦
-    logoText: "SYNC-STREAM" # 配合 EVA 字体使用
-    timezone: Asia/Shanghai
-  
-  # 2. 视觉与主题设计 (第一期写死品牌色，预留多主题开关)
-  theme:
-    enableSwitch: false # 第一期不开启切换，预留
-    defaultMode: "system"
-    colors:
-      primary: "#FFFFFF"     # 纸张白
-      background: "#121212"  # 深空灰
-      accent: "#6528F7"      # 初号机紫
-      terminal: "#00FF00"    # 终端绿
-      warning: "#FF0000"     # 警告红
-  
-  # 3. 核心路由导航 (F-NAV-01)
-  navigation:
-    - name: Timeline
-      path: /
-      icon: lucide:git-commit # 建议用 Lucide 极简图标库
-    - name: Archive
-      path: /archive
-      icon: lucide:database
-    - name: Universe
-      path: https://github.com/yourusername # 外链个人主页
-      external: true
-  
-  # 4. 归档与分类 (F-ARCH-01 对应机密档案库的三大 Tab)
-  category:
-    Tech: 
-      slug: tech
-      label: "[TECH]"
-      desc: "技术与编程"
-    Review: 
-      slug: review
-      label: "[REVIEW]"
-      desc: "书/影/音/游"
-    Life: 
-      slug: life
-      label: "[LIFE]"
-      desc: "随笔与生活"
-  
-  # 5. 全局媒体播放器 (F-MED-01)
-  bgm:
-    enabled: true
-    defaultPlaylist: 
-      - https://music.163.com/playlist?id=8882890045 # 默认歌单，进入文章后若有专属 BGM 则替换
-  
-  # 6. 自动化内容处理选项
-  content:
-    autoCover:
-      enabled: true
-      path: "/covers/" # public 目录下的封面图库路径
-      total: 50        # 图库总数，用于 Hash 取模兜底
-  
-  # 7. 运维与通知 (F-OPS-02)
-  ops:
-    bark:
-      enabled: true
-      # 警告: 请勿在此文件明文填写真实 Key，此处仅为标识，实际应由 GitHub Secrets 注入
-      deviceKeyEnv: "BARK_KEY" 
-      iconUrl: "https://your-icon-url"
-  
-  # =============================================================================
-  # 以下为第二期 (P2) 预留配置
-  # =============================================================================
-  
-  # 8. 评论系统 (预留 Giscus)
-  comment:
-    provider: none # 第一期为 none
-    # giscus:
-    #   repo: your/repo
-    #   ...
-  
-  # 9. SEO 与友链 (预留)
-  seo:
-    enabled: false
-  friends:
-    enabled: false
-  ```
-
-  
-
-+ 黑白双主题怎么做？
-
-### 第二期
-
-+ 多主题切换怎么做（组件切换？css控制？）
-+ 第三方评论系统怎么接入

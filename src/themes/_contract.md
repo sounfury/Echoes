@@ -4,7 +4,7 @@
 
 主题对接的是这份"接口约定"，而不是组件源码。主题**只能**使用下面列出的四类接口：
 
-1. CSS 变量（`--c-*` / `--font-*` / `--radius-*` / `--shiki-*` / `--layout-*` / `--card-*`）
+1. CSS 变量（`--c-*` / `--font-*` / `--radius-*` / `--shiki-*` / `--layout-*` / `--card-*` / `--comments-*` / `--waline-*`）
 2. 结构锚点 `data-ui="..."`（以及 `data-ui-variant`）
 3. 状态属性 `data-theme` / `data-mode` / `data-schemes` / `data-page` / `data-state` / `data-category` / `aria-*`
 4. 装饰位 `[data-ui="decor-back"]` / `[data-ui="decor-front"]`
@@ -80,7 +80,18 @@ base 层在 `:root` 上给出全部变量的兜底值（即默认外观，颜色
 | `--c-selection-bg` / `--c-selection-text` | 文字选中 | accent / `#fff` |
 | `--c-scrollbar` | 滚动条滑块 | `#333` / accent |
 | `--c-terminal` / `--c-warning` | 功能色 | 来自配置 |
-| `--c-signal-green` / `--c-signal-red` / `--c-signal-orange` | 信号色（播放器频谱、错误提示） | `#39ff14` / `#F90000` / `#FF9900` |
+| `--c-signal-green` / `--c-signal-red` / `--c-signal-orange` | 信号色（播放器频谱、错误提示、提示块 warning / danger） | `#10B981` / `#F90000` / `#FF9900` |
+| `--c-paper` | 文章页 `main` 的纸面底色 | `--c-bg` 与白 4:6 混合 / 同 `--c-bg` |
+| `--c-contrast` | 与页面反差最大的纯色（快速搜索里常配合很低的透明度使用） | `#000` / `#fff` |
+| `--c-info` | 提示块 info 色（可选，未设置时为 `#4f8ff7`） | 未设置 |
+| `--c-search-panel` | 快速搜索面板底色 | `#fff` 92% / `rgb(13 13 18)` 92% |
+| `--c-search-divider` | 快速搜索分隔线 / 条目悬停边框 | `#000` 8% / `#fff` 10% |
+| `--c-search-placeholder` | 快速搜索输入框占位符 | `#000` 35% / `#fff` 30% |
+| `--c-search-kbd` | 快速搜索按键提示边框 | `#000` 10% / `#fff` 15% |
+| `--c-search-mark` | 快速搜索命中高亮底色 | accent 16% / 26% |
+
+> 兼容：旧的 Tailwind 色名 `eva-*`（`text-eva-purple`、`bg-eva-paper` …）仍可用，已改为指向上面的变量，
+> 属于组件内部实现，主题不要依赖，新代码请用语义色名（`text-accent`、`bg-paper` …）。
 
 分类色（`site.config.yaml` 的 `category.*.color`）以内联 `--item-color` 形式出现在条目上，属于内容数据，不由主题控制；
 需要按分类定制时使用 `[data-category="tech"]`。
@@ -104,13 +115,29 @@ Vite 会处理路径和哈希），再覆盖 `--font-*`。主题 CSS 只在主�
 
 ### 2.4 代码高亮 `--shiki-*`
 
-Markdown 代码块使用 Shiki 的 `css-variables` 主题，颜色全部由变量决定：
+Markdown 代码块用 Shiki 多主题输出（`defaultColor: false`），每个 token 只带变量、不带写死的颜色：
+
+| 变量（由 Shiki 写在 `.astro-code` 及其 `span` 上） | 来源 |
+| --- | --- |
+| `--shiki-light` / `--shiki-light-bg` | `github-light`（默认亮色外观） |
+| `--shiki-dark` / `--shiki-dark-bg` | `dracula`（默认暗色外观） |
+| `--shiki-vars` / `--shiki-vars-bg` | `css-variables` 主题，值是 `var(--shiki-token-*)` / `var(--shiki-foreground)` / `var(--shiki-background)` |
+
+base 层按 `data-mode` 使用 light / dark。主题想要自己的配色时，设置下面这些变量，并在 skin 层把颜色切到 `--shiki-vars`：
 
 `--shiki-foreground`、`--shiki-background`、`--shiki-token-constant`、`--shiki-token-string`、
 `--shiki-token-comment`、`--shiki-token-keyword`、`--shiki-token-parameter`、`--shiki-token-function`、
 `--shiki-token-string-expression`、`--shiki-token-punctuation`、`--shiki-token-link`。
 
-（Astro 实际输出的是 `--astro-code-*`，base 层在 `.astro-code` 上做了桥接，主题只需设置 `--shiki-*`。）
+```css
+@layer skin {
+  :root { --shiki-background: #fbf3ea; --shiki-token-keyword: #c8243a; /* … */ }
+  .astro-code, .astro-code span { color: var(--shiki-vars); font-style: normal; }
+  .astro-code { background-color: var(--shiki-vars-bg); }
+}
+```
+
+（`.astro-code` 是 Astro / Shiki 的输出类名，在这里视为第三方稳定接口。）
 
 ### 2.5 布局 `--layout-*`（v2）
 
@@ -169,8 +196,22 @@ Markdown 代码块使用 Shiki 的 `css-variables` 主题，颜色全部由变�
 
 ### 2.7 第三方：Waline 评论
 
-`[data-ui="comments"]` 上已把 Waline 的 `--waline-*` 变量映射到 `--c-*`，换主题会自动跟随。
-需要更细的定制时可以写 `[data-ui="comments"] .wl-*`（Waline 官方类名，视为第三方稳定接口）。
+评论区组件是 `src/components/post/CommentSection.astro`（Waline，`serverURL` 等来自 `site.config.yaml` 的 `comment`）。
+
+- `[data-ui="comments"]` 上把 Waline 的 `--waline-*` 变量全部映射到 `--c-*`，切换主题 / 明暗时只是变量变化，
+  **不会重新挂载 Waline**，已输入的内容不丢。主题在 skin 层对同一个锚点覆盖 `--waline-*` 即可整体换色。
+- 更细的定制写 `[data-ui="comments"] .wl-*`（Waline 官方类名：`.wl-panel` / `.wl-header` / `.wl-editor` /
+  `.wl-btn` / `.wl-btn.primary` / `.wl-card-item` / `.wl-card` / `.wl-meta-head` / `.wl-sort` / `.wl-empty` / `.wl-power` …，
+  视为第三方稳定接口）。
+- Waline 自带样式放在 `@layer components.waline` 子层，组件自己的样式在 `components` 层，所以 skin 层的规则总能覆盖两者。
+- 额外的钩子变量：
+
+| 变量 | 用途 | 默认 |
+| --- | --- | --- |
+| `--comments-label` | 评论区顶部分隔线中间的字样（字符串，用于 `content`） | `"COMMENTS"` |
+| `--comments-error-color` | 评论提示条错误态颜色 | `#c0392b` |
+
+- 明暗：Waline 的 `dark` 选项指向 `html.dark`（运行时会同步 `.dark` 类），但实际颜色以 `[data-ui="comments"]` 上的变量为准。
 
 ## 3. 结构锚点 `data-ui`
 
@@ -181,7 +222,7 @@ Markdown 代码块使用 Shiki 的 `css-variables` 主题，颜色全部由变�
 | `brand` / `brand-logo` / `brand-title` / `brand-subtitle` | 站点标识（链接、Logo 方块、标题、打字机副标题） |
 | `nav` | 桌面端导航链接容器 |
 | `nav-link` | 导航链接（桌面 + 移动菜单）；当前页带 `data-state="active"` 与 `aria-current="page"` |
-| `search-link` | 头部搜索图标 |
+| `search-trigger` | 头部搜索按钮（桌面打开快速搜索，移动端跳归档页） |
 | `theme-switcher` | 主题切换区域（包含下面三个） |
 | `theme-menu-toggle` | 打开主题菜单的按钮（`aria-expanded`） |
 | `theme-menu` | 主题菜单（`data-state="open|closed"`） |
@@ -196,17 +237,31 @@ Markdown 代码块使用 Shiki 的 `css-variables` 主题，颜色全部由变�
 | `timeline-node` | 时间轴圆点 |
 | `post-card` | 时间轴条目内的文章卡片链接 |
 | `post-card-title` / `post-card-excerpt` | 卡片标题 / 摘要 |
-| `timeline-date` / `post-date` | 卡片日期容器（桌面端默认绝对定位在时间轴左侧）/ 日期文字 |
+| `card-body` | 卡片文字内容容器（在封面之上） |
+| `card-cover` / `card-cover-scrim` | 卡片封面（文章有封面图时才有；默认悬停时从右向左划入，铺满卡片）/ 封面上的渐隐遮罩 |
+| `timeline-date` / `post-date` | 桌面端日期容器（默认绝对定位在时间轴左侧，`< md` 隐藏）/ 日期文字 |
+| `card-date` | 卡片内的日期（默认只在 `< md` 显示；想把日期统一放进卡片时隐藏 `timeline-date`、显示它） |
 | `category-badge` | 分类徽标（时间轴、归档） |
 | `tag-list` / `tag` | 标签列表 / 单个标签（时间轴、文章页、归档、标签墙） |
 | `timeline-footer` / `load-more` / `timeline-end` | 时间轴底部 / 加载更多按钮 / 结束标识 |
 | `empty-state` | 列表为空时的提示 |
 | `post` | 文章 `<article>`；`data-ui-variant="md|mdx"`，带 `data-category` |
 | `post-header` / `post-stamp` / `post-title` / `post-meta` | 文章头部 / CONFIDENTIAL 印章 / 标题 / 元信息栅格 |
+| `post-cover` / `post-cover-image` / `post-cover-caption` | 文章封面 `<figure>`（有封面图时）/ 图片 / 角标（默认 `EXHIBIT`） |
+| `post-meta-item` / `post-meta-label` | 元信息单项（`data-field="category|created|updated|reading|soundtrack|tags"`）/ 单项小标题 |
+| `post-wordcount` | 阅读时间 + 字数（`READ_TIME` 项的值） |
+| `post-soundtrack` | 文章配乐（`music` 字段存在时，点击用全局播放器播放） |
 | `category-link` | 文章页分类链接 |
 | `post-body` | 文章正文容器（Markdown 渲染结果在其中） |
 | `toc` / `toc-link` | 目录 / 目录项（当前项 `data-state="active"` + `aria-current="location"`） |
-| `comments` / `comments-title` | 评论区（`data-provider="waline"`，仅在配置开启时渲染） |
+| `comments` | 评论区 `<section>`（`data-provider="waline"`，仅在配置开启时渲染），见 2.7 |
+| `comments-header` / `comments-title` / `comments-hint` | 评论区标题区 / 标题 / 说明文字 |
+| `comments-body` | Waline 挂载容器（内部为 Waline 的 `.wl-*` 结构） |
+| `comments-toast` | 评论操作提示条（`data-state="visible|hidden"`，`data-type="success|error"`；首次提示时才创建） |
+| `quick-search` | 快速搜索弹窗（`Ctrl/⌘ K` 或点 `search-trigger`；打开时 `data-state="open"`） |
+| `quick-search-backdrop` / `quick-search-panel` | 遮罩 / 面板 |
+| `quick-search-input` / `quick-search-list` / `quick-search-empty` / `quick-search-footer` | 输入框 / 结果列表 / 无结果 / 底部快捷键提示 |
+| `quick-search-group` / `quick-search-item` / `quick-search-mark` | 结果分组标题 / 结果项（键盘选中 `data-state="active"`）/ 命中高亮 |
 | `search` | 归档页搜索组件（标签墙展开时 `data-state="open"`） |
 | `search-field` / `search-input` / `search-chip` | 搜索框外壳 / 输入框 / 已选标签 chip |
 | `tag-wall` | 标签墙弹层 |
@@ -215,8 +270,10 @@ Markdown 代码块使用 Shiki 的 `css-variables` 主题，颜色全部由变�
 | `archive-item` | 归档行（带 `data-category`） |
 | `player` | 全局播放器（`data-state="playing|paused|loading|error"`） |
 | `player-cover` / `player-track` / `player-visualizer` / `player-toggle` | 封面 / 曲目信息 / 频谱 / 播放按钮 |
-| `player-toast` / `player-error` | 手势提示 / 错误信息 |
+| `player-controls` / `player-volume` | 移动端展开的控制条 / 音量按钮 |
+| `player-error` | 错误信息 |
 | `lyrics-panel` / `lyrics-current` | 歌词面板（`data-state="open|closed"`）/ 当前歌词 |
+| `footer` / `footer-link` | 页脚（版权 / 备案）/ 页脚链接 |
 | `decor-back` / `decor-front` | 装饰位，见第 5 节 |
 
 ### 3.1 可替换文案 `copy`
@@ -241,14 +298,14 @@ Markdown 代码块使用 Shiki 的 `css-variables` 主题，颜色全部由变�
 | `page-kicker` | 首页 `System Status: Online` |
 | `page-title` | 首页 `Transmissions`（归档页标题由 React 渲染，暂不支持替换） |
 | `post-stamp` | 文章页 `CONFIDENTIAL` |
-| `comments-title` | `Comms_Channel` |
+| `post-cover-caption` | 文章封面角标 `EXHIBIT` |
+| `comments-title` | `评论` |
+| `comments-hint` | `留下你的想法、补充、纠错，或者只是打个招呼。` |
 
 - 未知键：契约校验给出警告，运行时忽略。
 - 首屏无闪烁：`<head>` 内联脚本在解析阶段用 `MutationObserver` 于首次绘制前替换；切换主题、ClientRouter 换页时
   由运行时替换；切到没有 `copy` 的主题时恢复 `data-ui-default`。
 - 想让新元素可替换：在源码里给它加 `data-copy data-ui-default="默认文字"`（需是纯文本元素，且不能是 React 水合的节点），并更新上表。
-
-> 尚未提供：`footer`（站点目前没有页脚）。将来新增页脚时会以 `data-ui="footer"` 提供，属于兼容性新增。
 
 ## 4. 状态属性
 
@@ -258,7 +315,7 @@ Markdown 代码块使用 Shiki 的 `css-variables` 主题，颜色全部由变�
 | `data-mode` | `<html>` | `light` / `dark`（同时同步 `.dark` 类，供 Tailwind 使用；**主题请用 `data-mode`**） |
 | `data-schemes` | `<html>` | 当前主题支持的模式，空格分隔，如 `light dark` |
 | `data-page` | `<html>` | `home` / `archive` / `post` / `playground` / `other` |
-| `data-state` | 各锚点 | `active` / `open` / `closed` / `locked` / `playing` / `paused` / `loading` / `error`（见锚点表） |
+| `data-state` | 各锚点 | `active` / `open` / `closed` / `locked` / `playing` / `paused` / `loading` / `error` / `visible` / `hidden`（见锚点表） |
 | `data-category` | 条目 | 分类 slug（`tech` / `review` / `life` …） |
 | `aria-*` | 交互元素 | `aria-current`、`aria-checked`、`aria-selected`、`aria-expanded`、`[disabled]` |
 
@@ -359,3 +416,13 @@ src/themes/<id>/
   - 新增 `theme.json` 的 `copy` 字段与可替换文案锚点（见 3.1）。
   - 迁移：把 `theme.json` 的 `api` 改成 `2`；若 v1 主题曾用负外边距 + 内边距给 `post-card` 做悬停底色，改用 `--card-*` 变量；
     若曾用 `font-size: 0` + `::after` 改写文字（如印章），改用 `copy`。
+  - 合并 `dev` 分支（封面划入、文章封面、配乐、字数统计、纸面背景 / `article.scss`、快速搜索、播放器拖拽、Waline 评论区）时补充，
+    由于 v2 尚未发布，直接并入 v2，不再升版本：
+    - `search-link` 改名为 `search-trigger`（dev 把搜索图标改成了打开快速搜索的按钮）；删除 `player-toast`（dev 移除了手势提示）。
+    - 代码高亮改为 Shiki 多主题（见 2.4）：默认是 github-light / dracula，主题要用 `--shiki-token-*` 配色需显式切到 `--shiki-vars`。
+    - 新增锚点：`card-body` / `card-cover` / `card-cover-scrim` / `card-date`、`post-cover*`、`post-meta-item` / `post-meta-label`、
+      `post-wordcount`、`post-soundtrack`、`comments-header` / `comments-hint` / `comments-body` / `comments-toast`、`quick-search*`、
+      `player-controls` / `player-volume`、`footer` / `footer-link`。
+    - 新增变量：`--c-paper`、`--c-contrast`、`--c-info`、`--c-search-*`、`--comments-label`、`--comments-error-color`；
+      `--c-signal-green` 默认值随 dev 改为 `#10B981`。新增可替换文案：`post-cover-caption`、`comments-hint`；`comments-title` 默认文字改为 `评论`。
+    - 文章正文排版由 `src/styles/article.scss`（components 层）提供；默认主题不再自带 `post-body` 排版规则。

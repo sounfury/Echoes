@@ -1,6 +1,6 @@
 /*
  * Echoes 默认主题（EVA 风格）
- * 接口约定见 ../_contract.md（api: 1）。只使用 --c-* 变量、data-ui 锚点、状态属性和装饰位，
+ * 接口约定见 ../_contract.md（api: 2）。只使用 --c-* 变量、data-ui 锚点、状态属性和装饰位，
  * 不依赖任何 Tailwind 类名。所有规则都在 @layer skin 中。
  *
  * 配色本身来自 site.config.yaml（base 层把它映射成 --c-*），这里不重复定义，
@@ -47,64 +47,8 @@
 		}
 	}
 
-	/* ── 文章正文 ───────────────────────────────────────────── */
-	[data-ui="post-body"] h2 {
-		border-left: 4px solid var(--c-accent);
-		padding-left: 1rem;
-	}
-
-	[data-ui="post-body"] code {
-		background: color-mix(in srgb, var(--c-accent) 10%, transparent);
-		color: var(--c-accent);
-		padding: 0.2rem 0.4rem;
-		border-radius: 2px;
-	}
-
-	/* 首字下沉 */
-	[data-ui="post-body"] > p:first-of-type::first-letter {
-		float: left;
-		font-family: var(--font-serif);
-		font-size: 2.25rem;
-		line-height: 2.5rem;
-		font-weight: 700;
-		margin-right: 0.5rem;
-		margin-top: 0.1em;
-		color: var(--c-text);
-	}
-
-	/* ── 代码高亮（Shiki css-variables）────────────────────────
-	 * 复刻此前的 github-light 配色。
-	 * 注意：迁移前站点虽然配置了 dracula 作为暗色主题，但并没有相应 CSS，
-	 * 暗色模式下实际显示的也是 github-light，这里保持完全一致。
-	 * 想在暗色模式下用 dracula，取消下方 [data-mode="dark"] 块的注释即可。
-	 */
-	:root {
-		--shiki-foreground: #24292e;
-		--shiki-background: #fff;
-		--shiki-token-constant: #005cc5;
-		--shiki-token-string: #032f62;
-		--shiki-token-comment: #6a737d;
-		--shiki-token-keyword: #d73a49;
-		--shiki-token-parameter: #e36209;
-		--shiki-token-function: #6f42c1;
-		--shiki-token-string-expression: #032f62;
-		--shiki-token-punctuation: #24292e;
-		--shiki-token-link: #032f62;
-	}
-
 	/*
-	:root[data-mode="dark"] {
-		--shiki-foreground: #f8f8f2;
-		--shiki-background: #282a36;
-		--shiki-token-constant: #bd93f9;
-		--shiki-token-string: #f1fa8c;
-		--shiki-token-comment: #6272a4;
-		--shiki-token-keyword: #ff79c6;
-		--shiki-token-parameter: #ffb86c;
-		--shiki-token-function: #50fa7b;
-		--shiki-token-string-expression: #f1fa8c;
-		--shiki-token-punctuation: #f8f8f2;
-		--shiki-token-link: #8be9fd;
-	}
-	*/
+	 * 文章正文排版（标题竖条、首字下沉、行内代码、代码块……）由 src/styles/article.scss 提供，
+	 * 代码高亮默认使用 github-light / dracula（见 global.css），默认主题不再覆盖。
+	 */
 }

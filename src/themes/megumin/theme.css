@@ -387,18 +387,52 @@
 		corner-shape: bevel;
 	}
 
-	/* 日期放进卷轴内，作为日记的落款 */
+	/* 日期放进卷轴内，作为日记的落款：隐藏轴线左侧的桌面日期，卡片内日期在所有宽度显示 */
 	[data-ui="timeline-date"] {
-		position: static;
-		width: auto;
-		text-align: left;
-		margin-bottom: 0.35rem;
+		display: none;
 	}
 
-	[data-ui="post-date"] {
+	[data-ui="card-date"] {
+		display: block;
+		margin-bottom: 0.35rem;
 		font-family: "Megumin Display", var(--font-mono);
+		font-size: 0.8rem;
 		letter-spacing: 0.08em;
 		color: var(--mg-crimson-deep);
+		opacity: 0.75;
+	}
+
+	/* 封面划入：铺满整张卷轴（同样斜角），旧纸色调 + 羊皮纸渐隐，金边画在封面之上 */
+	[data-ui="card-cover"] {
+		inset: 0;
+		border-radius: var(--card-radius);
+		corner-shape: bevel;
+	}
+
+	[data-ui="card-cover"] img {
+		filter: sepia(0.3) saturate(0.95);
+		opacity: 0.95;
+	}
+
+	[data-ui="card-cover-scrim"] {
+		background: linear-gradient(to right,
+				rgb(251 243 228 / 0.95) 0%,
+				rgb(251 243 228 / 0.82) 42%,
+				rgb(241 224 196 / 0.35) 78%,
+				rgb(241 224 196 / 0.05) 100%);
+	}
+
+	[data-ui="card-cover"]::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		corner-shape: bevel;
+		box-shadow:
+			inset 0 0 0 1px var(--mg-gold),
+			inset 0 0 0 4px rgb(251 243 228 / 0.6),
+			inset 0 0 0 5px rgb(217 164 65 / 0.7);
+		pointer-events: none;
 	}
 
 	[data-ui="category-badge"] {
@@ -640,6 +674,59 @@
 		}
 	}
 
+	/* 文章页内容区不再铺 paper 白底，直接落在羊皮纸背景上 */
+	:root {
+		--c-paper: transparent;
+	}
+
+	[data-ui="post-meta-label"] {
+		font-size: 0.6rem;
+		letter-spacing: 0.22em;
+		color: var(--mg-crimson);
+		opacity: 0.75;
+	}
+
+	[data-ui="post-wordcount"] {
+		font-family: var(--font-mono);
+		letter-spacing: 0.02em;
+	}
+
+	/* 封面：嵌在扉页里的一幅「藏画」，斜角金框 + 旧纸色调，题签换成朱红小牌 */
+	[data-ui="post-cover"] {
+		padding: 6px;
+		border: 0;
+		border-radius: 10px;
+		corner-shape: bevel;
+		background: linear-gradient(170deg, #fbf3e4, #ead6b6);
+		box-shadow:
+			inset 0 0 0 1px var(--mg-gold),
+			0 8px 18px -12px rgb(122 15 31 / 0.55);
+	}
+
+	[data-ui="post-cover-image"] {
+		border-radius: 6px;
+		corner-shape: bevel;
+		filter: sepia(0.18) saturate(0.95);
+	}
+
+	[data-ui="post-cover-caption"] {
+		left: 50%;
+		bottom: -0.65rem;
+		translate: -50% 0;
+		padding: 0.15rem 0.8rem;
+		border-radius: 6px;
+		corner-shape: bevel;
+		font-family: "Megumin Display", var(--font-serif);
+		letter-spacing: 0.2em;
+		background: var(--mg-crimson);
+		color: #fff3e6;
+		box-shadow: 0 0 0 1px var(--mg-gold), 0 3px 8px -3px rgb(60 10 20 / 0.5);
+	}
+
+	[data-ui="post-soundtrack"] {
+		color: var(--mg-crimson);
+	}
+
 	[data-ui="post-body"] h2 {
 		position: relative;
 		padding-left: 1.75rem;
@@ -675,6 +762,19 @@
 		border-left: 3px solid var(--mg-crimson);
 		border-radius: 4px;
 		padding: 1rem;
+	}
+
+	/* 代码高亮：改用 css-variables 主题（--shiki-vars），颜色取上面的 --shiki-token-* */
+	.astro-code,
+	.astro-code span {
+		color: var(--shiki-vars);
+		font-style: normal;
+		font-weight: inherit;
+		text-decoration: none;
+	}
+
+	.astro-code {
+		background-color: var(--shiki-vars-bg);
 	}
 
 	[data-ui="post-body"] blockquote {
@@ -730,9 +830,376 @@
 		text-shadow: 0 0 10px rgb(200 36 58 / 0.35);
 	}
 
-	/* ── 评论 ─────────────────────────────────────────────── */
+	/* ── 快速搜索：魔导书检索页 ─────────────────────────────── */
+	:root {
+		--c-search-panel: rgb(251 243 228 / 0.97);
+		--c-search-divider: rgb(217 164 65 / 0.55);
+		--c-search-placeholder: #a0807a;
+		--c-search-kbd: rgb(217 164 65 / 0.8);
+		--c-search-mark: rgb(200 36 58 / 0.18);
+	}
+
+	[data-ui="quick-search-backdrop"] {
+		background: rgb(40 8 14 / 0.35);
+	}
+
+	[data-ui="quick-search-panel"] {
+		border: 0;
+		border-radius: 14px;
+		corner-shape: bevel;
+		background:
+			radial-gradient(ellipse at 30% 0%, rgb(255 252 244 / 0.95), transparent 70%),
+			linear-gradient(170deg, #fbf3e4, #f1e0c4);
+		box-shadow:
+			inset 0 0 0 1px var(--mg-gold),
+			inset 0 0 0 4px rgb(251 243 228 / 0.6),
+			inset 0 0 0 5px rgb(217 164 65 / 0.4),
+			0 24px 60px -20px rgb(40 8 14 / 0.65);
+	}
+
+	[data-ui="quick-search-group"] {
+		font-family: "Megumin Display", var(--font-mono);
+		color: var(--mg-crimson);
+		letter-spacing: 0.2em;
+	}
+
+	[data-ui="quick-search-item"][data-state="active"] {
+		border-color: var(--mg-crimson);
+		background: rgb(200 36 58 / 0.08);
+		box-shadow: inset 3px 0 0 var(--mg-crimson);
+	}
+
+	[data-ui="quick-search-mark"] {
+		color: var(--mg-crimson-deep);
+	}
+
+	[data-ui="search-trigger"]:hover {
+		text-shadow: 0 0 10px rgb(200 36 58 / 0.4);
+	}
+
+	/* ── 页脚：一行落款 ─────────────────────────────────────── */
+	[data-ui="footer"] {
+		color: var(--mg-crimson-deep);
+	}
+
+	[data-ui="footer"]::before {
+		content: "✧ ✦ ✧";
+		display: block;
+		margin-bottom: 0.5rem;
+		letter-spacing: 0.5em;
+		color: var(--mg-gold);
+	}
+
+	/* ── 评论：冒险者公会 · 留言板 ─────────────────────────────
+	 * 整个评论区是一块木质告示板（金色斜角包边 + 顶部朱红挂牌），
+	 * 留言表单和每条留言都是钉在板上的羊皮纸委托单（红色图钉）。
+	 * Waline 颜色全部通过 [data-ui="comments"] 上的 --waline-* 覆盖；细节用官方 .wl-* 类名。
+	 */
+	[data-ui="comments"] {
+		--comments-label: "QUEST BOARD";
+		--comments-error-color: var(--mg-crimson);
+		--mg-wood: #5a3420;
+		--mg-wood-dark: #3b2014;
+		--mg-parchment: #fbf3e4;
+		--mg-ink: #2b1a1d;
+
+		--waline-theme-color: var(--mg-crimson);
+		--waline-active-color: var(--mg-crimson-deep);
+		--waline-color: var(--mg-ink);
+		--waline-white: #fff7ef;
+		--waline-bg-color: transparent;
+		--waline-bg-color-light: rgb(200 36 58 / 0.06);
+		--waline-bg-color-hover: rgb(217 164 65 / 0.18);
+		--waline-border-color: rgb(217 164 65 / 0.6);
+		--waline-border: 1px solid rgb(217 164 65 / 0.6);
+		--waline-disable-bg-color: #eadbc6;
+		--waline-disable-color: #a08a80;
+		--waline-info-bg-color: rgb(217 164 65 / 0.15);
+		--waline-info-color: #6b4a4f;
+		--waline-light-grey: #8a676c;
+		--waline-dark-grey: #4a2c30;
+		--waline-bq-color: rgb(200 36 58 / 0.4);
+		--waline-code-bg-color: rgb(200 36 58 / 0.08);
+		--waline-badge-color: var(--mg-crimson);
+		--waline-avatar-radius: 50%;
+
+		position: relative;
+		margin-top: 5rem;
+		padding: 3.25rem 1.75rem 1.75rem;
+		border-top: 0;
+		border-radius: 16px;
+		corner-shape: bevel;
+		color: var(--mg-parchment);
+		background:
+			radial-gradient(ellipse at 50% 0%, rgb(255 220 170 / 0.18), transparent 60%),
+			repeating-linear-gradient(176deg, rgb(0 0 0 / 0.06) 0 2px, transparent 2px 9px, rgb(255 255 255 / 0.03) 9px 10px, transparent 10px 23px),
+			linear-gradient(180deg, var(--mg-wood), var(--mg-wood-dark));
+		box-shadow:
+			inset 0 0 0 1px var(--mg-gold),
+			inset 0 0 0 5px rgb(59 32 20 / 0.9),
+			inset 0 0 0 6px rgb(217 164 65 / 0.55),
+			inset 0 0 40px rgb(0 0 0 / 0.35),
+			0 18px 36px -18px rgb(40 8 14 / 0.7);
+	}
+
+	/* 去掉默认的分隔线，把「COMMENTS」字样改成朱红挂牌 */
+	[data-ui="comments"]::before {
+		display: none;
+	}
+
+	[data-ui="comments"]::after {
+		top: 0;
+		padding: 0.35rem 1.4rem;
+		border-radius: 8px;
+		corner-shape: bevel;
+		font-family: "Megumin Display", var(--font-serif);
+		font-size: 0.7rem;
+		letter-spacing: 0.3em;
+		color: #fff3e6;
+		opacity: 1;
+		background: radial-gradient(circle at 35% 30%, #e45468, var(--mg-crimson) 45%, var(--mg-crimson-deep));
+		box-shadow: 0 0 0 1px var(--mg-gold), 0 4px 10px -2px rgb(40 8 14 / 0.6);
+	}
+
+	[data-ui="comments-header"] {
+		margin-bottom: 1.75rem;
+		text-align: center;
+	}
+
+	[data-ui="comments-title"] {
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		color: #ffe9c2;
+		text-shadow: 0 0 12px rgb(217 164 65 / 0.45), 0 2px 0 rgb(0 0 0 / 0.35);
+	}
+
+	[data-ui="comments-title"]::before,
+	[data-ui="comments-title"]::after {
+		content: "✦";
+		margin-inline: 0.6rem;
+		font-size: 0.7em;
+		vertical-align: 0.15em;
+		color: var(--mg-gold);
+	}
+
+	[data-ui="comments-hint"] {
+		color: rgb(251 243 228 / 0.75);
+		font-size: 0.85rem;
+	}
+
+	/* 羊皮纸委托单 + 红色图钉 */
+	[data-ui="comments"] .wl-panel,
+	[data-ui="comments"] .wl-cards > .wl-card-item {
+		position: relative;
+		border: 0;
+		border-radius: 3px;
+		color: var(--mg-ink);
+		background:
+			radial-gradient(ellipse at 20% 10%, rgb(255 252 244 / 0.9), transparent 65%),
+			linear-gradient(170deg, var(--mg-parchment), #ecd8b6);
+		box-shadow:
+			inset 0 0 0 1px rgb(217 164 65 / 0.7),
+			inset 0 0 18px rgb(140 90 40 / 0.18),
+			0 10px 18px -10px rgb(0 0 0 / 0.65);
+	}
+
+	[data-ui="comments"] .wl-panel {
+		rotate: -0.35deg;
+		margin-inline: 0.25rem;
+	}
+
+	[data-ui="comments"] .wl-panel::before,
+	[data-ui="comments"] .wl-cards > .wl-card-item::before {
+		content: "";
+		position: absolute;
+		top: -6px;
+		left: 50%;
+		translate: -50% 0;
+		width: 14px;
+		height: 14px;
+		border-radius: 50%;
+		background: radial-gradient(circle at 35% 30%, #ff8a98, var(--mg-crimson) 50%, var(--mg-crimson-deep));
+		box-shadow: 0 3px 4px rgb(0 0 0 / 0.45);
+		z-index: 2;
+	}
+
+	[data-ui="comments"] .wl-header {
+		border-bottom: 1px dashed rgb(184 142 132 / 0.7);
+	}
+
+	[data-ui="comments"] .wl-header label {
+		font-family: var(--font-serif);
+		color: var(--mg-crimson-deep);
+	}
+
+	[data-ui="comments"] .wl-header-item:not(:last-child) {
+		border-right: 1px dashed rgb(184 142 132 / 0.7);
+	}
+
+	/* 编辑区：带横线的信纸 */
+	[data-ui="comments"] .wl-editor {
+		color: var(--mg-ink);
+		background:
+			repeating-linear-gradient(to bottom, transparent 0 1.85rem, rgb(200 36 58 / 0.13) 1.85rem calc(1.85rem + 1px)),
+			rgb(255 250 240 / 0.55);
+		background-attachment: local;
+		line-height: 1.85rem;
+		padding-top: 0.25rem;
+	}
+
+	[data-ui="comments"] .wl-action {
+		color: var(--mg-crimson-deep);
+	}
+
+	[data-ui="comments"] .wl-action:hover {
+		color: var(--mg-crimson);
+	}
+
+	[data-ui="comments"] .wl-text-number {
+		white-space: nowrap;
+		color: #8a676c;
+	}
+
+	[data-ui="comments"] .wl-btn {
+		border-radius: 6px;
+		corner-shape: bevel;
+		border-color: var(--mg-crimson-deep);
+		color: var(--mg-crimson-deep);
+		background: rgb(255 250 240 / 0.6);
+	}
+
+	[data-ui="comments"] .wl-btn:not(:disabled):hover {
+		opacity: 1;
+		background: rgb(200 36 58 / 0.1);
+	}
+
 	[data-ui="comments"] .wl-btn.primary {
-		box-shadow: 2px 2px 0 var(--mg-crimson-deep);
+		border-color: var(--mg-crimson-deep);
+		color: #fff3e6;
+		background: linear-gradient(180deg, #d83a4f, var(--mg-crimson) 55%, #a81a2e);
+		box-shadow: 2px 2px 0 var(--mg-crimson-deep), inset 0 0 0 1px rgb(255 220 200 / 0.3);
+		letter-spacing: 0.15em;
+	}
+
+	[data-ui="comments"] .wl-btn.primary:not(:disabled):hover {
+		opacity: 1;
+		background: linear-gradient(180deg, #e45468, #d22c43 55%, var(--mg-crimson));
+		box-shadow: 2px 2px 0 var(--mg-crimson-deep), 0 0 14px rgb(200 36 58 / 0.55);
+	}
+
+	/* 板面上的文字（计数 / 排序 / 空状态 / Powered by）用羊皮纸色 */
+	[data-ui="comments"] .wl-meta-head {
+		color: #ffe9c2;
+		border-bottom: 1px solid rgb(217 164 65 / 0.35);
+		margin-top: 1.5rem;
+	}
+
+	[data-ui="comments"] .wl-meta-head .wl-count {
+		font-family: var(--font-serif);
+		color: #ffe9c2;
+	}
+
+	[data-ui="comments"] .wl-sort li {
+		color: rgb(251 243 228 / 0.6);
+	}
+
+	[data-ui="comments"] .wl-sort li.active,
+	[data-ui="comments"] .wl-sort li:hover {
+		color: #ffd27a;
+	}
+
+	[data-ui="comments"] .wl-empty {
+		color: rgb(251 243 228 / 0.75);
+		font-family: var(--font-serif);
+		letter-spacing: 0.1em;
+	}
+
+	[data-ui="comments"] .wl-empty::before {
+		content: "📜 ";
+	}
+
+	[data-ui="comments"] .wl-power,
+	[data-ui="comments"] .wl-power a {
+		color: rgb(251 243 228 / 0.5);
+	}
+
+	[data-ui="comments"] .wl-loading svg {
+		color: #ffd27a;
+	}
+
+	/* 每条顶层留言是一张钉在板上的委托单，回复留在单子里 */
+	[data-ui="comments"] .wl-cards > .wl-card-item {
+		margin: 1.4rem 0.25rem 0;
+		padding: 1.1rem 1.1rem 0.8rem;
+	}
+
+	[data-ui="comments"] .wl-cards > .wl-card-item:nth-child(even) {
+		rotate: 0.3deg;
+	}
+
+	[data-ui="comments"] .wl-cards > .wl-card-item:nth-child(odd) {
+		rotate: -0.25deg;
+	}
+
+	[data-ui="comments"] .wl-card {
+		border-bottom: 0;
+	}
+
+	[data-ui="comments"] .wl-card .wl-nick {
+		font-family: var(--font-serif);
+		font-weight: 700;
+		color: var(--mg-crimson-deep);
+	}
+
+	[data-ui="comments"] .wl-card .wl-meta > span {
+		background: rgb(217 164 65 / 0.18);
+		color: #6b4a4f;
+	}
+
+	[data-ui="comments"] .wl-card .wl-quote {
+		border-inline-start: 2px solid rgb(200 36 58 / 0.35);
+	}
+
+	[data-ui="comments"] .wl-card .wl-quote .wl-card-item {
+		padding: 0.6rem 0 0.2rem;
+	}
+
+	[data-ui="comments"] .wl-user .wl-user-avatar,
+	[data-ui="comments"] .wl-card-item > .wl-user .wl-user-avatar {
+		box-shadow: 0 0 0 2px var(--mg-parchment), 0 0 0 3px var(--mg-gold);
+	}
+
+	[data-ui="comments"] .wl-like,
+	[data-ui="comments"] .wl-reply {
+		color: var(--mg-crimson-deep);
+	}
+
+	[data-ui="comments"] .wl-badge {
+		border-radius: 3px;
+		font-family: "Megumin Display", var(--font-mono);
+	}
+
+	[data-ui="comments"] .wl-emoji-popup {
+		background: rgb(251 243 228 / 0.97);
+		border-color: var(--mg-gold);
+	}
+
+	[data-ui="comments-toast"] {
+		border-color: var(--mg-gold);
+		background: rgb(251 243 228 / 0.95);
+		color: var(--mg-crimson-deep);
+	}
+
+	@media (max-width: 47.99rem) {
+		[data-ui="comments"] {
+			margin-inline: -0.5rem;
+			padding: 3rem 0.85rem 1.25rem;
+		}
+
+		[data-ui="comments"] .wl-header-item:not(:last-child) {
+			border-right: 0;
+			border-bottom: 1px dashed rgb(184 142 132 / 0.7);
+		}
 	}
 
 	/* ── 减少动态效果 ─────────────────────────────────────── */
