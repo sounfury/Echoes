@@ -79,12 +79,18 @@
 		--shiki-token-link: #c8243a;
 	}
 
-	/* ── 装饰位：暖光底色（右下角的大法阵由 effects.ts 放进 decor-back）──── */
+	/* ── 装饰位：纸纤维噪点 + 边缘暗角 + 暖光底色 ─────────────────
+	 * 右下角的大法阵和上浮的余烬由 effects.ts 放进 decor-back，都在内容之下
+	 */
 	[data-ui="decor-back"] {
 		overflow: hidden;
 		background-image:
+			url(./assets/paper-noise.svg),
+			radial-gradient(ellipse 120% 100% at 50% 45%, transparent 55%, rgb(122 15 31 / 0.09)),
 			radial-gradient(ellipse at 85% -10%, rgb(200 36 58 / 0.10), transparent 55%),
 			radial-gradient(ellipse at 100% 110%, rgb(122 15 31 / 0.10), transparent 50%);
+		background-size: 220px 220px, 100% 100%, 100% 100%, 100% 100%;
+		background-repeat: repeat, no-repeat, no-repeat, no-repeat;
 	}
 
 	/* ── 布局：左侧立绘栏（≥ 64rem）/ 顶部横幅（窄屏）────────────
@@ -137,6 +143,12 @@
 			--layout-gutter: 2.5rem;
 			--card-pad-x: 1.5rem;
 			--card-pad-y: 1.25rem;
+		}
+
+		/* 文章页放宽阅读区域，减少外层与内页叠加的留白 */
+		:root[data-page="post"] {
+			--layout-max-w: 64rem;
+			--layout-gutter: 1.5rem;
 		}
 
 		[data-ui="aside"],
@@ -200,32 +212,30 @@
 		}
 	}
 
-	/* ── 头部：悬浮半透明长条 ─────────────────────────────── */
+	/* ── 头部：与内容对齐的轻薄页眉 ───────────────────────── */
 	[data-ui="header"] {
 		top: 0.625rem;
 		left: 0.625rem;
 		right: 0.625rem;
 		width: auto;
-		border: 1px solid rgb(217 164 65 / 0.7);
-		border-radius: 14px;
-		corner-shape: bevel;
+		border: 0;
+		border-bottom: 1px solid rgb(217 164 65 / 0.55);
+		border-radius: 0;
 		background: rgb(250 243 233 / 0.72);
-		box-shadow:
-			inset 0 0 0 3px rgb(250 243 233 / 0.5),
-			inset 0 0 0 4px rgb(217 164 65 / 0.25),
-			0 10px 30px -18px rgb(122 15 31 / 0.6);
+		box-shadow: none;
 	}
 
 	@media (min-width: 64rem) {
 		[data-ui="header"] {
+			/* 与 main 内侧的文章头、纸张边缘对齐，同时兼容未达到最大宽度的窗口 */
+			--mg-header-inset: max(var(--layout-gutter), calc((100% - var(--mg-aside-w) - var(--layout-max-w)) / 2 + var(--layout-gutter)));
 			top: 0.875rem;
-			left: calc(var(--mg-aside-w) + 1.5rem);
-			right: 1.5rem;
+			left: calc(var(--mg-aside-w) + var(--mg-header-inset));
+			right: var(--mg-header-inset);
 		}
 
 		[data-ui="header-inner"] {
-			--layout-header-max-w: none;
-			padding-inline: 1.25rem;
+			padding-inline: 0.75rem;
 		}
 	}
 
@@ -510,17 +520,124 @@
 		color: var(--mg-crimson-deep);
 	}
 
-	/* ── 目录：立绘栏底部的「魔导书索引」（≥ 64rem）──────────── */
-	@media (min-width: 64rem) {
+	/* ── 文章阅读布局：正文始终按全屏居中，插画适应两侧留白 ── */
+	:root[data-page="post"] {
+		--layout-columns: minmax(0, 1fr);
+		--layout-areas: "aside" "content";
+		--layout-max-w: 64rem;
+	}
+
+	:root[data-page="post"] [data-ui="aside"] {
+		position: relative;
+		top: auto;
+		height: clamp(180px, 28vh, 280px);
+		background-position: 50% 22%;
+		-webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent);
+		mask-image: linear-gradient(to bottom, #000 55%, transparent);
+		box-shadow: none;
+	}
+
+	:root[data-page="post"] [data-ui="aside"]::before,
+	:root[data-page="post"] [data-ui="aside"]::after {
+		content: none;
+	}
+
+	:root[data-page="post"] [data-ui="main"] {
+		padding-top: 1.5rem;
+		padding-inline: var(--layout-gutter);
+	}
+
+	:root[data-page="post"] [data-ui="header"] {
+		--mg-header-inset: max(var(--layout-gutter), calc((100% - var(--layout-max-w)) / 2 + var(--layout-gutter)));
+		left: var(--mg-header-inset);
+		right: var(--mg-header-inset);
+	}
+
+	/* 64rem 阅读区域 + 两侧至少各 18rem，才展示常驻立绘与目录 */
+	@media (min-width: 100rem) {
+		:root[data-page="post"] {
+			--layout-areas: "content";
+		}
+
+		:root[data-page="post"] [data-ui="aside"] {
+			position: fixed;
+			grid-area: auto;
+			top: 0;
+			left: 0;
+			width: calc((100% - var(--layout-max-w)) / 2);
+			height: 100vh;
+			background-position: 50% 30%;
+			-webkit-mask-image: linear-gradient(to right, #000 65%, transparent);
+			mask-image: linear-gradient(to right, #000 65%, transparent);
+		}
+
+		:root[data-page="post"] [data-ui="main"] {
+			padding-top: 7rem;
+		}
+	}
+
+	/* 空间不足时目录收进按钮，打开后才显示链接，避免覆盖阅读区域 */
+	@media (max-width: 99.99rem) {
+		:root[data-page="post"] [data-ui="post-stamp"] {
+			right: 0;
+		}
+
+		[data-ui="toc-toggle"] {
+			display: block;
+			position: fixed;
+			top: 5.5rem;
+			right: var(--layout-gutter);
+			z-index: 31;
+			padding: 0.5rem 0.85rem;
+			border: 1px solid var(--mg-gold);
+			border-radius: 3px;
+			background: var(--c-bg);
+			color: var(--mg-crimson-deep);
+			font-family: var(--font-serif);
+			font-size: 0.8rem;
+			cursor: pointer;
+		}
+
+		[data-ui="toc"] {
+			display: none;
+			top: 8.25rem;
+			left: auto;
+			right: var(--layout-gutter);
+			width: min(20rem, calc(100% - 2 * var(--layout-gutter)));
+			max-width: none;
+			max-height: calc(100dvh - 14rem);
+			overflow-y: auto;
+			padding: 1rem;
+			border: 1px solid var(--mg-gold);
+			border-radius: 3px;
+			background: var(--c-bg);
+			box-shadow: 0 12px 24px rgb(40 8 14 / 0.15);
+		}
+
+		[data-ui="toc"][data-state="open"] {
+			display: flex;
+		}
+
+		[data-ui="toc-link"] {
+			opacity: 0.85;
+			transform: none;
+			font-size: 0.85rem;
+			white-space: normal;
+			padding-block: 0.5rem;
+		}
+	}
+
+	/* ── 目录：正文右侧的「魔导书索引」──────────────────── */
+	@media (min-width: 100rem) {
 		[data-ui="toc"] {
 			display: flex;
-			top: auto;
-			bottom: 2.25rem;
-			left: 2.25rem;
+			top: 7rem;
+			bottom: auto;
+			left: calc(50% + var(--layout-max-w) / 2 + 1rem);
 			right: auto;
-			width: calc(var(--mg-aside-w) - 4.5rem);
-			max-width: 22rem;
-			max-height: 42vh;
+			width: calc((100% - var(--layout-max-w)) / 2 - 2.5rem);
+			max-width: 18rem;
+			max-height: calc(100vh - 14rem);
 			overflow-y: auto;
 			padding: 2.1rem 1.25rem 1rem;
 			gap: 0.15rem;
@@ -705,9 +822,51 @@
 		}
 	}
 
-	/* 文章页内容区不再铺 paper 白底，直接落在羊皮纸背景上 */
+	/* 内容区本身不铺 paper 白底：文章头、正文内页、留言板各自是一块纸 */
 	:root {
 		--c-paper: transparent;
+	}
+
+	/* 正文：「魔导书内页」——比底色更亮的纸、一道金色细线、四角金色角花（和首页卡片同一套）。
+	 * 法阵和余烬都在这张纸下面，不会压住正文 */
+	[data-ui="post-body"] {
+		position: relative;
+		margin-inline: -0.5rem;
+		padding: 1.75rem 1rem 2rem;
+		border-radius: 3px;
+		background:
+			radial-gradient(ellipse at 50% 0%, rgb(255 253 248 / 0.7), transparent 60%),
+			linear-gradient(175deg, rgb(255 251 244 / 0.94), rgb(250 241 226 / 0.9));
+		box-shadow:
+			inset 0 0 0 1px rgb(217 164 65 / 0.5),
+			0 14px 32px -22px rgb(122 15 31 / 0.4);
+	}
+
+	[data-ui="post-body"]::before {
+		--mg-corner: 18px;
+		--mg-corner-c: rgb(217 164 65 / 0.9);
+		content: "";
+		position: absolute;
+		inset: 6px;
+		pointer-events: none;
+		opacity: 0.6;
+		background:
+			linear-gradient(var(--mg-corner-c), var(--mg-corner-c)) top left / var(--mg-corner) 1px,
+			linear-gradient(var(--mg-corner-c), var(--mg-corner-c)) top left / 1px var(--mg-corner),
+			linear-gradient(var(--mg-corner-c), var(--mg-corner-c)) top right / var(--mg-corner) 1px,
+			linear-gradient(var(--mg-corner-c), var(--mg-corner-c)) top right / 1px var(--mg-corner),
+			linear-gradient(var(--mg-corner-c), var(--mg-corner-c)) bottom left / var(--mg-corner) 1px,
+			linear-gradient(var(--mg-corner-c), var(--mg-corner-c)) bottom left / 1px var(--mg-corner),
+			linear-gradient(var(--mg-corner-c), var(--mg-corner-c)) bottom right / var(--mg-corner) 1px,
+			linear-gradient(var(--mg-corner-c), var(--mg-corner-c)) bottom right / 1px var(--mg-corner);
+		background-repeat: no-repeat;
+	}
+
+	@media (min-width: 48rem) {
+		[data-ui="post-body"] {
+			margin-inline: 0;
+			padding: 2.5rem 2.25rem 2.75rem;
+		}
 	}
 
 	[data-ui="post-meta-label"] {

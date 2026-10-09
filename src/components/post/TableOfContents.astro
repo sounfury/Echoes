@@ -26,7 +26,15 @@ const tocItems = headings.filter((h) => {
 
 {
     tocItems.length > 0 && (
-        <nav id="toc-nav" data-ui="toc" class="toc-container" aria-label="Table of Contents">
+        <button
+            type="button"
+            data-ui="toc-toggle"
+            aria-controls="toc-nav"
+            aria-expanded="false"
+        >
+            文章目录
+        </button>
+        <nav id="toc-nav" data-ui="toc" data-state="closed" class="toc-container" aria-label="Table of Contents">
             {tocItems.map((item, index) => (
                 <a
                     href={`#${item.slug}`}
@@ -82,13 +90,15 @@ const tocItems = headings.filter((h) => {
 
     mountTocWithRetry();
     document.addEventListener("astro:page-load", onPageLoad);
-    document.addEventListener("astro:before-swap", onBeforeSwap, {
-        once: true,
-    });
+    document.addEventListener("astro:before-swap", onBeforeSwap);
 </script>
 
 <style>
     @layer components {
+        [data-ui="toc-toggle"] {
+            display: none;
+        }
+
         /* ===== 容器：fixed 定位在正文右侧，不影响居中 ===== */
         .toc-container {
             display: none;

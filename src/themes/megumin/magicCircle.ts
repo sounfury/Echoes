@@ -5,6 +5,8 @@
  *   旋转作用在 <svg> 元素本身（Web Animations），由合成器处理，不会每帧重绘矢量图
  * - 挂载时线条依次描出，符文与刻度淡入
  * - surge()：点击放出爆裂魔法时调用，法阵闪光并加速旋转一段后回落
+ * - layout()：按内容栏右侧的留白决定大小和浓淡（挂载、窗口变化、换页时调用）。
+ *   文章页法阵整体收进右侧留白，放不下就缩成很淡的水印，不压正文
  * - reducedMotion 时只画静态法阵
  */
 
@@ -103,7 +105,15 @@ const LAYERS: Layer[] = [
 
 const FILL = 'position:absolute;inset:0;width:100%;height:100%;';
 
+/** 法阵最大边长（px） */
+const MAX_SIZE = 680;
+/** 法阵向右下伸出屏幕的比例：可见部分的宽度 = size * (1 - OFFSET) */
+const OFFSET = 0.18;
+
 export interface MagicCircle {
+    /** 法阵中心在视口中的坐标 */
+    center(): { x: number; y: number };
+    layout(): void;
     surge(): void;
     setPaused(paused: boolean): void;
     destroy(): void;
@@ -112,8 +122,9 @@ export interface MagicCircle {
 export function mountMagicCircle(parent: HTMLElement, reducedMotion: boolean): MagicCircle {
     const root = document.createElement('div');
     root.style.cssText =
-        '--mg-size:min(72vmin,680px);position:absolute;width:var(--mg-size);aspect-ratio:1;' +
-        'right:calc(var(--mg-size) * -0.18);bottom:calc(var(--mg-size) * -0.18);opacity:0.55;';
+        `position:absolute;width:var(--mg-size);aspect-ratio:1;` +
+        `right:calc(var(--mg-size) * -${OFFSET});bottom:calc(var(--mg-size) * -${OFFSET});` +
+        'transition:width .6s ease,right .6s ease,bottom .6s ease,opacity .6s ease;';
 
     const coreGlow = document.createElement('div');
     coreGlow.style.cssText =
@@ -135,10 +146,44 @@ export function mountMagicCircle(parent: HTMLElement, reducedMotion: boolean): M
         'background:radial-gradient(circle,rgb(255 200 120 / 0.6),rgb(200 36 58 / 0.3) 40%,transparent 68%);';
     root.append(flash);
 
+    const layout = () => {
+        const base = Math.min(Math.min(window.innerWidth, window.innerHeight) * 0.72, MAX_SIZE);
+        // 内容栏（不含左右内边距）右边缘到屏幕右边的距离
+        let free = window.innerWidth;
+        const main = document.querySelector<HTMLElement>('[data-ui="main"]');
+        if (main) {
+            const pad = parseFloat(getComputedStyle(main).paddingRight) || 0;
+            free = window.innerWidth - (main.getBoundingClientRect().right - pad) - 16;
+        }
+        let size = base;
+        let opacity = 0.55;
+        if (document.documentElement.dataset.page === 'post') {
+            opacity = 0.22;
+            const fit = Math.min(free / (1 - OFFSET), MAX_SIZE);
+            if (fit >= 240) {
+                size = fit;
+            } else {
+                size = Math.min(base, 420);
+                opacity = 0.14;
+            }
+        } else if (free < base * 0.35) {
+            // 窄屏首页等：法阵压在卡片后面，淡一些
+            opacity = 0.32;
+        }
+        root.style.setProperty('--mg-size', `${Math.round(size)}px`);
+        root.style.opacity = String(opacity);
+    };
+    const center = () => {
+        const r = root.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    };
+
+    // 先定好尺寸再插入，首次挂载不触发过渡
+    layout();
     parent.append(root);
 
     if (reducedMotion) {
-        return { surge() {}, setPaused() {}, destroy: () => root.remove() };
+        return { center, layout, surge() {}, setPaused() {}, destroy: () => root.remove() };
     }
 
     // ── 入场：由外向内依次描线，符文 / 刻度 / 节点淡入 ──
@@ -195,6 +240,8 @@ export function mountMagicCircle(parent: HTMLElement, reducedMotion: boolean): M
     };
 
     return {
+        center,
+        layout,
         surge() {
             boost = Math.min(boost + 18, 36);
             flash.animate([{ opacity: 0.9 }, { opacity: 0 }], {

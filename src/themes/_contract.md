@@ -256,7 +256,8 @@ base 层按 `data-mode` 使用 light / dark。主题想要自己的配色时，�
 | `post-soundtrack` | 文章配乐（`music` 字段存在时，点击用全局播放器播放） |
 | `category-link` | 文章页分类链接 |
 | `post-body` | 文章正文容器（Markdown 渲染结果在其中） |
-| `toc` / `toc-link` | 目录 / 目录项（当前项 `data-state="active"` + `aria-current="location"`） |
+| `toc` / `toc-link` | 目录 / 目录项（当前项 `data-state="active"` + `aria-current="location"`）；目录带 `data-state="open|closed"`，主题启用折叠模式时按此控制显隐，常驻目录可忽略此状态 |
+| `toc-toggle` | 目录折叠按钮，`aria-controls` 指向目录、`aria-expanded="true|false"` 与目录状态同步；默认隐藏，主题可按断点启用 |
 | `comments` | 评论区 `<section>`（`data-provider="waline"`，仅在配置开启时渲染），见 2.7 |
 | `comments-header` / `comments-title` / `comments-hint` | 评论区标题区 / 标题 / 说明文字 |
 | `comments-body` | Waline 挂载容器（内部为 Waline 的 `.wl-*` 结构） |
