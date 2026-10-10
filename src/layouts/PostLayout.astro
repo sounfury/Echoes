@@ -3,14 +3,20 @@ import BaseLayout from "./BaseLayout.astro";
 import type { CollectionEntry } from "astro:content";
 import type { MarkdownHeading } from "astro";
 import TableOfContents from "../components/post/TableOfContents.astro";
+import CommentSection from "../components/post/CommentSection.astro";
+import PostSoundtrack from "../components/post/PostSoundtrack";
 import {
     getReadingTime,
+    getArticleWordCount,
     getCategoryFromId,
     getTitleFromId,
     formatDateFull,
     getCategoryColor,
     getCategoryLabel,
+    getExcerpt,
+    buildCommentId,
 } from "../lib/utils";
+import { getPostMusicSource, getSiteConfig } from "../lib/config";
 
 interface Props {
     post: CollectionEntry<"blog">;
@@ -18,12 +24,16 @@ interface Props {
     headings: MarkdownHeading[];
 }
 
+const config = getSiteConfig();
 const { post, content, headings } = Astro.props;
 const title = getTitleFromId(post.id);
 const category = getCategoryFromId(post.id);
 const color = getCategoryColor(category);
 const tags = post.data.tags;
+const cover = post.data.封面图;
 const readingMinutes = getReadingTime(content);
+const articleWordCount = getArticleWordCount(content);
+const excerpt = getExcerpt(content);
 
 const createdDate = post.data.创建时间
     ? formatDateFull(post.data.创建时间)
@@ -31,64 +41,135 @@ const createdDate = post.data.创建时间
 const updatedDate = post.data.更新时间
     ? formatDateFull(post.data.更新时间)
     : "";
+const commentPath = buildCommentId(title, post.data.创建时间);
+const postPlayerSource = getPostMusicSource(post.data.music, config.bgm.apiBase);
+const shouldShowSoundtrack = Boolean(postPlayerSource);
+const soundtrackSourceApi = postPlayerSource?.playlistApi ?? "";
+const metaGridColumnsClass = shouldShowSoundtrack ? "md:grid-cols-6" : "md:grid-cols-5";
+// md / mdx：写到 data-ui-variant，主题可以区分两类文章
+const variant = post.filePath?.endsWith(".mdx") ? "mdx" : "md";
 ---
 
-<BaseLayout title={`${title} | Echoes`} description={title}>
+<BaseLayout title={`${title} | Echoes`} description={excerpt} playerSource={postPlayerSource} page="post">
     <TableOfContents headings={headings} charCount={content.length} />
-    <main class="pt-24 pb-20 max-w-4xl mx-auto px-4">
-        <article>
+    <main data-ui="main" class="pt-24 pb-20 md:px-10 bg-paper transition-colors duration-500">
+        <article
+            data-ui="post"
+            data-ui-variant={variant}
+            data-category={category}
+        >
+            <!-- JSON-LD 结构化数据 -->
+            <script
+                type="application/ld+json"
+                set:html={JSON.stringify({
+                    "@context": "https://schema.org",
+                    "@type": "BlogPosting",
+                    headline: title,
+                    description: excerpt,
+                    ...(cover ? { image: cover } : {}),
+                    author: { "@type": "Person", name: config.site.author },
+                    datePublished: post.data.创建时间?.toISOString(),
+                    dateModified: (
+                        post.data.更新时间 ?? post.data.创建时间
+                    )?.toISOString(),
+                    keywords: tags.join(", "),
+                    url: Astro.url.href,
+                })}
+            />
             <!-- Dossier Header -->
             <header
-                class="mb-12 relative border-t-4 border-eva-ink dark:border-white pt-6"
+                data-ui="post-header"
+                class="mb-12 relative border-t-4 border-ink pt-6"
             >
                 <div
-                    class="absolute top-0 right-0 bg-eva-ink dark:bg-white text-white dark:text-eva-dark px-2 py-1 text-xs font-mono font-bold"
+                    data-ui="post-stamp"
+                    data-copy
+                    data-ui-default="CONFIDENTIAL"
+                    class="absolute top-0 right-0 bg-ink text-on-ink px-2 py-1 text-xs font-mono font-bold"
                 >
                     CONFIDENTIAL
                 </div>
 
                 <h1
+                    data-ui="post-title"
                     class="text-3xl md:text-5xl font-serif font-black mb-6 leading-tight"
                 >
                     {title}
                 </h1>
 
+                {
+                    cover && (
+                        <figure data-ui="post-cover" class="relative mb-6 border border-ink/20">
+                            <img
+                                src={cover}
+                                alt=""
+                                data-ui="post-cover-image"
+                                class="block w-full max-h-80 object-cover"
+                                onerror="this.parentElement.hidden = true"
+                            />
+                            <figcaption
+                                data-ui="post-cover-caption"
+                                data-copy
+                                data-ui-default="EXHIBIT"
+                                class="absolute bottom-0 left-0 bg-ink text-on-ink px-2 py-0.5 text-[10px] font-mono font-bold tracking-wider"
+                            >
+                                EXHIBIT
+                            </figcaption>
+                        </figure>
+                    )
+                }
+
                 <!-- Meta Grid -->
                 <div
-                    class="grid grid-cols-2 md:grid-cols-5 gap-4 border-y border-dashed border-gray-400 py-4 font-mono text-xs opacity-80"
+                    data-ui="post-meta"
+                    class:list={[
+                        "grid grid-cols-2 gap-4 border-y border-dashed border-line-strong py-4 font-mono text-xs opacity-80",
+                        metaGridColumnsClass,
+                    ]}
                 >
-                    <div>
-                        <span class="block opacity-50 mb-1">CATEGORY</span>
+                    <div data-ui="post-meta-item" data-field="category">
+                        <span data-ui="post-meta-label" class="block opacity-50 mb-1">CATEGORY</span>
                         <a
                             href={`/archive/?category=${encodeURIComponent(category.toLowerCase())}`}
-                            data-astro-reload
-                            class="no-underline text-eva-ink/80 dark:text-white/80 hover:text-[var(--cat-color)] transition-colors font-bold"
+                            data-ui="category-link"
+                            class="no-underline text-ink/80 hover:text-[var(--cat-color)] transition-colors font-bold"
                             style={`--cat-color: ${color}`}
                         >
                             {getCategoryLabel(category)}
                         </a>
                     </div>
-                    <div>
-                        <span class="block opacity-50 mb-1">CREATED</span>
+                    <div data-ui="post-meta-item" data-field="created">
+                        <span data-ui="post-meta-label" class="block opacity-50 mb-1">CREATED</span>
                         {createdDate || "—"}
                     </div>
-                    <div>
-                        <span class="block opacity-50 mb-1">UPDATED</span>
+                    <div data-ui="post-meta-item" data-field="updated">
+                        <span data-ui="post-meta-label" class="block opacity-50 mb-1">UPDATED</span>
                         {updatedDate || "—"}
                     </div>
-                    <div>
-                        <span class="block opacity-50 mb-1">READ_TIME</span>
-                        {readingMinutes} MIN
+                    <div data-ui="post-meta-item" data-field="reading">
+                        <span data-ui="post-meta-label" class="block opacity-50 mb-1">READ_TIME</span>
+                        <span data-ui="post-wordcount">{readingMinutes}MIN/{articleWordCount}字</span>
                     </div>
-                    <div>
-                        <span class="block opacity-50 mb-1">TAGS</span>
+                    {
+                        shouldShowSoundtrack && (
+                            <div data-ui="post-meta-item" data-field="soundtrack">
+                                <span data-ui="post-meta-label" class="block opacity-50 mb-1">SOUNDTRACK</span>
+                                <PostSoundtrack
+                                    sourceApi={soundtrackSourceApi}
+                                    client:load
+                                />
+                            </div>
+                        )
+                    }
+                    <div data-ui="post-meta-item" data-field="tags">
+                        <span data-ui="post-meta-label" class="block opacity-50 mb-1">TAGS</span>
                         <div class="flex flex-wrap gap-2">
                             {
                                 tags.map((t: string) => (
                                     <a
                                         href={`/archive/?tag=${encodeURIComponent(t.toLowerCase())}`}
-                                        data-astro-reload
-                                        class="no-underline text-eva-ink/60 dark:text-white/60 hover:text-[var(--tag-hover)] hover:scale-105 transition-all duration-200 inline-block"
+                                        data-ui="tag"
+                                        class="no-underline text-ink/60 hover:text-[var(--tag-hover)] hover:scale-105 transition-all duration-200 inline-block"
                                         style={`--tag-hover: ${color}`}
                                     >
                                         #{t.toUpperCase()}
@@ -101,9 +182,86 @@ const updatedDate = post.data.更新时间
             </header>
 
             <!-- Article Content -->
-            <div class="prose-eva max-w-none text-lg">
+            <div data-ui="post-body" class="prose-eva max-w-none text-lg">
                 <slot />
             </div>
+            <CommentSection path={commentPath} />
+            <script is:inline>
+                /**
+                 * 解析 blockquote 第一段中的 Obsidian callout 标记。
+                 * 返回值为 null 表示这是普通引用块，不应转换为提示块。
+                 */
+                function parseCalloutMarker(text) {
+                    const lines = text.split(/\r?\n/);
+                    const firstLine = (lines[0] ?? "").trim();
+                    const match = firstLine.match(/^\[!([a-zA-Z]+)\]([+-]?)\s*(.*)$/);
+
+                    if (!match) {
+                        return null;
+                    }
+
+                    return {
+                        type: match[1].toLowerCase(),
+                        mode: match[2] ?? "",
+                        title: match[3] || match[1],
+                        remainingText: lines.slice(1).join("\n").trim(),
+                    };
+                }
+
+                /**
+                 * 将原始 Markdown 生成的 blockquote 就地转换为 callout DOM。
+                 * 这样可以在不依赖 remark 插件的前提下恢复 Obsidian 风格提示块。
+                 */
+                function transformObsidianCallouts() {
+                    const contentRoot = document.querySelector(".prose-eva");
+                    if (!(contentRoot instanceof HTMLElement)) return;
+
+                    const blockquotes = Array.from(contentRoot.querySelectorAll("blockquote"));
+
+                    blockquotes.forEach((blockquote) => {
+                        const firstChild = blockquote.firstElementChild;
+                        if (!(firstChild instanceof HTMLParagraphElement)) {
+                            return;
+                        }
+
+                        const parsed = parseCalloutMarker(firstChild.textContent ?? "");
+                        if (!parsed) {
+                            return;
+                        }
+
+                        const isCollapsible = parsed.mode === "+" || parsed.mode === "-";
+                        const callout = document.createElement(isCollapsible ? "details" : "div");
+                        callout.className = `callout callout-${parsed.type}`;
+
+                        if (isCollapsible) {
+                            callout.classList.add("callout-collapsible");
+                            if (parsed.mode === "+") {
+                                callout.open = true;
+                            }
+                        }
+
+                        const title = document.createElement(isCollapsible ? "summary" : "div");
+                        title.className = "callout-title";
+                        title.textContent = parsed.title;
+                        callout.appendChild(title);
+
+                        if (parsed.remainingText) {
+                            const contentParagraph = document.createElement("p");
+                            contentParagraph.textContent = parsed.remainingText;
+                            callout.appendChild(contentParagraph);
+                        }
+
+                        Array.from(blockquote.children).slice(1).forEach((child) => {
+                            callout.appendChild(child.cloneNode(true));
+                        });
+
+                        blockquote.replaceWith(callout);
+                    });
+                }
+
+                transformObsidianCallouts();
+                document.addEventListener("astro:page-load", transformObsidianCallouts);
+            </script>
         </article>
     </main>
 </BaseLayout>

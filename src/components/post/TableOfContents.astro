@@ -26,16 +26,26 @@ const tocItems = headings.filter((h) => {
 
 {
     tocItems.length > 0 && (
-        <nav id="toc-nav" class="toc-container" aria-label="Table of Contents">
+        <button
+            type="button"
+            data-ui="toc-toggle"
+            aria-controls="toc-nav"
+            aria-expanded="false"
+        >
+            文章目录
+        </button>
+        <nav id="toc-nav" data-ui="toc" data-state="closed" class="toc-container" aria-label="Table of Contents">
             {tocItems.map((item, index) => (
                 <a
                     href={`#${item.slug}`}
+                    data-ui="toc-link"
                     class:list={[
                         "toc-link",
                         index === 0 && "active",
                         item.depth === 3 && "toc-link--h3",
                     ]}
                     data-heading-slug={item.slug}
+                    data-state={index === 0 ? "active" : undefined}
                 >
                     {item.text}
                 </a>
@@ -80,74 +90,78 @@ const tocItems = headings.filter((h) => {
 
     mountTocWithRetry();
     document.addEventListener("astro:page-load", onPageLoad);
-    document.addEventListener("astro:before-swap", onBeforeSwap, {
-        once: true,
-    });
+    document.addEventListener("astro:before-swap", onBeforeSwap);
 </script>
 
 <style>
-    /* ===== 容器：fixed 定位在正文右侧，不影响居中 ===== */
-    .toc-container {
-        display: none;
-        position: fixed;
-        top: 20vh;
-        /* max-w-4xl = 56rem, half = 28rem, + 1rem gap */
-        left: calc(50% + 29rem);
-        right: 1rem;
-        max-width: 14rem;
-        z-index: 30;
-        flex-direction: column;
-        gap: 0.2rem;
-    }
-
-    @media (min-width: 1280px) {
-        .toc-container {
-            display: flex;
+    @layer components {
+        [data-ui="toc-toggle"] {
+            display: none;
         }
-    }
 
-    /* ===== 链接默认：隐形（opacity 0），仅 active 可见 ===== */
-    .toc-link {
-        font-family: "JetBrains Mono", monospace;
-        font-size: 0.65rem;
-        line-height: 1.6;
-        color: var(--c-text-secondary);
-        text-decoration: none;
-        padding: 0.15rem 0 0.15rem 0.75rem;
-        border-left: 2px solid transparent;
-        opacity: 0;
-        transform: translateX(6px);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+        /* ===== 容器：fixed 定位在正文右侧，不影响居中 ===== */
+        .toc-container {
+            display: none;
+            position: fixed;
+            top: 20vh;
+            /* 正文宽度的一半 + 1rem 间距（--layout-max-w 默认 56rem） */
+            left: calc(50% + var(--layout-max-w) / 2 + 1rem);
+            right: 1rem;
+            max-width: 14rem;
+            z-index: 30;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
 
-    .toc-link--h3 {
-        padding-left: 1.5rem;
-        font-size: 0.6rem;
-    }
+        @media (min-width: 1280px) {
+            .toc-container {
+                display: flex;
+            }
+        }
 
-    /* ===== 激活态：accent 高亮 + 左侧指示线 ===== */
-    .toc-link.active {
-        opacity: 1;
-        color: var(--c-accent);
-        border-left-color: var(--c-accent);
-        transform: translateX(0);
-    }
+        /* ===== 链接默认：隐形（opacity 0），仅 active 可见 ===== */
+        .toc-link {
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            line-height: 1.6;
+            color: var(--c-text-secondary);
+            text-decoration: none;
+            padding: 0.15rem 0 0.15rem 0.75rem;
+            border-left: 2px solid transparent;
+            opacity: 0;
+            transform: translateX(6px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
-    /* ===== Hover 容器区域：所有标题动画浮现 ===== */
-    .toc-container:hover .toc-link {
-        opacity: 0.4;
-        transform: translateX(0);
-    }
+        .toc-link--h3 {
+            padding-left: 1.5rem;
+            font-size: 0.6rem;
+        }
 
-    .toc-container:hover .toc-link.active {
-        opacity: 1;
-    }
+        /* ===== 激活态：accent 高亮 + 左侧指示线 ===== */
+        .toc-link.active {
+            opacity: 1;
+            color: var(--c-accent);
+            border-left-color: var(--c-accent);
+            transform: translateX(0);
+        }
 
-    .toc-container:hover .toc-link:hover {
-        opacity: 0.85;
-        color: var(--c-accent);
+        /* ===== Hover 容器区域：所有标题动画浮现 ===== */
+        .toc-container:hover .toc-link {
+            opacity: 0.4;
+            transform: translateX(0);
+        }
+
+        .toc-container:hover .toc-link.active {
+            opacity: 1;
+        }
+
+        .toc-container:hover .toc-link:hover {
+            opacity: 0.85;
+            color: var(--c-accent);
+        }
     }
 </style>

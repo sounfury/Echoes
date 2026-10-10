@@ -5,8 +5,7 @@ import {
     getCategoryFromId,
     getTitleFromId,
     formatDateShort,
-    getCategoryColor,
-    getCategoryLabel,
+    getCategoryMeta,
 } from "../lib/utils";
 import ArchiveApp from "../components/archive/ArchiveApp";
 import type {
@@ -26,16 +25,28 @@ const sortedPosts = allPosts.sort((a, b) => {
 });
 
 // 序列化 posts 为可传递给 React 的纯数据
+const categoryMetaCache = new Map<string, ReturnType<typeof getCategoryMeta>>();
+function resolveCategoryMeta(category: string) {
+    const key = category.toLowerCase();
+    const cached = categoryMetaCache.get(key);
+    if (cached) return cached;
+
+    const meta = getCategoryMeta(key);
+    categoryMetaCache.set(key, meta);
+    return meta;
+}
+
 const posts: ArchivePost[] = sortedPosts.map((post) => {
     const category = getCategoryFromId(post.id);
+    const categoryMeta = resolveCategoryMeta(category);
     const date = post.data.创建时间;
     const tagsNormalized = post.data.tags.map((tag) => tag.toLowerCase());
     return {
         slug: post.id,
         title: getTitleFromId(post.id),
         category,
-        categoryLabel: getCategoryLabel(category),
-        categoryColor: getCategoryColor(category),
+        categoryLabel: categoryMeta.label,
+        categoryColor: categoryMeta.color,
         date: date ? formatDateShort(date) : "",
         year: date ? date.getFullYear() : 0,
         tags: post.data.tags,
@@ -50,12 +61,15 @@ posts.forEach((p) => {
 });
 const categories: CategoryMeta[] = Object.entries(categoryCount)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([slug, count]) => ({
-        slug,
-        label: getCategoryLabel(slug),
-        color: getCategoryColor(slug),
-        count,
-    }));
+    .map(([slug, count]) => {
+        const categoryMeta = resolveCategoryMeta(slug);
+        return {
+            slug,
+            label: categoryMeta.label,
+            color: categoryMeta.color,
+            count,
+        };
+    });
 
 // 统计标签频次
 const tagFrequency = new Map<string, number>();
@@ -68,53 +82,70 @@ const tags: TagEntry[] = [...tagFrequency.entries()]
     .sort((a, b) => b[1] - a[1])
     .map(([tag, count]) => ({ tag, count }));
 
-// 从 URL params 中读取初始值 (SSR 阶段)
-const url = new URL(Astro.request.url);
-const initialCategory =
-    url.searchParams.get("category")?.toLowerCase() ?? "all";
-const initialTag = url.searchParams.get("tag")?.toLowerCase() ?? undefined;
+// 筛选参数改为客户端读取，避免 SSG 首屏与 URL 查询参数不一致
 ---
 
-<BaseLayout title="Archive | Echoes">
+<BaseLayout
+    title="Archive | Echoes"
+    description="按分类与标签检索所有文章 — Echoes 归档数据库"
+    page="archive"
+>
     <ArchiveApp
-        client:load
+        client:only="react"
         posts={posts}
         categories={categories}
         tags={tags}
         totalCount={posts.length}
-        initialCategory={initialCategory}
-        initialTag={initialTag}
-    />
+    >
+        <main
+            slot="fallback"
+            data-ui="main"
+            class="pt-24 pb-20 min-h-screen"
+        >
+            <div data-ui="page-header" class="mb-10 border-b-2 border-ink pb-6">
+                <h1
+                    class="text-4xl md:text-5xl font-serif font-black mb-2 tracking-tight"
+                >
+                    ARCHIVE_DB
+                </h1>
+                <p class="font-mono text-xs opacity-50 tracking-widest">
+                    LOADING ARCHIVE...
+                </p>
+            </div>
+            <div
+                class="h-24 border border-dashed border-line-chip animate-pulse"
+            >
+            </div>
+        </main>
+    </ArchiveApp>
 </BaseLayout>
 
 <style>
-    /* 活跃 Tab 样式 */
-    :global(.archive-tab.active) {
-        border-color: var(--c-text, #111) !important;
-        background-color: var(--c-text, #111) !important;
-        color: var(--c-bg, #fff) !important;
-        font-weight: 700;
-        box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 0.15);
-    }
+    @layer components {
+        /* 活跃 Tab 样式（状态走 data-state，颜色走变量；不用 !important，主题可在 skin 层覆盖） */
+        :global([data-ui="archive-tab"][data-state="active"]) {
+            border-color: var(--c-ink);
+            background-color: var(--c-ink);
+            color: var(--c-bg);
+            font-weight: 700;
+            box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 0.15);
+        }
 
-    :global(.dark .archive-tab.active) {
-        border-color: #fff !important;
-        background-color: #fff !important;
-        color: #0a0a0c !important;
-    }
-
-    /* 行触控友好 (Mobile) */
-    @media (max-width: 480px) {
-        :global(.archive-item) {
-            min-height: 44px;
-            padding-top: 0.75rem;
-            padding-bottom: 0.75rem;
+        /* fadeIn animation for tag wall */
+        :global(.animate-fadeIn) {
+            animation: fadeIn 0.15s ease-out;
         }
     }
 
-    /* fadeIn animation for tag wall */
-    :global(.animate-fadeIn) {
-        animation: fadeIn 0.15s ease-out;
+    /* 行触控友好 (Mobile)：需要压过 py-3 工具类，放在 utilities 层 */
+    @layer utilities {
+        @media (max-width: 480px) {
+            :global(.archive-item) {
+                min-height: 44px;
+                padding-top: 0.75rem;
+                padding-bottom: 0.75rem;
+            }
+        }
     }
 
     @keyframes fadeIn {

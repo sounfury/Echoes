@@ -1,0 +1,128 @@
+---
+/**
+ * 主题首屏引导：放在 <head> 最前面（紧跟 charset / viewport）。
+ * BaseLayout 与 404 等独立页面共用，保证所有页面的主题加载方式一致。
+ */
+import { getSiteConfig } from "../../lib/config";
+import {
+    getThemeManifest,
+    resolveThemeDefaults,
+} from "../../lib/themes/registry";
+
+const config = getSiteConfig();
+// 主题清单（构建期由 src/lib/themes/registry.ts 扫描 src/themes/* 生成）
+const themeManifest = getThemeManifest();
+const { entry: defaultTheme, ...themeDefaults } = resolveThemeDefaults(
+    config.theme.defaultTheme,
+    config.theme.defaultMode,
+);
+---
+
+<!--
+    层叠顺序：必须早于任何样式表，保证主题的 @layer skin 永远在最后。
+    transition:persist：ClientRouter 换页时保留这个节点（否则内联 style 会被移到 head 末尾，
+    而保留下来的主题 <link> 会排到它前面，导致 skin 变成第一个、优先级最低的层）。
+-->
+<style is:inline transition:persist="echoes-layer-order">
+    @layer theme, base, components, utilities, skin;
+</style>
+<meta
+    name="theme-color"
+    content={defaultTheme.meta.themeColor ?? config.theme.colors.accent}
+/>
+
+<!--
+    Theme Init (FOUC prevention)
+    同步内联脚本：读取 localStorage 'echoes:theme'，确定主题与模式，
+    用 document.write 写入阻塞渲染的主题 <link>，首屏不会先闪默认样式。
+-->
+<script
+    is:inline
+    define:vars={{ __themes: themeManifest, __defaults: themeDefaults }}
+>
+    (function () {
+        var T = __themes;
+        var D = __defaults;
+        var h = document.documentElement;
+        var s = {};
+        var legacy = null;
+        window.__THEMES__ = T;
+        window.__THEME_DEFAULTS__ = D;
+        try {
+            s = JSON.parse(localStorage.getItem("echoes:theme") || "{}") || {};
+            legacy = localStorage.getItem("theme-mode");
+        } catch (e) {}
+        var id = T[s.theme] ? s.theme : D.theme;
+        var t = T[id];
+        var want = s.mode || legacy || D.mode;
+        var mode = t.schemes.indexOf(want) >= 0 ? want : t.schemes[0];
+        h.dataset.theme = id;
+        h.dataset.mode = mode;
+        h.dataset.schemes = t.schemes.join(" ");
+        h.classList.toggle("dark", mode === "dark");
+        if (t.themeColor) {
+            var m = document.querySelector('meta[name="theme-color"]');
+            if (m) m.setAttribute("content", t.themeColor);
+        }
+        /*
+         * 可替换文案（无闪烁）：此时 <body> 还没解析，无法直接改文本。
+         * 用 MutationObserver 监听解析器插入的节点：MO 回调是微任务，在解析器每个任务结束、
+         * 浏览器有机会绘制之前就会执行，所以带 data-copy 的元素在首次绘制前就已换成主题文案。
+         * Header / 页面内容之后还各有一次同步调用 __applyThemeCopy() 兜底；DOMContentLoaded 后停止监听。
+         */
+        var C = t.copy || null;
+        function copyOf(el) {
+            var k = el.getAttribute("data-ui");
+            var p = h.getAttribute("data-page");
+            if (C && C[k + "@" + p] != null) return C[k + "@" + p];
+            if (C && C[k] != null) return C[k];
+            return el.getAttribute("data-ui-default");
+        }
+        function applyEl(el) {
+            var v = copyOf(el);
+            if (v == null) return;
+            if (el.textContent !== v) el.textContent = v;
+            if (el.hasAttribute("data-text")) el.setAttribute("data-text", v);
+        }
+        window.__applyThemeCopy = function () {
+            if (!C) return;
+            var list = document.querySelectorAll("[data-copy]");
+            for (var i = 0; i < list.length; i++) applyEl(list[i]);
+        };
+        if (C && window.MutationObserver) {
+            var mo = new MutationObserver(function (recs) {
+                for (var i = 0; i < recs.length; i++) {
+                    var added = recs[i].addedNodes;
+                    for (var j = 0; j < added.length; j++) {
+                        var n = added[j];
+                        if (n.nodeType === 3) n = n.parentNode;
+                        if (!n || n.nodeType !== 1) continue;
+                        if (n.hasAttribute("data-copy")) applyEl(n);
+                        var inner = n.querySelectorAll("[data-copy]");
+                        for (var k = 0; k < inner.length; k++) applyEl(inner[k]);
+                    }
+                }
+            });
+            mo.observe(h, { childList: true, subtree: true });
+            document.addEventListener("DOMContentLoaded", function () {
+                mo.disconnect();
+                window.__applyThemeCopy();
+            });
+        }
+
+        if (document.querySelector("link[data-theme-css]")) return;
+        t.css.forEach(function (u) {
+            if (document.readyState === "loading") {
+                document.write(
+                    '<link rel="stylesheet" data-theme-css href="' + u + '">',
+                );
+            } else {
+                var l = document.createElement("link");
+                l.rel = "stylesheet";
+                l.href = u;
+                l.setAttribute("data-theme-css", "");
+                document.head.appendChild(l);
+            }
+        });
+    })();
+</script>

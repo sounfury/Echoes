@@ -1,0 +1,461 @@
+/* ================================================
+   Prose / Typography (文章内容排版)
+   ================================================ */
+
+/*
+ * 整个文件放在 components 层（主题接口约定：组件样式不能是不分层的，否则主题的 @layer skin 无法覆盖）。
+ * 颜色全部走 --c-* 变量；.prose 的颜色变量在 global.css 的 utilities 层（需排在 typography 插件之后）。
+ */
+@layer components {
+.prose-eva {
+
+    // 标题 H2
+    h2 {
+        font-family: 'Noto Serif SC', serif;
+        border-left: 4px solid var(--c-accent);
+        padding-left: 1rem;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    // 标题 H3
+    h3 {
+        font-family: 'Noto Serif SC', serif;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--c-text);
+        position: relative;
+        padding-left: 0.5rem;
+
+        // 可选：添加一个小装饰或保持简洁
+        &::before {
+            content: '#';
+            color: var(--c-accent);
+            margin-right: 0.5rem;
+            opacity: 0.6;
+        }
+    }
+
+    // 标题 H4
+    h4 {
+        font-family: 'Inter', sans-serif; // H4 使用无衬线字体以区分
+        margin-top: 1.25rem;
+        margin-bottom: 0.5rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--c-text-secondary);
+    }
+
+    // 段落
+    p {
+        margin-bottom: 1.5rem;
+        line-height: 1.8;
+        color: inherit;
+        // 兼容作者使用单个换行控制诗句/独白节奏的写法。
+        white-space: pre-line;
+    }
+
+    // 行内代码
+    :not(pre)>code {
+        font-family: 'JetBrains Mono', monospace;
+        background: color-mix(in srgb, var(--c-accent) 10%, transparent);
+        color: var(--c-accent);
+        padding: 0.2rem 0.4rem;
+        border-radius: 2px;
+    }
+
+    // 首字下沉 (Drop Cap)
+    >p:first-of-type::first-letter {
+        float: left;
+        font-family: 'Noto Serif SC', serif;
+        font-size: 2.25rem;
+        line-height: 2.5rem;
+        font-weight: 700;
+        margin-right: 0.5rem;
+        margin-top: 0.1em;
+        color: var(--c-text);
+    }
+
+    // 引用块
+    blockquote {
+        font-style: italic;
+        border-left: 4px solid var(--c-accent);
+        padding: 1rem 1rem 1rem 2rem;
+        margin: 1.5rem 0;
+        background: color-mix(in srgb, var(--c-bg-secondary) 50%, transparent); // 微妙的背景色
+        color: var(--c-text-secondary);
+        border-radius: 0 4px 4px 0;
+
+        p {
+            margin: 0; // 移除引用块内段落的默认边距
+        }
+    }
+
+    // 代码块
+    pre,
+    .astro-code {
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 1.5rem 0;
+        overflow-x: auto;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9em;
+        line-height: 1.5;
+        tab-size: 2;
+        position: relative; // 为绝对定位的语言标签提供锚点
+
+        /* 自定义滚动条样式以匹配代码块 */
+        &::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background-color: var(--c-accent);
+            border-radius: 4px;
+            opacity: 0.5;
+        }
+
+        &::-webkit-scrollbar-track {
+            background-color: transparent;
+        }
+
+        code {
+            background: transparent !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
+            color: inherit !important;
+        }
+
+        // 鼠标悬浮显示语言标签
+        &::after {
+            content: attr(data-language);
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--c-text-secondary);
+            background-color: var(--c-bg);
+            border-top-left-radius: 6px;
+            border-bottom-right-radius: 8px;
+            /* 匹配容器圆角 */
+            border-top: 1px solid var(--c-border);
+            border-left: 1px solid var(--c-border);
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+            pointer-events: none; // 防止标签阻挡用户选中文本
+            z-index: 10;
+        }
+
+        &:hover::after {
+            opacity: 1;
+        }
+    }
+
+    // 列表
+    ul,
+    ol {
+        margin: 1.5rem 0;
+        padding-left: 2rem; // 列表缩进
+    }
+
+    ul {
+        list-style-type: disc;
+
+        li::marker {
+            color: var(--c-accent); // 标记颜色
+        }
+    }
+
+    ol {
+        list-style-type: decimal;
+
+        li::marker {
+            color: var(--c-accent);
+            font-weight: 600;
+        }
+    }
+
+    li {
+        margin-bottom: 0.5rem;
+        // 列表项内如果存在手动换行，也按正文一致的规则展示。
+        white-space: pre-line;
+    }
+
+    // 表格
+    table {
+        width: 100%;
+        margin: 2rem 0;
+        border-collapse: collapse;
+        font-size: 0.95em;
+        overflow-x: auto;
+        display: block; // 响应式滚动支持
+
+        @media (min-width: 640px) {
+            display: table;
+        }
+
+        th,
+        td {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--c-border);
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--c-bg-secondary);
+            font-weight: 600;
+            color: var(--c-text);
+        }
+
+        tr:nth-child(even) {
+            background-color: color-mix(in srgb, var(--c-bg-secondary) 30%, transparent);
+        }
+
+        // 行悬停效果
+        tr:hover {
+            background-color: color-mix(in srgb, var(--c-accent) 5%, transparent);
+        }
+    }
+
+    // 链接
+    a {
+        color: var(--c-accent);
+        text-decoration: underline;
+        text-decoration-thickness: 1px;
+        text-underline-offset: 4px;
+        transition: color 0.2s, text-decoration-color 0.2s;
+
+        &:hover {
+            color: color-mix(in srgb, var(--c-accent) 80%, black);
+            text-decoration-thickness: 2px;
+        }
+    }
+
+    // 图片
+    img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+    }
+
+    // 图片
+    img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        margin: 2rem auto;
+        display: block;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    // 分隔线
+    hr {
+        border: 0;
+        height: 2px;
+        background-color: var(--c-text-secondary);
+        margin: 3rem 0;
+        opacity: 0.3;
+    }
+
+    // ==========================================
+    // Obsidian Callouts
+    // ==========================================
+    .callout {
+        // 统一管理提示块内容区留白，方便后续微调不同内容类型的缩进。
+        --callout-content-padding-x: 1.25rem;
+        --callout-list-padding-left: 2.5rem;
+        margin: 1.5em 0;
+        padding: 0;
+        border-radius: 0.5rem;
+        background-color: color-mix(in srgb, var(--c-bg-secondary) 80%, transparent);
+        border: 1px solid var(--c-border);
+        overflow: hidden;
+        transition: all 0.3s ease;
+
+        &-title {
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            background-color: color-mix(in srgb, var(--c-bg) 50%, transparent);
+            color: var(--c-text);
+            margin: 0;
+            font-family: var(--font-sans);
+
+            // Icon Placeholder using SVG mask for dynamic coloring
+            &::before {
+                content: "";
+                display: inline-block;
+                width: 1.1em;
+                height: 1.1em;
+                margin-right: 0.75rem;
+                background-color: currentColor;
+                -webkit-mask-size: contain;
+                -webkit-mask-repeat: no-repeat;
+                -webkit-mask-position: center;
+                mask-size: contain;
+                mask-repeat: no-repeat;
+                mask-position: center;
+                // Default: Pencil (Note)
+                -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>');
+                mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>');
+            }
+        }
+
+        &.callout-collapsible > .callout-title {
+            cursor: pointer;
+            list-style: none;
+
+            &::-webkit-details-marker {
+                display: none;
+            }
+
+            // 只有可折叠提示块才显示展开箭头。
+            &::after {
+                content: "";
+                display: inline-block;
+                margin-left: auto;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                opacity: 0.7;
+                transition: transform 0.3s ease;
+                -webkit-mask-size: contain;
+                -webkit-mask-repeat: no-repeat;
+                -webkit-mask-position: center;
+                mask-size: contain;
+                mask-repeat: no-repeat;
+                mask-position: center;
+                -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+                mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+            }
+        }
+
+        &[open].callout-collapsible .callout-title {
+            border-bottom: 1px solid var(--c-border);
+            &::after {
+                transform: rotate(180deg);
+            }
+        }
+
+        // Content spacing inside details
+        > *:not(summary):not(.callout-title) {
+            padding-left: var(--callout-content-padding-x);
+            padding-right: var(--callout-content-padding-x);
+        }
+
+        > *:not(summary):not(.callout-title):first-of-type {
+            margin-top: 1rem;
+        }
+
+        > *:not(summary):not(.callout-title):last-of-type {
+            margin-bottom: 1rem;
+        }
+
+        // 列表的 marker 默认会更靠左，需要额外补足缩进，避免贴近提示块边框。
+        > ul,
+        > ol {
+            padding-left: var(--callout-list-padding-left);
+            padding-right: var(--callout-content-padding-x);
+            margin-left: 0.85rem;
+            margin-top: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        > ul:first-of-type,
+        > ol:first-of-type {
+            margin-top: 1rem;
+        }
+
+        // =======================
+        // Specific Callout Themes
+        // =======================
+
+        // 1. Note
+        &.callout-note {
+            border-left: 4px solid var(--c-accent);
+            background-color: color-mix(in srgb, var(--c-accent) 5%, transparent);
+            .callout-title {
+                background-color: color-mix(in srgb, var(--c-accent) 10%, transparent);
+                color: color-mix(in srgb, var(--c-accent) 80%, var(--c-text));
+            }
+        }
+
+        // 2. Info
+        &.callout-info {
+            --callout-info-color: var(--c-info, #4f8ff7);
+            border-left: 4px solid var(--callout-info-color);
+            background-color: color-mix(in srgb, var(--callout-info-color) 8%, transparent);
+
+            .callout-title {
+                background-color: color-mix(in srgb, var(--callout-info-color) 14%, transparent);
+                color: color-mix(in srgb, var(--callout-info-color) 78%, var(--c-text));
+
+                &::before {
+                    -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>');
+                    mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>');
+                }
+            }
+        }
+
+        // 3. Warning
+        &.callout-warning {
+            border-left: 4px solid var(--c-signal-orange);
+            background-color: color-mix(in srgb, var(--c-signal-orange) 5%, transparent);
+            .callout-title {
+                background-color: color-mix(in srgb, var(--c-signal-orange) 10%, transparent);
+                color: color-mix(in srgb, var(--c-signal-orange) 80%, var(--c-text));
+                &::before {
+                    -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>');
+                    mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>');
+                }
+            }
+        }
+
+        // 4. Danger / Error
+        &.callout-danger, &.callout-error {
+            border-left: 4px solid var(--c-signal-red);
+            background-color: color-mix(in srgb, var(--c-signal-red) 5%, transparent);
+            .callout-title {
+                background-color: color-mix(in srgb, var(--c-signal-red) 10%, transparent);
+                color: color-mix(in srgb, var(--c-signal-red) 80%, var(--c-text));
+                &::before {
+                    -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>');
+                    mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>');
+                }
+            }
+        }
+
+        // 5. Quote (Elegant citation style)
+        &.callout-quote {
+            border-left: 4px solid var(--c-text-secondary);
+            background-color: color-mix(in srgb, var(--c-bg-secondary) 40%, transparent);
+            .callout-title {
+                background-color: transparent;
+                font-family: var(--font-serif);
+                font-style: italic;
+                color: var(--c-text-secondary);
+                &::before {
+                    -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/></svg>');
+                    mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/></svg>');
+                    opacity: 0.8;
+                }
+            }
+            // Enhance the content area for quote
+            > *:not(summary):not(.callout-title) {
+                font-family: var(--font-serif);
+                color: var(--c-text-secondary);
+                font-style: italic;
+            }
+        }
+    }
+}
+}

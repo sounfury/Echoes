@@ -15,7 +15,7 @@ function getActiveSlugByScrollPosition(items: TocItem[]): string | null {
     let activeSlug = items[0].slug;
 
     for (let i = 0; i < items.length; i++) {
-        if (items[i].heading.offsetTop <= currentY) {
+        if (items[i].heading.getBoundingClientRect().top + window.scrollY <= currentY) {
             activeSlug = items[i].slug;
         } else {
             break;
@@ -46,12 +46,37 @@ export function initToc(): Cleanup {
 
     if (!tocItems.length) return EMPTY_CLEANUP;
 
+    const toggle = document.querySelector<HTMLButtonElement>('[data-ui="toc-toggle"]');
+    const setOpen = (open: boolean) => {
+        tocNav.dataset.state = open ? 'open' : 'closed';
+        toggle?.setAttribute('aria-expanded', String(open));
+    };
+    const onToggle = () => setOpen(toggle?.getAttribute('aria-expanded') !== 'true');
+    const onKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape' && tocNav.dataset.state === 'open') {
+            setOpen(false);
+            toggle?.focus();
+        }
+    };
+    toggle?.addEventListener('click', onToggle);
+    tocNav.addEventListener('keydown', onKeyDown);
+    toggle?.addEventListener('keydown', onKeyDown);
+
     let currentActiveSlug: string | null = null;
     const setActive = (slug: string | null) => {
         if (slug === currentActiveSlug) return;
         currentActiveSlug = slug;
         tocItems.forEach(({ link, slug: itemSlug }) => {
-            link.classList.toggle('active', itemSlug === slug);
+            const isActive = itemSlug === slug;
+            link.classList.toggle('active', isActive);
+            // 主题接口约定：状态用 data-state / aria-*，主题不依赖 .active 类名
+            if (isActive) {
+                link.dataset.state = 'active';
+                link.setAttribute('aria-current', 'location');
+            } else {
+                delete link.dataset.state;
+                link.removeAttribute('aria-current');
+            }
         });
     };
 
@@ -62,9 +87,13 @@ export function initToc(): Cleanup {
             const target = document.getElementById(slug);
             if (!target) return;
             window.scrollTo({
-                top: target.offsetTop - 80,
-                behavior: 'smooth',
+                top: target.getBoundingClientRect().top + window.scrollY - 80,
+                behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
             });
+            if (toggle && getComputedStyle(toggle).display !== 'none') {
+                setOpen(false);
+                toggle.focus();
+            }
         };
         link.addEventListener('click', onClick);
         clickHandlers.set(link, onClick);
@@ -101,6 +130,9 @@ export function initToc(): Cleanup {
     updateActive();
 
     return () => {
+        toggle?.removeEventListener('click', onToggle);
+        toggle?.removeEventListener('keydown', onKeyDown);
+        tocNav.removeEventListener('keydown', onKeyDown);
         observer?.disconnect();
         if (fallbackScrollHandler) {
             window.removeEventListener('scroll', fallbackScrollHandler);

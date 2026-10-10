@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 // ATMOSPHERE</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&family=Noto+Serif+SC:wght@400;700;900&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        eva: { purple: '#6528F7', dark: '#050505', ink: '#111111' }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['"Noto Serif SC"', 'serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body
+    class="bg-eva-dark text-gray-200 min-h-screen relative overflow-hidden flex items-center justify-center font-sans">
+
+    <!-- Blurred Atmosphere Orbs -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div
+            class="absolute top-1/4 left-1/4 w-[40vw] h-[40vw] bg-eva-purple/20 rounded-full mix-blend-screen filter blur-[100px] animate-pulse-slow">
+        </div>
+        <div class="absolute bottom-1/4 right-1/4 w-[30vw] h-[30vw] bg-white/5 rounded-full mix-blend-screen filter blur-[80px] animate-pulse-slow"
+            style="animation-delay: -4s"></div>
+    </div>
+
+    <!-- Frosted Glass Card -->
+    <div class="z-10 relative max-w-lg w-full px-6 flex flex-col items-center">
+
+        <!-- Abstract Missing Graphic -->
+        <div class="w-24 h-24 mb-12 relative flex items-center justify-center">
+            <div class="absolute inset-0 border border-white/20 rounded-full animate-[spin_10s_linear_infinite]"></div>
+            <div
+                class="absolute inset-2 border border-white/10 rounded-full animate-[spin_15s_linear_infinite_reverse]">
+            </div>
+            <div class="w-1 h-1 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.8)]"></div>
+        </div>
+
+        <h1 class="text-3xl font-serif font-light tracking-widest mb-6 opacity-90 text-center">
+            信 号 <span class="text-eva-purple font-serif ml-1 opacity-70 italic">丢失</span>
+        </h1>
+
+        <p class="text-sm opacity-50 text-center leading-relaxed font-light mb-12 max-w-sm">
+            如同坠入深海的石子，你的请求没有激起任何涟漪。请确认记忆的路径是否发生了偏移。
+        </p>
+
+        <a href="/"
+            class="relative overflow-hidden group border border-white/20 py-3 px-8 rounded-full bg-white/5 backdrop-blur-md hover:border-eva-purple transition-colors duration-500">
+            <span
+                class="relative z-10 text-xs font-mono tracking-[0.2em] group-hover:text-eva-purple transition-colors">重新浮出水面</span>
+            <div
+                class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000">
+            </div>
+        </a>
+    </div>
+
+</body>
+
+</html>

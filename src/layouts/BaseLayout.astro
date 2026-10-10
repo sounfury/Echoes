@@ -1,35 +1,57 @@
 ---
 import { ClientRouter } from "astro:transitions";
 import { SEO } from "astro-seo";
-import { getDefaultPlayerSource, getSiteConfig } from "../lib/config";
+import { buildCfgStyle, getDefaultPlayerSource, getSiteConfig } from "../lib/config";
 import Header from "../components/common/Header.astro";
 import GlobalPlayer from "../components/player/GlobalPlayer";
+import type { PlayerSource } from "../stores/player";
+import QuickSearchLauncher from "../components/search/QuickSearchLauncher.astro";
+import ThemeBoot from "../components/common/ThemeBoot.astro";
+import { resolveThemeDefaults } from "../lib/themes/registry";
+import type { ThemePage } from "../lib/themes/schema";
 import "../styles/global.css";
 
 interface Props {
     title?: string;
     description?: string;
+    playerSource?: PlayerSource | null;
+    /** 写到 <html data-page>，属于主题接口约定的状态属性 */
+    page?: ThemePage;
 }
 
 const config = getSiteConfig();
-const { title = config.site.title, description = config.site.subtitle } =
-    Astro.props;
+const {
+    title = config.site.title,
+    description = config.site.description,
+    playerSource: pagePlayerSource = null,
+    page = "other",
+} = Astro.props;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
-const playerSource = getDefaultPlayerSource(config);
+const playerSource = pagePlayerSource ?? getDefaultPlayerSource(config);
+const playerSourcePayload = JSON.stringify(playerSource);
 
-const { colors, defaultMode: defaultThemeMode } = config.theme;
-const { accent, terminal, warning, light, dark: darkColors } = colors;
+// 无 JS 时的兜底；有 JS 时由 ThemeBoot 内联脚本按 localStorage 覆盖
+const themeDefaults = resolveThemeDefaults(
+    config.theme.defaultTheme,
+    config.theme.defaultMode,
+);
+
+const ogImage = `${config.site.url}/covers/og-default.jpg`;
 ---
 
 <!doctype html>
 <html
     lang="zh-CN"
     class="scroll-smooth"
-    style={`--c-accent:${accent};--c-terminal:${terminal};--c-warning:${warning};--c-bg-light:${light.bg};--c-bg-secondary-light:${light.bgSecondary};--c-text-light:${light.text};--c-text-secondary-light:${light.textSecondary};--c-border-light:${light.border};--c-bg-dark:${darkColors.bg};--c-bg-secondary-dark:${darkColors.bgSecondary};--c-text-dark:${darkColors.text};--c-text-secondary-dark:${darkColors.textSecondary};--c-border-dark:${darkColors.border}`}
+    data-page={page}
+    data-theme={themeDefaults.theme}
+    data-mode={themeDefaults.mode}
+    style={buildCfgStyle(config)}
 >
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <ThemeBoot />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <meta name="generator" content={Astro.generator} />
 
@@ -50,60 +72,108 @@ const { accent, terminal, warning, light, dark: darkColors } = colors;
                     title: title,
                     type: "website",
                     url: canonicalURL.href,
-                    image: "",
+                    image: ogImage,
                 },
+                optional: {
+                    description: description,
+                    siteName: config.site.title,
+                    locale: "zh_CN",
+                },
+            }}
+            twitter={{
+                card: "summary_large_image",
+                title: title,
+                description: description,
+                image: ogImage,
             }}
         />
 
         <ClientRouter />
-
-        <!-- Theme Init (FOUC prevention) -->
-        <script is:inline define:vars={{ defaultThemeMode }}>
-            (function () {
-                var stored = localStorage.getItem("theme-mode");
-                var isDark = (stored || defaultThemeMode) === "dark";
-                document.documentElement.classList.toggle("dark", isDark);
-            })();
-        </script>
     </head>
     <body
         class="transition-colors duration-500 min-h-screen relative overflow-x-hidden font-sans"
     >
-        <!-- Background Layers -->
-        <div
-            id="dynamic-bg"
-            class="fixed inset-0 -z-20 transition-colors duration-1000 "
-        >
-        </div>
-        <div
-            class="fixed inset-0 -z-10 bg-grid-pattern opacity-50 pointer-events-none"
-        >
-        </div>
-
-        <!-- Decorative EVA Side Text -->
-        <div
-            class="fixed top-20 left-4 text-[10px] font-mono opacity-30 rotate-90 hidden lg:block tracking-widest"
-        >
-            SYSTEM_STATUS: NORMAL // SYNC_RATE: 100%
+        <!--
+            装饰位（主题接口约定）：始终为空，由主题 CSS（::before/::after、背景）
+            （默认主题的网格背景与侧边状态文字就画在 decor-back 上）
+            或主题 effects.ts 填充。transition:persist 让 JS 效果跨页面保留。
+        -->
+        <div data-ui="decor-back" aria-hidden="true" transition:persist="decor-back">
         </div>
 
         <!-- Global Navigation -->
         <Header />
+        <script is:inline>
+            window.__applyThemeCopy && window.__applyThemeCopy();
+        </script>
 
-        <!-- Page Content -->
-        <slot />
+        <!--
+            布局骨架（接口约定 v2）：shell 是 grid，默认只有 content 一栏；
+            aside 默认为空且隐藏，主题通过 --layout-* 变量把它变成侧栏 / 横幅。
+        -->
+        <div data-ui="shell">
+            <aside data-ui="aside" aria-hidden="true"></aside>
+            <div data-ui="content">
+                <!-- Page Content -->
+                <slot />
+
+                <!-- Footer -->
+                <footer
+                    data-ui="footer"
+                    class="py-6 flex flex-col items-center justify-center gap-2 text-xs opacity-50 font-mono"
+                >
+                    <div class="flex items-center gap-2">
+                        <span
+                            >&copy; {new Date().getFullYear()}
+                            {config.site.author}</span
+                        >
+                    </div>
+                    {
+                        config.site.icp && (
+                            <a
+                                href="https://beian.miit.gov.cn/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                data-ui="footer-link"
+                                class="hover:text-accent transition-colors"
+                            >
+                                {config.site.icp}
+                            </a>
+                        )
+                    }
+                </footer>
+            </div>
+        </div>
+        <script is:inline>
+            window.__applyThemeCopy && window.__applyThemeCopy();
+        </script>
+
+        <div data-ui="decor-front" aria-hidden="true" transition:persist="decor-front">
+        </div>
+
+        <QuickSearchLauncher />
 
         <!-- Global Music Player -->
         {
-            config.bgm.enabled &&
-                playerSource && (
+            config.bgm.enabled && playerSource && (
+                <>
+                    <script is:inline define:vars={{ playerSourcePayload }}>
+                        /**
+                         * 将当前页面期望使用的播放源广播给持久化播放器。
+                         * 页面切换时播放器节点会保留，因此需要靠事件同步新的目标歌单或单曲。
+                         */
+                        (() => {
+                            const nextSource = JSON.parse(playerSourcePayload);
+                            window.dispatchEvent(new CustomEvent("echoes:player-source-change", {
+                                detail: nextSource,
+                            }));
+                        })();
+                    </script>
                     <div id="global-player-shell" transition:persist>
-                        <GlobalPlayer
-                            source={playerSource}
-                            client:only="react"
-                        />
+                        <GlobalPlayer source={playerSource} client:only="react" />
                     </div>
-                )
+                </>
+            )
         }
     </body>
 </html>

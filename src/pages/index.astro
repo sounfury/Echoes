@@ -2,6 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import TimelineItem from "../components/home/TimelineItem.astro";
 import { getCollection } from "astro:content";
+import { getSiteConfig } from "../lib/config";
 
 const allPosts = await getCollection("blog", ({ data }) => data.published);
 
@@ -11,25 +12,35 @@ const sortedPosts = allPosts.sort((a, b) => {
 	return dateB - dateA;
 });
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = getSiteConfig().timeline.pageSize;
 ---
 
-<BaseLayout>
-	<main class="pt-24 pb-20 max-w-4xl mx-auto px-4 min-h-screen">
+<BaseLayout page="home">
+	<main data-ui="main" class="pt-24 pb-20 min-h-screen">
 		<!-- System Status Header -->
 		<header
-			class="mb-12 border-b-2 border-eva-ink/10 dark:border-white/10 pb-4"
+			data-ui="page-header"
+			class="mb-12 border-b-2 border-ink/10 pb-4"
 		>
-			<h1 class="text-xs font-mono tracking-widest opacity-60 uppercase">
-				System Status: Online
-			</h1>
-			<p class="text-4xl font-serif font-bold mt-2">Transmissions</p>
+			<h1
+				data-ui="page-kicker"
+				data-copy
+				data-ui-default="System Status: Online"
+				class="text-xs font-mono tracking-widest opacity-60 uppercase"
+			>System Status: Online</h1>
+			<p
+				data-ui="page-title"
+				data-copy
+				data-ui-default="Transmissions"
+				class="text-4xl font-serif font-bold mt-2"
+			>Transmissions</p>
 		</header>
 
 		<!-- Vertical Timeline -->
 		<div
 			id="timeline-container"
-			class="relative border-l border-eva-ink/20 dark:border-white/20 ml-3 md:ml-6 space-y-12"
+			data-ui="timeline"
+			class="relative border-l border-ink/20 ml-3 md:ml-6 space-y-12"
 			data-page-size={PAGE_SIZE}
 			data-total={sortedPosts.length}
 		>
@@ -51,18 +62,20 @@ const PAGE_SIZE = 5;
 		<!-- Load More / End Indicator -->
 		<div
 			id="timeline-footer"
-			class="mt-12 ml-3 md:ml-6 pl-8 md:pl-12 border-l border-dashed border-eva-ink/20 dark:border-white/20"
+			data-ui="timeline-footer"
+			class="mt-12 ml-3 md:ml-6 pl-8 md:pl-12 border-l border-dashed border-ink/20"
 		>
 			{
 				sortedPosts.length > PAGE_SIZE ? (
 					<button
 						id="load-more-btn"
-						class="text-sm font-mono opacity-50 hover:text-eva-purple hover:opacity-100 transition-all uppercase tracking-wider cursor-pointer"
+						data-ui="load-more"
+						class="text-sm font-mono opacity-50 hover:text-accent hover:opacity-100 transition-all uppercase tracking-wider cursor-pointer"
 					>
 						[ Load More Data ]
 					</button>
 				) : (
-					<span class="text-sm font-mono opacity-50 uppercase tracking-wider">
+					<span data-ui="timeline-end" class="text-sm font-mono opacity-50 uppercase tracking-wider">
 						[ END OF TRANSMISSIONS ]
 					</span>
 				)
@@ -75,7 +88,7 @@ const PAGE_SIZE = 5;
 		<!-- Empty State -->
 		{
 			sortedPosts.length === 0 && (
-				<div class="text-center py-20 opacity-50 font-mono text-sm">
+				<div data-ui="empty-state" class="text-center py-20 opacity-50 font-mono text-sm">
 					NO TRANSMISSIONS FOUND
 				</div>
 			)
@@ -84,23 +97,44 @@ const PAGE_SIZE = 5;
 </BaseLayout>
 
 <script>
+	/**
+	 * 初始化 Timeline
+	 */
 	import { initTimeline } from "../lib/client/timeline";
 
-	let destroyTimeline = () => {};
-
-	const mountTimeline = () => {
-		destroyTimeline();
-		destroyTimeline = initTimeline();
+	type TimelineRuntime = {
+		mount: () => void;
 	};
 
-	const onAfterSwap = () => mountTimeline();
-	const onBeforeSwap = () => {
-		destroyTimeline();
-		destroyTimeline = () => {};
-		document.removeEventListener("astro:after-swap", onAfterSwap);
+	const win = window as Window & {
+		__echoesTimelineRuntime?: TimelineRuntime;
 	};
 
-	mountTimeline();
-	document.addEventListener("astro:after-swap", onAfterSwap);
-	document.addEventListener("astro:before-swap", onBeforeSwap, { once: true });
+	if (!win.__echoesTimelineRuntime) {
+		let destroyTimeline = () => {};
+
+		const mount = () => {
+			destroyTimeline();
+			destroyTimeline = () => {};
+
+			const isHomePage =
+				window.location.pathname === "/" || window.location.pathname === "";
+			if (!isHomePage) return;
+
+			destroyTimeline = initTimeline();
+		};
+
+		const onPageLoad = () => mount();
+		const onBeforeSwap = () => {
+			destroyTimeline();
+			destroyTimeline = () => {};
+		};
+
+		document.addEventListener("astro:page-load", onPageLoad);
+		document.addEventListener("astro:before-swap", onBeforeSwap);
+
+		win.__echoesTimelineRuntime = { mount };
+	}
+
+	win.__echoesTimelineRuntime?.mount();
 </script>

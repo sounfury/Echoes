@@ -108,7 +108,7 @@ jobs:
       - name: Install notification dependencies
         run: python3 -m pip install --disable-pip-version-check --quiet pyyaml
 
-      - name: Send Bark notification
+      - name: Send Bark notification (success)
         env:
           BARK_KEY: ${{ secrets.BARK_KEY }}
           EVENT_NAME: ${{ github.event_name }}
@@ -121,3 +121,11 @@ jobs:
           DISPATCH_CHANGED_FILES: ${{ toJSON(github.event.client_payload.changed_files) }}
           DISPATCH_NEWLY_PUBLISHED_FILES: ${{ toJSON(github.event.client_payload.newly_published_files) }}
         run: python3 scripts/notify.py
+
+      - name: Send Bark notification (failure)
+        if: failure()
+        env:
+          BARK_KEY: ${{ secrets.BARK_KEY }}
+          NOTIFY_STATUS: failure
+        run: python3 scripts/notify.py
+

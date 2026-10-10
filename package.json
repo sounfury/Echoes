@@ -4,7 +4,8 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev --host",
-    "build": "astro build",
+    "build:media-links": "node ./scripts/build-media-links.mjs",
+    "build": "pnpm run build:media-links && astro build",
     "preview": "astro preview",
     "astro": "astro"
   },
@@ -17,21 +18,27 @@
     "@tailwindcss/vite": "^4.1.18",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@waline/client": "^3.13.0",
     "astro": "^5.17.1",
     "astro-seo": "^1.1.0",
     "class-variance-authority": "^0.7.1",
     "dayjs": "^1.11.19",
     "js-yaml": "^4.1.1",
     "nanostores": "^1.1.0",
+    "pinyin-pro": "^3.28.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "reading-time": "^1.5.0",
     "sharp": "^0.34.3",
     "tailwindcss": "^4.1.18",
+    "unist-util-visit": "^5.1.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.19",
-    "@types/js-yaml": "^4.0.9"
+    "@types/hast": "3.0.4",
+    "@types/js-yaml": "^4.0.9",
+    "astro-robots-txt": "^1.0.0",
+    "sass": "^1.85.0"
   }
 }

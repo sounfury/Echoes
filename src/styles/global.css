@@ -1,3 +1,13 @@
+/*
+ * 层叠顺序（主题接口约定的一部分，见 src/themes/_contract.md）
+ *   theme → base → components → utilities → skin
+ * 主题 CSS 全部写在 @layer skin { ... } 中，因此天然排在 Tailwind 工具类之后，
+ * 不需要比拼选择器优先级，也不需要 !important。
+ * 注意：BaseLayout <head> 最前面也内联声明了同样的顺序，保证主题 <link> 无论
+ * 出现在主样式之前还是之后，skin 层永远是最后一层。
+ */
+@layer theme, base, components, utilities, skin;
+
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
@@ -5,17 +15,51 @@
    Tailwind v4 Theme Extensions
    ================================================ */
 
-@theme {
-	/* EVA Brand Colors — 固定品牌色，引用配置源变量 */
-	--color-eva-purple: var(--c-accent);
-	--color-eva-green: #39ff14;
-	--color-eva-red: #F90000;
-	--color-eva-orange: #FF9900;
-	--color-eva-dark: var(--c-bg-dark);
-	--color-eva-paper: var(--c-bg-light);
-	--color-eva-ink: var(--c-text-light);
+/*
+ * 语义色 → Tailwind 工具类（bg-ink / text-accent / border-line-strong ...）
+ * 使用 inline，让工具类直接引用 var(--c-*)，主题改变量即可整体换色。
+ * 组件里禁止再写 dark:xxx 颜色变体，明暗差异全部由变量承担。
+ */
+@theme inline {
+	--color-canvas: var(--c-bg);
+	--color-canvas-secondary: var(--c-bg-secondary);
+	--color-fg: var(--c-text);
+	--color-fg-secondary: var(--c-text-secondary);
+	--color-accent: var(--c-accent);
+	--color-on-accent: var(--c-on-accent);
+	--color-ink: var(--c-ink);
+	--color-on-ink: var(--c-on-ink);
+	--color-surface: var(--c-surface);
+	--color-popover: var(--c-popover);
+	--color-field: var(--c-field);
+	--color-shadow: var(--c-shadow);
+	--color-line: var(--c-line);
+	--color-line-strong: var(--c-line-strong);
+	--color-line-muted: var(--c-line-muted);
+	--color-line-chip: var(--c-line-chip);
+	--color-divider: var(--c-divider);
+	--color-muted: var(--c-muted);
+	--color-signal-green: var(--c-signal-green);
+	--color-signal-red: var(--c-signal-red);
+	--color-signal-orange: var(--c-signal-orange);
+	--color-paper: var(--c-paper);
+	--color-contrast: var(--c-contrast);
 
-	/* Font Families */
+	/*
+	 * 兼容别名（deprecated）：旧组件 / 文章样式里的 eva-* 颜色。
+	 * 新代码请用上面的语义色；这些别名同样走变量，主题改 --c-* 会一起生效。
+	 */
+	--color-eva-purple: var(--c-accent);
+	--color-eva-green: var(--c-signal-green);
+	--color-eva-red: var(--c-signal-red);
+	--color-eva-orange: var(--c-signal-orange);
+	--color-eva-dark: var(--cfg-bg-dark, #0a0a0c);
+	--color-eva-paper: var(--cfg-bg-light, #f0f0f2);
+	--color-eva-ink: var(--cfg-text-light, #111);
+}
+
+@theme {
+	/* Font Families — 主题可在 skin 层覆盖 --font-* */
 	--font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 	--font-serif: 'Noto Serif SC', 'Georgia', serif;
 	--font-mono: 'JetBrains Mono', 'Fira Code', monospace;
@@ -55,165 +99,292 @@
    Dark Mode Variant
    ================================================ */
 
+/* 仍保留 .dark 以兼容第三方；组件颜色请走变量，不要新增 dark: 颜色变体 */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ================================================
-   CSS Variables (Semantic Tokens)
+   Contract Variables (fallback = 默认外观)
    ================================================ */
 
 /*
- * 配置源变量由 BaseLayout inline style 注入到 <html>:
- *   --c-accent, --c-terminal, --c-warning       → 全局功能色（不分明暗）
- *   --c-bg-light, --c-text-light, ...            → 亮色配置值
- *   --c-bg-dark, --c-text-dark, ...              → 暗色配置值
- *
- * :root 将 -light 源映射为语义变量 --c-bg, --c-text 等
- * .dark 将其重定向到 -dark 源
+ * 配置源变量由 BaseLayout 以 inline style 注入到 <html>（来自 site.config.yaml）:
+ *   --cfg-accent / --cfg-terminal / --cfg-warning
+ *   --cfg-{bg,bg-secondary,text,text-secondary,border}-{light,dark}
+ * 这里把它们映射成接口约定里的语义变量 --c-*。主题在 @layer skin 中覆盖 --c-*。
+ * 注意：主题不要依赖 --cfg-*，它不属于接口约定。
  */
+@layer base {
+	:root {
+		color-scheme: light;
 
-:root {
-	--c-bg: var(--c-bg-light);
-	--c-bg-secondary: var(--c-bg-secondary-light);
-	--c-text: var(--c-text-light);
-	--c-text-secondary: var(--c-text-secondary-light);
-	--c-border: var(--c-border-light);
+		--c-accent: var(--cfg-accent, #6528F7);
+		--c-on-accent: #fff;
+		--c-terminal: var(--cfg-terminal, #00FF00);
+		--c-warning: var(--cfg-warning, #FF0000);
+		--c-signal-green: #10B981;
+		--c-signal-red: #F90000;
+		--c-signal-orange: #FF9900;
+
+		--c-bg: var(--cfg-bg-light, #f0f0f2);
+		--c-bg-secondary: var(--cfg-bg-secondary-light, #e8e8ea);
+		--c-text: var(--cfg-text-light, #111);
+		--c-text-secondary: var(--cfg-text-secondary-light, #6B7280);
+		--c-border: var(--cfg-border-light, #E5E7EB);
+		/* 长文阅读区底色（文章页 main）：比页面底色更亮，遮住网格背景 */
+		--c-paper: color-mix(in srgb, var(--c-bg) 40%, #fff);
+
+		--c-ink: var(--cfg-text-light, #111);
+		--c-on-ink: #fff;
+		--c-surface: #fff;
+		--c-popover: rgb(255 255 255 / 0.9);
+		--c-field: oklch(96.7% 0.003 264.542);
+		--c-shadow: #000;
+		--c-line: oklch(92.8% 0.006 264.531);
+		--c-line-strong: oklch(70.7% 0.022 261.325);
+		--c-line-muted: oklch(87.2% 0.01 258.338);
+		--c-line-chip: oklch(87.2% 0.01 258.338);
+		--c-divider: oklch(96.7% 0.003 264.542);
+		--c-muted: oklch(55.1% 0.027 264.364);
+		--c-caret: var(--c-accent);
+		--c-selection-bg: var(--c-accent);
+		--c-selection-text: #fff;
+		--c-scrollbar: #333;
+		/* 与底色反差最大的纯色（黑 / 白），用于半透明发丝线、悬停底色 */
+		--c-contrast: #000;
+
+		/* 快速搜索弹层（Header 搜索按钮 / ⌘K） */
+		--c-search-panel: rgb(255 255 255 / 0.92);
+		--c-search-divider: rgb(0 0 0 / 0.08);
+		--c-search-placeholder: rgb(0 0 0 / 0.35);
+		--c-search-kbd: rgb(0 0 0 / 0.1);
+		--c-search-mark: color-mix(in srgb, var(--c-accent) 16%, transparent);
+
+		/* 布局（接口约定 v2）：主题可以改成多栏、侧栏、不同内容宽度 */
+		--layout-columns: minmax(0, 1fr);
+		--layout-areas: "content";
+		--layout-aside-display: none;
+		--layout-max-w: 56rem;
+		--layout-gutter: 1rem;
+		--layout-header-max-w: var(--layout-max-w);
+
+		/* 文章卡片（时间轴 post-card）：默认无底色、无内边距 */
+		--card-pad-x: 0px;
+		--card-pad-y: 0px;
+		--card-radius: 0px;
+		--card-bg: transparent;
+		--card-bg-hover: var(--card-bg);
+		--card-shadow: none;
+		--card-shadow-hover: var(--card-shadow);
+		--card-lift: none;
+
+		/* Shiki css-variables 主题的兜底色（默认主题会覆盖） */
+		--shiki-foreground: var(--c-text);
+		--shiki-background: var(--c-bg-secondary);
+	}
+
+	:root[data-mode="dark"],
+	.dark {
+		color-scheme: dark;
+
+		--c-bg: var(--cfg-bg-dark, #0a0a0c);
+		--c-bg-secondary: var(--cfg-bg-secondary-dark, #1E1E1E);
+		--c-text: var(--cfg-text-dark, #d4d4d4);
+		--c-text-secondary: var(--cfg-text-secondary-dark, #9CA3AF);
+		--c-border: var(--cfg-border-dark, #2D2D2D);
+		--c-paper: var(--c-bg);
+
+		--c-ink: #fff;
+		--c-on-ink: var(--cfg-bg-dark, #0a0a0c);
+		--c-surface: oklch(21% 0.006 285.885);
+		--c-popover: color-mix(in oklab, #1a1a2e 95%, transparent);
+		--c-field: rgb(255 255 255 / 0.05);
+		--c-shadow: #fff;
+		--c-line: rgb(255 255 255 / 0.1);
+		--c-line-muted: rgb(255 255 255 / 0.1);
+		--c-line-chip: rgb(255 255 255 / 0.2);
+		--c-divider: color-mix(in oklab, oklch(27.8% 0.033 256.848) 50%, transparent);
+		--c-caret: rgb(255 255 255 / 0.8);
+		--c-scrollbar: var(--c-accent);
+		--c-contrast: #fff;
+
+		--c-search-panel: rgb(13 13 18 / 0.92);
+		--c-search-divider: rgb(255 255 255 / 0.1);
+		--c-search-placeholder: rgb(255 255 255 / 0.3);
+		--c-search-kbd: rgb(255 255 255 / 0.15);
+		--c-search-mark: color-mix(in srgb, var(--c-accent) 26%, transparent);
+	}
 }
-
-.dark {
-	--c-bg: var(--c-bg-dark);
-	--c-bg-secondary: var(--c-bg-secondary-dark);
-	--c-text: var(--c-text-dark);
-	--c-text-secondary: var(--c-text-secondary-dark);
-	--c-border: var(--c-border-dark);
-}
-
 
 /* ================================================
    Base Styles
    ================================================ */
 
-body {
-	font-family: var(--font-sans);
-	background-color: var(--c-bg);
-	color: var(--c-text);
-	transition: background-color 0.5s ease, color 0.3s ease;
-	overflow-x: hidden;
-}
+@layer base {
+	body {
+		font-family: var(--font-sans);
+		background-color: var(--c-bg);
+		color: var(--c-text);
+		transition: background-color 0.5s ease, color 0.3s ease;
+		overflow-x: hidden;
+	}
 
-::selection {
-	background-color: var(--c-accent);
-	color: white;
-}
+	::selection {
+		background-color: var(--c-selection-bg);
+		color: var(--c-selection-text);
+	}
 
-/* ================================================
-   Custom Scrollbar
-   ================================================ */
+	/* Custom Scrollbar */
+	::-webkit-scrollbar {
+		width: 6px;
+	}
 
-::-webkit-scrollbar {
-	width: 6px;
-}
+	::-webkit-scrollbar-track {
+		background: transparent;
+	}
 
-::-webkit-scrollbar-track {
-	background: transparent;
-}
+	::-webkit-scrollbar-thumb {
+		background: var(--c-scrollbar);
+	}
 
-::-webkit-scrollbar-thumb {
-	background: #333;
-}
+	/* 装饰位：默认空、不拦截事件、不参与布局 */
+	[data-ui="decor-back"],
+	[data-ui="decor-front"] {
+		position: fixed;
+		inset: 0;
+		pointer-events: none;
+	}
 
-.dark ::-webkit-scrollbar-thumb {
-	background: var(--c-accent);
-}
+	[data-ui="decor-back"] {
+		z-index: -10;
+	}
 
-/* ================================================
-   网格背景
-   ================================================ */
+	[data-ui="decor-front"] {
+		z-index: 60;
+	}
 
-.bg-grid-pattern {
-	background-image:
-		linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-		linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
-	background-size: 40px 40px;
-}
+	/*
+	 * 代码高亮（Shiki 多主题，defaultColor: false）：每个 token 只带变量
+	 *   --shiki-light / --shiki-dark       → github-light / dracula（默认外观）
+	 *   --shiki-vars                       → css-variables 主题，颜色取 --shiki-token-* / --shiki-foreground
+	 * 默认按模式使用 light / dark；主题想用自己的配色时，在 skin 层把颜色切到 --shiki-vars（见 _contract.md 2.4）。
+	 */
+	.astro-code,
+	.astro-code span {
+		color: var(--shiki-light);
+		font-style: var(--shiki-light-font-style);
+		font-weight: var(--shiki-light-font-weight);
+		text-decoration: var(--shiki-light-text-decoration);
+	}
 
-.dark .bg-grid-pattern {
-	background-image:
-		linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-		linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-}
+	.astro-code {
+		background-color: var(--shiki-light-bg);
+	}
 
-/* ================================================
-   Prose / Typography (Article Content)
-   ================================================ */
-
-.prose {
-	--tw-prose-body: var(--c-text);
-	--tw-prose-headings: var(--c-text);
-	--tw-prose-links: var(--c-accent);
-	--tw-prose-code: var(--c-accent);
-	--tw-prose-quotes: var(--c-text-secondary);
-	--tw-prose-quote-borders: var(--c-accent);
-}
-
-.prose-eva h2 {
-	font-family: 'Noto Serif SC', serif;
-	border-left: 4px solid var(--c-accent);
-	padding-left: 1rem;
-	margin-top: 2rem;
-	margin-bottom: 1rem;
-}
-
-.prose-eva p {
-	margin-bottom: 1.5rem;
-	line-height: 1.8;
-	color: inherit;
-}
-
-.prose-eva code {
-	font-family: 'JetBrains Mono', monospace;
-	background: color-mix(in srgb, var(--c-accent) 10%, transparent);
-	color: var(--c-accent);
-	padding: 0.2rem 0.4rem;
-	border-radius: 2px;
-}
-
-/* Drop Cap (首字下沉) */
-.prose-eva>p:first-of-type::first-letter {
-	float: left;
-	font-family: 'Noto Serif SC', serif;
-	font-size: 2.25rem;
-	line-height: 2.5rem;
-	font-weight: 700;
-	margin-right: 0.5rem;
-	margin-top: 0.1em;
-	color: var(--c-text);
+	:root[data-mode="dark"] .astro-code,
+	:root[data-mode="dark"] .astro-code span {
+		color: var(--shiki-dark);
+		background-color: var(--shiki-dark-bg);
+		font-style: var(--shiki-dark-font-style);
+		font-weight: var(--shiki-dark-font-weight);
+		text-decoration: var(--shiki-dark-text-decoration);
+	}
 }
 
 /* ================================================
-   Hide Scrollbar Utility
+   Components
    ================================================ */
 
-.no-scrollbar::-webkit-scrollbar {
-	display: none;
-}
+@layer components {
+	/* ── 布局骨架（接口约定 v2）────────────────────────────── */
+	[data-ui="shell"] {
+		display: grid;
+		grid-template-columns: var(--layout-columns);
+		grid-template-areas: var(--layout-areas);
+	}
 
-.no-scrollbar {
-	-ms-overflow-style: none;
-	scrollbar-width: none;
+	[data-ui="aside"] {
+		grid-area: aside;
+		display: var(--layout-aside-display);
+		min-width: 0;
+	}
+
+	[data-ui="content"] {
+		grid-area: content;
+		min-width: 0;
+	}
+
+	[data-ui="main"] {
+		max-width: var(--layout-max-w);
+		margin-inline: auto;
+		padding-inline: var(--layout-gutter);
+	}
+
+	[data-ui="header-inner"] {
+		max-width: var(--layout-header-max-w);
+		margin-inline: auto;
+		padding-inline: var(--layout-gutter);
+	}
+
+	/* ── 文章卡片钩子 ─────────────────────────────────────── */
+	[data-ui="post-card"] {
+		padding: var(--card-pad-y) var(--card-pad-x);
+		margin: calc(var(--card-pad-y) * -1) calc(var(--card-pad-x) * -1);
+		border-radius: var(--card-radius);
+		background: var(--card-bg);
+		box-shadow: var(--card-shadow);
+		transition: background 0.35s ease, box-shadow 0.35s ease, translate 0.35s ease;
+	}
+
+	[data-ui="post-card"]:hover,
+	[data-ui="post-card"]:focus-visible {
+		background: var(--card-bg-hover);
+		box-shadow: var(--card-shadow-hover);
+		translate: var(--card-lift);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		[data-ui="post-card"] {
+			transition: none;
+			translate: none !important;
+		}
+	}
 }
 
 /* ================================================
-   Utility: Screen Reader Only
+   Utilities
    ================================================ */
 
-.sr-only {
-	position: absolute;
-	width: 1px;
-	height: 1px;
-	padding: 0;
-	margin: -1px;
-	overflow: hidden;
-	clip: rect(0, 0, 0, 0);
-	white-space: nowrap;
-	border-width: 0;
+@layer utilities {
+	/* Prose 颜色接到语义变量（需排在 typography 插件之后） */
+	.prose {
+		--tw-prose-body: var(--c-text);
+		--tw-prose-headings: var(--c-text);
+		--tw-prose-links: var(--c-accent);
+		--tw-prose-code: var(--c-accent);
+		--tw-prose-quotes: var(--c-text-secondary);
+		--tw-prose-quote-borders: var(--c-accent);
+	}
+
+	/* Hide Scrollbar Utility */
+	.no-scrollbar::-webkit-scrollbar {
+		display: none;
+	}
+
+	.no-scrollbar {
+		-ms-overflow-style: none;
+		scrollbar-width: none;
+	}
+
+	/* Screen Reader Only */
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border-width: 0;
+	}
 }
