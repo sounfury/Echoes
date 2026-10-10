@@ -31,6 +31,17 @@ export const themeMetaSchema = z
                 z.string().max(200),
             )
             .optional(),
+        /**
+         * 世界线：切换到本主题时播放"世界线变动"演出（见 _contract.md 2.7）。
+         * divergence 是变动率（形如 "1.048596"），line 是这条世界线的一句说明。
+         */
+        worldline: z
+            .object({
+                divergence: z.string().regex(/^\d\.\d{6}$/, 'divergence 格式应为 "1.048596"（1 位整数 + 6 位小数）'),
+                line: z.string().max(60).optional(),
+            })
+            .strict()
+            .optional(),
         meta: z
             .object({
                 themeColor: z.string().optional(),

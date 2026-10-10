@@ -11,6 +11,16 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* 辉光管数字（世界线变动读数专用）：Nixie One，SIL OFL 1.1，只含 0-9 和小数点 */
+@font-face {
+	font-family: "Nixie One";
+	font-style: normal;
+	font-weight: 400;
+	font-display: block;
+	src: url("../assets/fonts/nixie-one-digits.woff2") format("woff2");
+	unicode-range: U+2E, U+30-39;
+}
+
 /* ================================================
    Tailwind v4 Theme Extensions
    ================================================ */
@@ -166,6 +176,11 @@
 		--layout-max-w: 56rem;
 		--layout-gutter: 1rem;
 		--layout-header-max-w: var(--layout-max-w);
+
+		/* 世界线变动（切换主题的转场）：辉光管的灯丝色 / 光晕色 / 读数停留期间页面的虚化滤镜 */
+		--worldline-core: #f2560d;
+		--worldline-glow: #ff7a1a;
+		--worldline-rest: brightness(0.96) saturate(0.7) blur(5px);
 
 		/* 文章卡片（时间轴 post-card）：默认无底色、无内边距 */
 		--card-pad-x: 0px;
@@ -323,6 +338,499 @@
 		max-width: var(--layout-header-max-w);
 		margin-inline: auto;
 		padding-inline: var(--layout-gutter);
+	}
+
+	/* ── 世界线变动（切换主题的转场，见 src/lib/themes/client/worldline.ts）──────────
+	 * 读数 worldline-shift 由 JS 创建、挂在 <html> 下，全屏、无底板，只有发光的字。
+	 * data-state: hidden → active → leaving；data-motion: glitch | plain | none
+	 */
+	[data-ui="worldline-shift"] {
+		position: fixed;
+		inset: 0;
+		z-index: 2147483647;
+		display: none;
+		place-content: center;
+		justify-items: center;
+		gap: 1.1rem;
+		padding: 1rem;
+		pointer-events: none;
+		font-family: var(--font-mono);
+		color: var(--c-text);
+		view-transition-name: worldline-shift;
+		animation: worldline-in 260ms cubic-bezier(0.23, 1, 0.32, 1) backwards;
+		transition: opacity 500ms ease;
+	}
+
+	[data-ui="worldline-shift"][data-state="active"],
+	[data-ui="worldline-shift"][data-state="leaving"] {
+		display: grid;
+	}
+
+	[data-ui="worldline-shift"][data-state="leaving"] {
+		opacity: 0;
+	}
+
+	/* 读数停留期间页面轻微虚化，字不用垫底板也读得清（与转场结束帧的 --worldline-rest 接上） */
+	[data-ui="worldline-shift"]::before {
+		content: "";
+		position: absolute;
+		inset: 0;
+		z-index: -1;
+		-webkit-backdrop-filter: var(--worldline-rest);
+		backdrop-filter: var(--worldline-rest);
+	}
+
+	/* 光晕 + 扫描线：只是一层很淡的光，不是底板 */
+	[data-ui="worldline-shift"]::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		z-index: -1;
+		background:
+			radial-gradient(ellipse 46% 34% at 50% 50%, color-mix(in srgb, var(--worldline-glow) 18%, transparent), transparent 72%),
+			repeating-linear-gradient(to bottom, transparent 0 3px, color-mix(in srgb, var(--worldline-glow) 7%, transparent) 3px 4px);
+		animation: worldline-hum 140ms steps(1, end) infinite;
+	}
+
+	[data-ui="worldline-label"],
+	[data-ui="worldline-line"] {
+		text-align: center;
+		text-shadow:
+			0 0 0.25em var(--c-bg),
+			0 0 0.7em var(--c-bg);
+	}
+
+	[data-ui="worldline-label"] {
+		font-size: 0.72rem;
+		letter-spacing: 0.5em;
+		margin-right: -0.5em;
+		opacity: 0.75;
+	}
+
+	[data-ui="worldline-line"] {
+		font-size: clamp(0.85rem, 2.4vw, 1.05rem);
+		letter-spacing: 0.14em;
+	}
+
+	[data-ui="worldline-digits"] {
+		display: flex;
+		font-family: "Nixie One", var(--font-mono);
+		font-size: clamp(3.25rem, 13vw, 8.5rem);
+		line-height: 1;
+		white-space: nowrap;
+		color: var(--worldline-core);
+		text-shadow:
+			0 0 0.03em var(--worldline-core),
+			0 0 0.16em var(--worldline-glow),
+			0 0 0.45em color-mix(in srgb, var(--worldline-glow) 65%, transparent),
+			0 0 1.1em color-mix(in srgb, var(--worldline-glow) 30%, transparent);
+	}
+
+	[data-ui="worldline-digits"] > span {
+		position: relative;
+	}
+
+	[data-ui="worldline-digits"] > [data-digit] {
+		width: 0.64em;
+		text-align: center;
+	}
+
+	/* 没点亮的阴极：辉光管里叠在后面的其他数字，隐约可见 */
+	[data-ui="worldline-digits"] > [data-digit]::before {
+		content: "8";
+		position: absolute;
+		inset: 0;
+		opacity: 0.07;
+		text-shadow: none;
+	}
+
+	/* 通电：闪几下才亮稳 */
+	[data-ui="worldline-digits"][data-state="igniting"] {
+		animation: worldline-ignite 280ms steps(1, end) both;
+	}
+
+	/* 乱跳：整排抖动，带左右错开的重影 */
+	[data-ui="worldline-digits"][data-state="rolling"] {
+		animation: worldline-jitter 170ms steps(1, end) infinite;
+		text-shadow:
+			0.045em 0 color-mix(in srgb, var(--worldline-glow) 45%, transparent),
+			-0.045em 0 color-mix(in srgb, var(--worldline-core) 35%, transparent),
+			0 0 0.16em var(--worldline-glow),
+			0 0 0.45em color-mix(in srgb, var(--worldline-glow) 65%, transparent),
+			0 0 1.1em color-mix(in srgb, var(--worldline-glow) 30%, transparent);
+	}
+
+	/* 每一位锁定时弹一下；全部锁定后整排再亮一次 */
+	[data-ui="worldline-digits"] > [data-state="locked"] {
+		animation: worldline-lock 260ms cubic-bezier(0.23, 1, 0.32, 1);
+	}
+
+	[data-ui="worldline-digits"][data-state="locked"] {
+		animation: worldline-settle 460ms cubic-bezier(0.23, 1, 0.32, 1);
+	}
+
+	[data-ui="worldline-shift"][data-motion="none"]::after,
+	[data-ui="worldline-shift"][data-motion="none"] [data-ui="worldline-digits"],
+	[data-ui="worldline-shift"][data-motion="none"] [data-ui="worldline-digits"] > span {
+		animation: none;
+	}
+
+	/* ── 画面：新旧两个世界的页面快照（View Transition）──
+	 * image-pair：两个世界一起变暗、抖动，结尾白光一闪后落到 --worldline-rest；
+	 * new：新世界以横向撕裂的条带渗进来，82% 起完全盖住旧世界。
+	 * 亮度只做缓慢变化，大幅明暗跳变只有两次反相和结尾一次闪光（间隔 > 1/3 秒）。
+	 */
+	:root[data-worldline-shift]::view-transition-image-pair(root) {
+		animation: worldline-quake var(--worldline-duration, 2800ms) steps(1, end) both;
+	}
+
+	:root[data-worldline-shift="brief"]::view-transition-image-pair(root) {
+		animation-name: worldline-quake-brief;
+	}
+
+	:root[data-worldline-shift]::view-transition-old(root) {
+		animation: none;
+		mix-blend-mode: normal;
+	}
+
+	:root[data-worldline-shift]::view-transition-new(root) {
+		animation: worldline-bleed var(--worldline-duration, 2800ms) steps(1, end) both;
+		mix-blend-mode: normal;
+	}
+
+	/* 读数是独立的一层，始终显示实时内容，不参与新旧交叉淡化 */
+	::view-transition-group(worldline-shift) {
+		animation: none;
+	}
+
+	::view-transition-old(worldline-shift) {
+		display: none;
+	}
+
+	::view-transition-new(worldline-shift) {
+		animation: none;
+		mix-blend-mode: normal;
+	}
+
+	@keyframes worldline-in {
+		from {
+			opacity: 0;
+		}
+	}
+
+	@keyframes worldline-hum {
+		0% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.72;
+		}
+	}
+
+	@keyframes worldline-ignite {
+		0% {
+			opacity: 0;
+		}
+		18% {
+			opacity: 0.7;
+		}
+		30% {
+			opacity: 0.15;
+		}
+		48% {
+			opacity: 0.9;
+		}
+		60% {
+			opacity: 0.4;
+		}
+		74% {
+			opacity: 1;
+		}
+	}
+
+	@keyframes worldline-jitter {
+		0% {
+			translate: 0 0;
+		}
+		20% {
+			translate: -0.03em 0.01em;
+		}
+		40% {
+			translate: 0.04em -0.015em;
+		}
+		60% {
+			translate: -0.015em -0.01em;
+		}
+		80% {
+			translate: 0.02em 0.02em;
+		}
+	}
+
+	@keyframes worldline-lock {
+		from {
+			scale: 1.2;
+			filter: brightness(2.2);
+		}
+	}
+
+	@keyframes worldline-settle {
+		0% {
+			filter: brightness(2.4);
+			translate: 0.05em 0;
+		}
+		12% {
+			translate: -0.035em 0;
+		}
+		24% {
+			translate: 0 0;
+		}
+		100% {
+			filter: brightness(1);
+		}
+	}
+
+	@keyframes worldline-quake {
+		0% {
+			transform: none;
+			filter: none;
+		}
+		3% {
+			transform: translate(2px, -1px) scale(1.02);
+			filter: brightness(0.9) saturate(0.85);
+		}
+		6% {
+			transform: translate(-3px, 1px) scale(1.02);
+			filter: brightness(0.82) saturate(0.75);
+		}
+		9% {
+			transform: translate(1px, 2px) scale(1.02);
+			filter: brightness(0.76) saturate(0.65);
+		}
+		12% {
+			transform: translate(-2px, -2px) scale(1.02);
+			filter: brightness(0.7) saturate(0.58) contrast(1.08);
+		}
+		16% {
+			transform: translate(5px, 0) scale(1.03);
+			filter: brightness(0.66) saturate(0.52) hue-rotate(-18deg);
+		}
+		19% {
+			transform: translate(-6px, 2px) scale(1.03);
+			filter: brightness(0.62) saturate(0.5);
+		}
+		22% {
+			transform: translate(3px, -3px) scale(1.03);
+			filter: brightness(0.6) saturate(0.46);
+		}
+		26% {
+			transform: translate(-4px, -1px) scale(1.03);
+			filter: invert(1) hue-rotate(180deg) brightness(0.8);
+		}
+		28% {
+			transform: translate(6px, 3px) scale(1.03);
+			filter: brightness(0.58) saturate(0.42);
+		}
+		32% {
+			transform: translate(-2px, 4px) scale(1.03);
+			filter: brightness(0.6) saturate(0.48) hue-rotate(22deg);
+		}
+		36% {
+			transform: translate(4px, -2px) scale(1.03);
+			filter: brightness(0.56) saturate(0.42);
+		}
+		40% {
+			transform: translate(-7px, 1px) scale(1.03);
+			filter: brightness(0.58) saturate(0.45) contrast(1.2);
+		}
+		44% {
+			transform: translate(2px, 2px) scale(1.03);
+			filter: brightness(0.55) saturate(0.4);
+		}
+		48% {
+			transform: translate(-3px, -4px) scale(1.03);
+			filter: brightness(0.58) saturate(0.42) hue-rotate(-28deg);
+		}
+		52% {
+			transform: translate(7px, 0) scale(1.03);
+			filter: invert(1) hue-rotate(180deg) brightness(0.75);
+		}
+		54% {
+			transform: translate(-5px, 2px) scale(1.03);
+			filter: brightness(0.55) saturate(0.45);
+		}
+		58% {
+			transform: translate(3px, 3px) scale(1.03);
+			filter: brightness(0.58) saturate(0.48);
+		}
+		62% {
+			transform: translate(-2px, -2px) scale(1.03);
+			filter: brightness(0.6) saturate(0.5);
+		}
+		66% {
+			transform: translate(5px, -1px) scale(1.03);
+			filter: brightness(0.63) saturate(0.55);
+		}
+		70% {
+			transform: translate(-4px, 1px) scale(1.03);
+			filter: brightness(0.66) saturate(0.58);
+		}
+		74% {
+			transform: translate(2px, -2px) scale(1.02);
+			filter: brightness(0.7) saturate(0.6);
+		}
+		78% {
+			transform: translate(-1px, 1px) scale(1.02);
+			filter: brightness(0.74) saturate(0.62);
+		}
+		82% {
+			transform: scale(1.03);
+			filter: brightness(2.6) saturate(0.3) blur(0px);
+			animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+		}
+		90% {
+			transform: none;
+			filter: brightness(1.1) saturate(0.6) blur(2px);
+			animation-timing-function: ease-out;
+		}
+		100% {
+			transform: none;
+			filter: var(--worldline-rest);
+		}
+	}
+
+	/* 短版：只有变暗、抖动和结尾的闪光，没有反相 */
+	@keyframes worldline-quake-brief {
+		0% {
+			transform: none;
+			filter: none;
+		}
+		8% {
+			transform: translate(3px, -1px) scale(1.02);
+			filter: brightness(0.85) saturate(0.75);
+		}
+		18% {
+			transform: translate(-4px, 2px) scale(1.03);
+			filter: brightness(0.72) saturate(0.6);
+		}
+		28% {
+			transform: translate(5px, 1px) scale(1.03);
+			filter: brightness(0.64) saturate(0.5) hue-rotate(-18deg);
+		}
+		38% {
+			transform: translate(-6px, -2px) scale(1.03);
+			filter: brightness(0.6) saturate(0.45);
+		}
+		48% {
+			transform: translate(4px, 3px) scale(1.03);
+			filter: brightness(0.6) saturate(0.45) hue-rotate(22deg);
+		}
+		58% {
+			transform: translate(-3px, -1px) scale(1.03);
+			filter: brightness(0.63) saturate(0.5);
+		}
+		68% {
+			transform: translate(2px, 2px) scale(1.02);
+			filter: brightness(0.68) saturate(0.55);
+		}
+		76% {
+			transform: translate(-1px, -1px) scale(1.02);
+			filter: brightness(0.74) saturate(0.6);
+		}
+		82% {
+			transform: scale(1.03);
+			filter: brightness(2.4) saturate(0.3) blur(0px);
+			animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+		}
+		90% {
+			transform: none;
+			filter: brightness(1.1) saturate(0.6) blur(2px);
+			animation-timing-function: ease-out;
+		}
+		100% {
+			transform: none;
+			filter: var(--worldline-rest);
+		}
+	}
+
+	@keyframes worldline-bleed {
+		0% {
+			opacity: 0;
+			clip-path: inset(0);
+			transform: none;
+		}
+		17% {
+			opacity: 1;
+			clip-path: inset(22% 0 71% 0);
+			transform: translateX(14px);
+		}
+		20% {
+			opacity: 0;
+		}
+		30% {
+			opacity: 1;
+			clip-path: inset(58% 0 31% 0);
+			transform: translateX(-20px);
+		}
+		33% {
+			opacity: 0;
+		}
+		39% {
+			opacity: 1;
+			clip-path: inset(8% 0 56% 0);
+			transform: translateX(9px);
+		}
+		43% {
+			opacity: 0;
+		}
+		47% {
+			opacity: 1;
+			clip-path: inset(70% 0 6% 0);
+			transform: translateX(-11px);
+		}
+		50% {
+			opacity: 0;
+		}
+		56% {
+			opacity: 1;
+			clip-path: inset(38% 0 14% 0);
+			transform: translateX(-12px);
+		}
+		61% {
+			opacity: 1;
+			clip-path: inset(0 0 60% 0);
+			transform: translateX(16px);
+		}
+		65% {
+			opacity: 0;
+		}
+		70% {
+			opacity: 1;
+			clip-path: inset(0);
+			transform: none;
+		}
+		72% {
+			opacity: 1;
+			clip-path: inset(28% 0 0 0);
+			transform: translateX(-8px);
+		}
+		76% {
+			opacity: 1;
+			clip-path: inset(0 0 18% 0);
+			transform: translateX(6px);
+		}
+		80% {
+			opacity: 0;
+		}
+		82% {
+			opacity: 1;
+			clip-path: inset(0);
+			transform: none;
+		}
+		100% {
+			opacity: 1;
+			clip-path: inset(0);
+			transform: none;
+		}
 	}
 
 	/* ── 文章卡片钩子 ─────────────────────────────────────── */

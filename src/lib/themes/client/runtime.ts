@@ -5,6 +5,7 @@
  * 本模块只负责之后的交互。
  */
 import type { StoredThemeState, ThemeChangeDetail, ThemeManifestItem, ThemeMode } from '../types';
+import type { WorldlineShift } from './worldline';
 import { emitEffectsEvent, mountEffects, prefersReducedMotion, unmountEffects } from './effects';
 
 export const THEME_STORAGE_KEY = 'echoes:theme';
@@ -93,13 +94,62 @@ export function applyCopy(doc: Document, theme: string): void {
     });
 }
 
+const WORLDLINE_SEEN_KEY = 'echoes:worldlines-seen';
+
+/** 本次会话里已经播过完整世界线演出的主题 */
+function seenWorldlines(): string[] {
+    try {
+        const parsed = JSON.parse(sessionStorage.getItem(WORLDLINE_SEEN_KEY) || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+}
+
+function markWorldlineSeen(id: string) {
+    try {
+        const seen = seenWorldlines();
+        if (!seen.includes(id)) sessionStorage.setItem(WORLDLINE_SEEN_KEY, JSON.stringify([...seen, id]));
+    } catch {
+        /* 隐私模式等情况下忽略 */
+    }
+}
+
+/** 从 fromId 切到 toId 的世界线变动；新主题没有声明 worldline 时不播 */
+function worldlineShift(fromId: string, toId: string): WorldlineShift | undefined {
+    const to = getThemeItem(toId)?.worldline;
+    if (!to) return undefined;
+    return {
+        from: getThemeItem(fromId)?.worldline?.divergence ?? to.divergence,
+        to: to.divergence,
+        line: to.line,
+        brief: seenWorldlines().includes(toId),
+    };
+}
+
+/** 页脚常驻的当前世界线变动率（[data-ui="worldline"]）；首屏由 BaseLayout 内联脚本填好 */
+export function applyWorldline(doc: Document, theme: string): void {
+    const worldline = getThemeItem(theme)?.worldline;
+    doc.querySelectorAll<HTMLElement>('[data-ui="worldline"]').forEach((el) => {
+        el.hidden = !worldline;
+        el.textContent = worldline ? `世界线变动率 ${worldline.divergence}` : '';
+        if (worldline?.line) el.title = worldline.line;
+        else el.removeAttribute('title');
+    });
+}
+
 function themeLinks(): HTMLLinkElement[] {
     return Array.from(document.querySelectorAll<HTMLLinkElement>(THEME_LINK_SELECTOR));
 }
 
+/** 已发起预加载、还没启用的样式表（href → link），避免重复下载 */
+const preloaded = new Map<string, Promise<HTMLLinkElement>>();
+
 /** 预加载样式表：media="not all" 时会下载但不生效，onload 后再启用 */
 function preloadLink(href: string): Promise<HTMLLinkElement> {
-    return new Promise((resolve) => {
+    const cached = preloaded.get(href);
+    if (cached) return cached;
+    const pending = new Promise<HTMLLinkElement>((resolve) => {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = href;
@@ -112,17 +162,122 @@ function preloadLink(href: string): Promise<HTMLLinkElement> {
         };
         document.head.appendChild(link);
     });
+    preloaded.set(href, pending);
+    return pending;
 }
 
-function runTransition(update: () => void): Promise<void> {
-    const doc = document as Document & {
-        startViewTransition?: (cb: () => void) => { finished: Promise<void> };
+/** 样式表里引用的图片 / 字体（url(...)），解析成绝对地址 */
+function collectAssetUrls(link: HTMLLinkElement): string[] {
+    const urls = new Set<string>();
+    const walk = (rules: CSSRuleList) => {
+        for (const rule of Array.from(rules)) {
+            const nested = (rule as CSSGroupingRule).cssRules;
+            if (nested?.length) {
+                walk(nested);
+                continue;
+            }
+            for (const m of rule.cssText.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)) {
+                if (!m[1].startsWith('data:') && !m[1].startsWith('#')) urls.add(new URL(m[1], link.href).href);
+            }
+        }
     };
-    if (typeof doc.startViewTransition === 'function' && !prefersReducedMotion()) {
-        return doc.startViewTransition(update).finished.catch(() => {});
+    try {
+        if (link.sheet) walk(link.sheet.cssRules);
+    } catch {
+        /* 跨域样式表读不到规则：只预加载 CSS 本身 */
     }
-    update();
-    return Promise.resolve();
+    return [...urls];
+}
+
+const warmedAssets = new Set<string>();
+
+function warmAsset(url: string) {
+    if (warmedAssets.has(url)) return;
+    warmedAssets.add(url);
+    if (/\.(woff2?|ttf|otf)(\?|$)/i.test(url)) {
+        void fetch(url).catch(() => {});
+    } else {
+        new Image().src = url;
+    }
+}
+
+/**
+ * 提前把其他主题需要的东西下载好（打开主题菜单时调用）：theme.css、里面引用的图片和字体、
+ * 世界线变动的模块与数字字体。这样点击后立刻开演，落定时立绘等图片也已就位。
+ * 开启了省流量模式时不预加载。
+ */
+export function preloadThemes(): void {
+    const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    if (conn?.saveData) return;
+    const current = getCurrentTheme().theme;
+    const active = new Set(themeLinks().filter((l) => !l.media).map((l) => l.getAttribute('href')));
+    let needsWorldline = false;
+    for (const id of listThemeIds()) {
+        const item = getThemeItem(id);
+        if (!item || id === current) continue;
+        needsWorldline ||= !!item.worldline;
+        for (const href of item.css) {
+            if (active.has(href)) continue;
+            void preloadLink(href).then((link) => collectAssetUrls(link).forEach(warmAsset));
+        }
+    }
+    if (needsWorldline) {
+        void import('./worldline')
+            .then((m) => {
+                worldlineModule ??= m;
+                return m.warmWorldline();
+            })
+            .catch(() => {});
+    }
+}
+
+type WorldlineModule = typeof import('./worldline');
+let worldlineModule: WorldlineModule | null = null;
+
+/**
+ * 执行主题替换并播放转场。
+ * 切换主题且新主题声明了 worldline 时播放"世界线变动"（见 worldline.ts）；
+ * 其余情况（切明暗、主题没有世界线）用 View Transition 的交叉淡化，不支持或开启减弱动效时直接替换。
+ */
+async function runTransition(update: () => void | Promise<void>, worldline?: WorldlineShift): Promise<void> {
+    let ran = false;
+    const once = () => {
+        if (ran) return;
+        ran = true;
+        return update();
+    };
+    if (worldline && !document.hidden) {
+        try {
+            worldlineModule ??= await import('./worldline');
+            await worldlineModule.playWorldlineShift(worldline, once);
+        } catch (err) {
+            console.warn('[themes] worldline shift failed', err);
+        }
+        if (ran) return;
+    }
+    const doc = document as Document & {
+        startViewTransition?: (cb: () => void | Promise<void>) => { finished: Promise<void> };
+    };
+    if (typeof doc.startViewTransition === 'function' && !prefersReducedMotion() && !document.hidden) {
+        await doc.startViewTransition(once).finished.catch(() => {});
+    }
+    await once();
+}
+
+/** 样式表真正生效（已解析出 sheet）后 resolve；挪动过的 <link> 会重新加载，要等它 */
+function whenApplied(link: HTMLLinkElement): Promise<void> {
+    if (link.sheet) return Promise.resolve();
+    return new Promise((resolve) => {
+        const done = () => {
+            clearTimeout(timer);
+            link.removeEventListener('load', done);
+            link.removeEventListener('error', done);
+            resolve();
+        };
+        const timer = setTimeout(done, 4000);
+        link.addEventListener('load', done);
+        link.addEventListener('error', done);
+    });
 }
 
 function dispatchChange(detail: ThemeChangeDetail) {
@@ -135,6 +290,8 @@ let switching: Promise<void> = Promise.resolve();
  * 切换主题（以及可选的模式）。先把新样式表加载完，再在 View Transition 里一次性替换，避免空白期。
  */
 export function switchTheme(id: string, mode?: ThemeMode): Promise<void> {
+    // 上一次转场还在播时直接跳到结尾，连续切换不用等
+    worldlineModule?.skipWorldlineShift();
     switching = switching.then(() => doSwitch(id, mode));
     return switching;
 }
@@ -153,24 +310,30 @@ async function doSwitch(id: string, requestedMode?: ThemeMode) {
         return;
     }
 
+    const worldline = worldlineShift(prev.theme, themeId);
     const oldLinks = themeLinks();
-    const keep = new Map(oldLinks.map((l) => [l.getAttribute('href'), l]));
-    // 父主题等已挂载的 CSS 直接复用，其余并行预加载
+    // 已经生效的 CSS（父主题等）直接复用，其余等预加载完成（打开菜单时可能已经下好）
+    const keep = new Map(oldLinks.filter((l) => !l.media).map((l) => [l.getAttribute('href'), l]));
     const nextLinks = await Promise.all(
         next.css.map((href) => keep.get(href) ?? preloadLink(href)),
     );
+    // 这些 link 即将启用或移除，不再算"预加载中"
+    preloaded.clear();
 
     await runTransition(() => {
         oldLinks.filter((l) => !nextLinks.includes(l)).forEach((l) => l.remove());
-        // 按主题链顺序重新排列，保证子主题在父主题之后
-        nextLinks.forEach((l) => {
-            l.removeAttribute('media');
-            document.head.appendChild(l);
-        });
+        nextLinks.forEach((l) => l.removeAttribute('media'));
+        // 子主题必须在父主题之后。顺序已经正确时不要动节点：
+        // 挪动 <link> 会让浏览器重新加载它，加载完之前页面处于没有主题样式的状态
+        const ordered = themeLinks().every((l, i) => l === nextLinks[i]);
+        if (!ordered) nextLinks.forEach((l) => document.head.appendChild(l));
         applyAttrs(document.documentElement, themeId, mode);
         applyThemeColor(document, themeId);
         applyCopy(document, themeId);
-    });
+        applyWorldline(document, themeId);
+        return Promise.all(nextLinks.map(whenApplied)).then(() => {});
+    }, worldline);
+    if (worldline) markWorldlineSeen(themeId);
 
     writeStoredTheme({ theme: themeId, mode: preferred });
     dispatchChange({ theme: themeId, mode, previousTheme: prev.theme, previousMode: prev.mode });
@@ -185,6 +348,7 @@ export async function setMode(mode: ThemeMode): Promise<void> {
     const item = getThemeItem(prev.theme);
     if (!item || !item.schemes.includes(mode) || mode === prev.mode) return;
 
+    worldlineModule?.skipWorldlineShift();
     await runTransition(() => applyAttrs(document.documentElement, prev.theme, mode));
     writeStoredTheme({ theme: prev.theme, mode });
     const detail: ThemeChangeDetail = { theme: prev.theme, mode, previousTheme: prev.theme, previousMode: prev.mode };
@@ -226,6 +390,7 @@ export function initThemeRuntime(): void {
         applyAttrs(newDoc.documentElement, theme, mode);
         applyThemeColor(newDoc, theme);
         applyCopy(newDoc, theme);
+        applyWorldline(newDoc, theme);
         // 新文档 head 里放入同 href 的 link，Astro 的 head 对比会保留现有节点，不会重新下载
         newDoc.head.querySelectorAll(THEME_LINK_SELECTOR).forEach((l) => l.remove());
         themeLinks().forEach((l) => newDoc.head.appendChild(newDoc.importNode(l, true)));

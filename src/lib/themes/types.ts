@@ -5,6 +5,13 @@
 
 export type ThemeMode = 'light' | 'dark';
 
+export interface ThemeWorldline {
+    /** 变动率，形如 "1.048596" */
+    divergence: string;
+    /** 这条世界线的说明 */
+    line?: string;
+}
+
 /** theme.json 经 zod 校验后的结构 */
 export interface ThemeMeta {
     id: string;
@@ -20,6 +27,8 @@ export interface ThemeMeta {
     preview?: string;
     /** 主题文案（data-ui 锚点 → 文本），见 _contract.md「可替换文案」 */
     copy?: Record<string, string>;
+    /** 世界线：变动率与一句说明，见 _contract.md 2.7 */
+    worldline?: ThemeWorldline;
     meta: {
         themeColor?: string;
     };
@@ -46,6 +55,8 @@ export interface ThemeManifestItem {
     hasEffects: boolean;
     /** 按 extends 链合并后的文案 */
     copy?: Record<string, string>;
+    /** 世界线（子主题未声明时沿用父主题的） */
+    worldline?: ThemeWorldline;
 }
 
 export type ThemeManifest = Record<string, ThemeManifestItem>;

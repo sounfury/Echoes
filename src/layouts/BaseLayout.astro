@@ -128,6 +128,7 @@ const ogImage = `${config.site.url}/covers/og-default.jpg`;
                             {config.site.author}</span
                         >
                     </div>
+                    <span data-ui="worldline" hidden></span>
                     {
                         config.site.icp && (
                             <a
@@ -146,6 +147,15 @@ const ogImage = `${config.site.url}/covers/og-default.jpg`;
         </div>
         <script is:inline>
             window.__applyThemeCopy && window.__applyThemeCopy();
+            // 页脚的世界线变动率：首屏在绘制前填好，之后由主题运行时维护
+            (function () {
+                var item = (window.__THEMES__ || {})[document.documentElement.dataset.theme] || {};
+                var el = document.querySelector('[data-ui="worldline"]');
+                if (!el || !item.worldline) return;
+                el.textContent = "世界线变动率 " + item.worldline.divergence;
+                if (item.worldline.line) el.title = item.worldline.line;
+                el.hidden = false;
+            })();
         </script>
 
         <div data-ui="decor-front" aria-hidden="true" transition:persist="decor-front">

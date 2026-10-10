@@ -95,6 +95,8 @@ function buildRegistry(): ThemeEntry[] {
             copy: chain.some((m) => m.copy)
                 ? Object.assign({}, ...chain.map((m) => m.copy ?? {}))
                 : undefined,
+            // 世界线：子主题没有声明时沿用最近的祖先
+            worldline: [...chain].reverse().find((m) => m.worldline)?.worldline,
             css: chain.map((m) => cssUrls[`${THEMES_ROOT}${m.id}/theme.css`]),
             hasEffects: chain.some((m) => `${THEMES_ROOT}${m.id}/effects.ts` in effectLoaders),
             previewUrl,
@@ -140,6 +142,7 @@ export function getThemeManifest(): ThemeManifest {
                 themeColor: t.meta.themeColor,
                 hasEffects: t.hasEffects,
                 copy: t.copy,
+                worldline: t.worldline,
             },
         ]),
     );

@@ -313,7 +313,7 @@ const currentPath = Astro.url.pathname;
         switchTheme,
         toggleTheme,
     } from "../../stores/theme";
-    import { getThemeItem } from "../../lib/themes/client/runtime";
+    import { getThemeItem, preloadThemes } from "../../lib/themes/client/runtime";
     import { typeWriter } from "../../lib/effects";
 
     let cleanupTypewriter: (() => void) | null = null;
@@ -379,8 +379,12 @@ const currentPath = Astro.url.pathname;
 
         menuToggle?.addEventListener("click", (e) => {
             e.stopPropagation();
+            preloadThemes();
             setMenuOpen(themeMenu?.dataset.state !== "open");
         });
+        // 指针移到按钮上 / 键盘聚焦时就开始预加载其他主题，点开菜单再选时资源多半已经到手
+        menuToggle?.addEventListener("pointerenter", () => preloadThemes());
+        menuToggle?.addEventListener("focus", () => preloadThemes());
 
         themeMenu
             ?.querySelectorAll<HTMLElement>('[data-ui="theme-option"]')

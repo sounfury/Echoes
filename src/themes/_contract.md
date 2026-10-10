@@ -4,7 +4,7 @@
 
 主题对接的是这份"接口约定"，而不是组件源码。主题**只能**使用下面列出的四类接口：
 
-1. CSS 变量（`--c-*` / `--font-*` / `--radius-*` / `--shiki-*` / `--layout-*` / `--card-*` / `--comments-*` / `--waline-*`）
+1. CSS 变量（`--c-*` / `--font-*` / `--radius-*` / `--shiki-*` / `--layout-*` / `--card-*` / `--worldline-*` / `--comments-*` / `--waline-*`）
 2. 结构锚点 `data-ui="..."`（以及 `data-ui-variant`）
 3. 状态属性 `data-theme` / `data-mode` / `data-schemes` / `data-page` / `data-state` / `data-category` / `aria-*`
 4. 装饰位 `[data-ui="decor-back"]` / `[data-ui="decor-front"]`
@@ -197,7 +197,37 @@ base 层按 `data-mode` 使用 light / dark。主题想要自己的配色时，�
 | `--card-shadow` / `--card-shadow-hover` | `none` / 同 `--card-shadow` |
 | `--card-lift` | 悬停位移（`translate` 值），默认 `none`；`prefers-reduced-motion` 时强制无位移 |
 
-### 2.7 第三方：Waline 评论
+### 2.7 世界线变动 `--worldline-*`
+
+切换主题时的转场（`src/lib/themes/client/worldline.ts`，画面关键帧在 `global.css`）。`theme.json` 声明了
+`worldline` 的主题在被切换到时播放：
+
+1. 旧世界的页面变暗、抖动，屏幕中央一排辉光管数字（旧主题的变动率）通电亮起；
+2. 数字乱跳，新世界的页面以横向撕裂的条带一闪一闪地渗进来；
+3. 数字从左到右逐位锁定到新主题的变动率，最后一位锁定时白光一闪，落到新世界；
+4. 数字下面逐字打出 `line`，页面轻微虚化，停留片刻后读数淡出。
+
+```json
+"worldline": { "divergence": "1.048596", "line": "在这个世界线，站长是位极简主义者" }
+```
+
+| 变量 | 用途 | 默认 |
+| --- | --- | --- |
+| `--worldline-core` | 辉光管数字的灯丝色（字本身的颜色） | `#f2560d` |
+| `--worldline-glow` | 数字的光晕色，也用于背后很淡的光晕和扫描线 | `#ff7a1a` |
+| `--worldline-rest` | 读数停留期间页面的虚化滤镜（`filter` 值；保持 `brightness() saturate() blur()` 的写法，结尾才能平滑过渡） | `brightness(0.96) saturate(0.7) blur(5px)` |
+
+- `divergence` 必须是 1 位整数 + 6 位小数；`line` 可省略，最长 60 字。子主题没有声明时沿用父主题的。
+- 同一会话（同一标签页）里再次切到同一主题时播短版（约 1.3 秒，不打说明）；切明暗、切到没有 `worldline` 的主题只做交叉淡化。
+- 画面部分依赖 View Transition：不支持时页面直接替换，只播读数；系统开启减弱动效时读数直接显示最终数值，不乱跳、不抖动。
+- 演出期间点击或按键可以跳过。
+- 读数是运行时创建的 `worldline-shift`（全屏、无底板，`data-state="hidden|active|leaving"`、`data-motion="glitch|plain|none"`、
+  `data-variant="full|brief"`），挂在 `<html>` 下；`worldline-digits` 带 `data-state="igniting|rolling|locked"`，
+  数字位带 `data-digit`，`data-state="rolling|locked"`。数字字体是 Nixie One（只含数字和小数点）。
+- 演出期间 `<html>` 带 `data-worldline-shift="full|brief"`，主题可以据此改写 `::view-transition-*(root)` 的动画。
+- 当前主题的变动率常驻在页脚的 `worldline` 锚点里（`title` 是 `line`）。
+
+### 2.8 第三方：Waline 评论
 
 评论区组件是 `src/components/post/CommentSection.astro`（Waline，`serverURL` 等来自 `site.config.yaml` 的 `comment`）。
 
@@ -258,7 +288,7 @@ base 层按 `data-mode` 使用 light / dark。主题想要自己的配色时，�
 | `post-body` | 文章正文容器（Markdown 渲染结果在其中） |
 | `toc` / `toc-link` | 目录 / 目录项（当前项 `data-state="active"` + `aria-current="location"`）；目录带 `data-state="open|closed"`，主题启用折叠模式时按此控制显隐，常驻目录可忽略此状态 |
 | `toc-toggle` | 目录折叠按钮，`aria-controls` 指向目录、`aria-expanded="true|false"` 与目录状态同步；默认隐藏，主题可按断点启用 |
-| `comments` | 评论区 `<section>`（`data-provider="waline"`，仅在配置开启时渲染），见 2.7 |
+| `comments` | 评论区 `<section>`（`data-provider="waline"`，仅在配置开启时渲染），见 2.8 |
 | `comments-header` / `comments-title` / `comments-hint` | 评论区标题区 / 标题 / 说明文字 |
 | `comments-body` | Waline 挂载容器（内部为 Waline 的 `.wl-*` 结构） |
 | `comments-toast` | 评论操作提示条（`data-state="visible|hidden"`，`data-type="success|error"`；首次提示时才创建） |
@@ -279,6 +309,9 @@ base 层按 `data-mode` 使用 light / dark。主题想要自己的配色时，�
 | `player-error` | 错误信息 |
 | `lyrics-panel` / `lyrics-current` / `lyrics-next` / `lyrics-status` | 歌词面板（`data-state="open|closed"`）/ 当前歌词 / 下一句 / 加载提示（SYNCING…） |
 | `footer` / `footer-link` | 页脚（版权 / 备案）/ 页脚链接 |
+| `worldline` | 页脚里常驻的当前世界线变动率（主题没有声明 `worldline` 时隐藏），见 2.7 |
+| `worldline-shift` | 切换主题时的世界线变动读数（运行时创建，全屏无底板，带 `data-state`），见 2.7 |
+| `worldline-label` / `worldline-digits` / `worldline-line` | 读数的小标题 / 一排数字 / 说明文字 |
 | `decor-back` / `decor-front` | 装饰位，见第 5 节 |
 
 ### 3.1 可替换文案 `copy`
@@ -393,7 +426,8 @@ src/themes/<id>/
   "extends": "default",        // 可选：先加载父主题 CSS，再加载本主题
   "preview": "./preview.png",  // 可选
   "meta": { "themeColor": "#c8243a" },  // 可选：<meta name="theme-color">
-  "copy": { "brand-subtitle": "…" }      // 可选：可替换文案，见 3.1
+  "copy": { "brand-subtitle": "…" },     // 可选：可替换文案，见 3.1
+  "worldline": { "divergence": "1.204014", "line": "…" }  // 可选：世界线变动演出，见 2.7
 }
 ```
 
@@ -431,4 +465,5 @@ src/themes/<id>/
     - 新增变量：`--c-paper`、`--c-contrast`、`--c-info`、`--c-search-*`、`--comments-label`、`--comments-error-color`；
       `--c-signal-green` 默认值随 dev 改为 `#10B981`。新增可替换文案：`post-cover-caption`、`comments-hint`；`comments-title` 默认文字改为 `评论`。
     - 文章正文排版由 `src/styles/article.scss`（components 层）提供；默认主题不再自带 `post-body` 排版规则。
+  - 新增世界线变动转场：`theme.json` 的 `worldline` 字段、`--worldline-*` 变量与 `worldline*` 锚点（见 2.7，原 2.7 Waline 顺延为 2.8），兼容变更，不升版本。
   - 新增 `data-page="404"`：404 页接入主题（加载主题 CSS、装饰位与 effects），兼容变更，不升版本。

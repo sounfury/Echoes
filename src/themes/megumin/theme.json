@@ -7,6 +7,10 @@
     "light"
   ],
   "preview": "./assets/art.webp",
+  "worldline": {
+    "divergence": "1.204014",
+    "line": "在这个世界线，站长是慧慧的单推人"
+  },
   "meta": {
     "themeColor": "#c8243a"
   },

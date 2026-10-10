@@ -4,6 +4,10 @@
   "nameEn": "Minimalism",
   "api": 2,
   "schemes": ["light", "dark"],
+  "worldline": {
+    "divergence": "1.048596",
+    "line": "在这个世界线，站长是位极简主义者"
+  },
   "meta": {
     "themeColor": "#6528F7"
   }
