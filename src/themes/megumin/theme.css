@@ -553,10 +553,27 @@
 		right: var(--mg-header-inset);
 	}
 
-	/* 64rem 阅读区域 + 两侧至少各 18rem，才展示常驻立绘与目录 */
+	/* 宽屏：时间轴页与文章页共用同一个内容框（64rem），两侧留白按 6 : 4 分给立绘 / 目录，
+	 * 两类页面的左右边距完全一致，切换时内容不再左右跳动 */
 	@media (min-width: 100rem) {
+		:root,
 		:root[data-page="post"] {
-			--layout-areas: "content";
+			--mg-aside-w: calc((100% - 64rem) * 0.6);
+			--mg-side-w: calc((100% - 64rem) * 0.4);
+			--layout-max-w: 64rem;
+			--layout-gutter: 1.5rem;
+			--layout-columns: var(--mg-aside-w) var(--layout-max-w) minmax(0, 1fr);
+			--layout-areas: "aside content .";
+		}
+
+		:root[data-page="post"] {
+			--layout-areas: ". content .";
+		}
+
+		[data-ui="header"],
+		:root[data-page="post"] [data-ui="header"] {
+			left: calc(var(--mg-aside-w) + var(--layout-gutter));
+			right: calc(var(--mg-side-w) + var(--layout-gutter));
 		}
 
 		:root[data-page="post"] [data-ui="aside"] {
@@ -564,7 +581,7 @@
 			grid-area: auto;
 			top: 0;
 			left: 0;
-			width: calc((100% - var(--layout-max-w)) / 2);
+			width: var(--mg-aside-w);
 			height: 100vh;
 			background-position: 50% 30%;
 			-webkit-mask-image: linear-gradient(to right, #000 65%, transparent);
@@ -633,9 +650,9 @@
 			display: flex;
 			top: 7rem;
 			bottom: auto;
-			left: calc(50% + var(--layout-max-w) / 2 + 1rem);
+			left: calc(var(--mg-aside-w) + var(--layout-max-w) + 1rem);
 			right: auto;
-			width: calc((100% - var(--layout-max-w)) / 2 - 2.5rem);
+			width: calc(var(--mg-side-w) - 2.5rem);
 			max-width: 18rem;
 			max-height: calc(100vh - 14rem);
 			overflow-y: auto;
