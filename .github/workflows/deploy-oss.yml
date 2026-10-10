@@ -3,7 +3,6 @@ name: Deploy to Aliyun OSS
 on:
   push:
     branches:
-      - dev
       - master
     paths-ignore:
       - 'spec/**'
@@ -33,7 +32,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'push' && github.sha || 'dev' }}
+          ref: ${{ github.event_name == 'push' && github.sha || 'master' }}
           fetch-depth: 0 # 完整历史，确保多 commit push 时 before SHA 可达
 
       - name: Checkout blog repository

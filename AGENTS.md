@@ -45,4 +45,4 @@ PRs should include:
 - Linked issue/task when applicable.
 - Screenshots or clips for visual/UI updates.
 
-Deploy workflow targets the `dev` branch, so keep PR base/merge strategy aligned with that flow.
+Single-branch workflow: commit and push directly to `master`; the deploy workflow builds `master`.
