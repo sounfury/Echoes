@@ -285,7 +285,10 @@ base 层按 `data-mode` 使用 light / dark。主题想要自己的配色时，�
 | `post-wordcount` | 阅读时间 + 字数（`READ_TIME` 项的值） |
 | `post-soundtrack` | 文章配乐（`music` 字段存在时，点击用全局播放器播放） |
 | `category-link` | 文章页分类链接 |
-| `post-body` | 文章正文容器（Markdown 渲染结果在其中） |
+| `post-body` | 文章正文容器（Markdown 渲染结果在其中）；其中的图片和 `post-cover-image` 可点击放大（medium-zoom，遮罩色取 `--c-bg`，层级 z-80） |
+| `post-copyright` | 文章末尾的版权声明（`site.config.yaml` 的 `copyright.enabled` 开启时渲染，位于正文之后、评论区之前） |
+| `post-copyright-item` / `post-copyright-label` | 版权声明单项（`data-field="author|link|license"`）/ 单项小标题 |
+| `post-copyright-link` / `post-copyright-copy` | 本文永久链接 / 复制链接按钮（复制后短暂带 `data-state="active"`，失败为 `data-state="error"`） |
 | `toc` / `toc-link` | 目录 / 目录项（当前项 `data-state="active"` + `aria-current="location"`）；目录带 `data-state="open|closed"`，主题启用折叠模式时按此控制显隐，常驻目录可忽略此状态 |
 | `toc-toggle` | 目录折叠按钮，`aria-controls` 指向目录、`aria-expanded="true|false"` 与目录状态同步；默认隐藏，主题可按断点启用 |
 | `comments` | 评论区 `<section>`（`data-provider="waline"`，仅在配置开启时渲染），见 2.8 |
@@ -308,7 +311,7 @@ base 层按 `data-mode` 使用 light / dark。主题想要自己的配色时，�
 | `player-title` / `player-artist` | 曲名 / 歌手（桌面端，在 `player-track` 内；文字过长时滚动） |
 | `player-error` | 错误信息 |
 | `lyrics-panel` / `lyrics-current` / `lyrics-next` / `lyrics-status` | 歌词面板（`data-state="open|closed"`）/ 当前歌词 / 下一句 / 加载提示（SYNCING…） |
-| `footer` / `footer-link` | 页脚（版权 / 备案）/ 页脚链接 |
+| `footer` / `footer-link` | 页脚（版权 / RSS / 备案）/ 页脚链接 |
 | `worldline` | 页脚里常驻的当前世界线变动率（主题没有声明 `worldline` 时隐藏），见 2.7 |
 | `worldline-shift` | 切换主题时的世界线变动读数（运行时创建，全屏无底板，带 `data-state`），见 2.7 |
 | `worldline-label` / `worldline-digits` / `worldline-line` | 读数的小标题 / 一排数字 / 说明文字 |
@@ -467,3 +470,4 @@ src/themes/<id>/
     - 文章正文排版由 `src/styles/article.scss`（components 层）提供；默认主题不再自带 `post-body` 排版规则。
   - 新增世界线变动转场：`theme.json` 的 `worldline` 字段、`--worldline-*` 变量与 `worldline*` 锚点（见 2.7，原 2.7 Waline 顺延为 2.8），兼容变更，不升版本。
   - 新增 `data-page="404"`：404 页接入主题（加载主题 CSS、装饰位与 effects），兼容变更，不升版本。
+  - 新增文章版权声明 `post-copyright*` 锚点、页脚 RSS 链接（复用 `footer-link`）、正文图片点击放大，兼容变更，不升版本。

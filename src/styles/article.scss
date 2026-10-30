@@ -459,3 +459,14 @@
     }
 }
 }
+
+/* ================================================
+   图片点击放大（medium-zoom，见 src/lib/client/imageZoom.ts）
+   遮罩与放大后的图片要盖过固定头部（z-50）和 decor-front（z-60），低于快速搜索（z-90）。
+   ================================================ */
+@layer components {
+    .medium-zoom-overlay,
+    .medium-zoom-image--opened {
+        z-index: 80;
+    }
+}

@@ -4,6 +4,7 @@ import type { CollectionEntry } from "astro:content";
 import type { MarkdownHeading } from "astro";
 import TableOfContents from "../components/post/TableOfContents.astro";
 import CommentSection from "../components/post/CommentSection.astro";
+import PostCopyright from "../components/post/PostCopyright.astro";
 import PostSoundtrack from "../components/post/PostSoundtrack";
 import {
     getReadingTime,
@@ -17,6 +18,7 @@ import {
     buildCommentId,
 } from "../lib/utils";
 import { getPostMusicSource, getSiteConfig } from "../lib/config";
+import { getPostUrl } from "../lib/permalink";
 
 interface Props {
     post: CollectionEntry<"blog">;
@@ -42,6 +44,7 @@ const updatedDate = post.data.更新时间
     ? formatDateFull(post.data.更新时间)
     : "";
 const commentPath = buildCommentId(title, post.data.创建时间);
+const permalinkURL = new URL(getPostUrl(post), config.site.url).href;
 const postPlayerSource = getPostMusicSource(post.data.music, config.bgm.apiBase);
 const shouldShowSoundtrack = Boolean(postPlayerSource);
 const soundtrackSourceApi = postPlayerSource?.playlistApi ?? "";
@@ -185,6 +188,7 @@ const variant = post.filePath?.endsWith(".mdx") ? "mdx" : "md";
             <div data-ui="post-body" class="prose-eva max-w-none text-lg">
                 <slot />
             </div>
+            <PostCopyright url={permalinkURL} />
             <CommentSection path={commentPath} />
             <script is:inline>
                 /**
@@ -261,6 +265,16 @@ const variant = post.filePath?.endsWith(".mdx") ? "mdx" : "md";
 
                 transformObsidianCallouts();
                 document.addEventListener("astro:page-load", transformObsidianCallouts);
+            </script>
+            <script>
+                /**
+                 * 图片点击放大。模块脚本只执行一次；上面的 callout 转换会克隆节点，
+                 * 它的 page-load 监听先注册、先执行，所以这里挂上的是转换后的图片。
+                 */
+                import { mountImageZoom, unmountImageZoom } from "../lib/client/imageZoom";
+
+                document.addEventListener("astro:page-load", mountImageZoom);
+                document.addEventListener("astro:before-swap", unmountImageZoom);
             </script>
         </article>
     </main>

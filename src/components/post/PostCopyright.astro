@@ -1,0 +1,117 @@
+---
+/**
+ * 文章末尾的版权声明：作者 / 本文链接（带复制按钮）/ 许可协议。
+ * 内容来自 site.config.yaml 的 copyright 段；链接是永久链接（见 lib/permalink.ts）。
+ */
+import { getSiteConfig } from "../../lib/config";
+
+interface Props {
+    /** 文章永久链接（绝对地址） */
+    url: string;
+}
+
+const { url } = Astro.props;
+const { site, copyright } = getSiteConfig();
+---
+
+{
+    copyright.enabled && (
+        <aside
+            data-ui="post-copyright"
+            aria-label="版权声明"
+            class="mt-16 border-y border-dashed border-line-strong py-4 font-mono text-xs"
+        >
+            <dl class="grid gap-3">
+                <div data-ui="post-copyright-item" data-field="author" class="flex flex-col gap-1 md:flex-row md:gap-4">
+                    <dt data-ui="post-copyright-label" class="shrink-0 w-20 opacity-50">AUTHOR</dt>
+                    <dd class="opacity-80">{site.author}</dd>
+                </div>
+                <div data-ui="post-copyright-item" data-field="link" class="flex flex-col gap-1 md:flex-row md:gap-4">
+                    <dt data-ui="post-copyright-label" class="shrink-0 w-20 opacity-50">LINK</dt>
+                    <dd class="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
+                        <a
+                            href={url}
+                            data-ui="post-copyright-link"
+                            class="no-underline opacity-80 hover:opacity-100 hover:text-accent transition-colors break-all"
+                        >
+                            {url}
+                        </a>
+                        <button
+                            type="button"
+                            data-ui="post-copyright-copy"
+                            data-url={url}
+                            class="border border-line-strong px-2 py-0.5 opacity-60 hover:opacity-100 hover:text-accent hover:border-accent transition-colors cursor-pointer"
+                        >
+                            复制链接
+                        </button>
+                    </dd>
+                </div>
+                <div data-ui="post-copyright-item" data-field="license" class="flex flex-col gap-1 md:flex-row md:gap-4">
+                    <dt data-ui="post-copyright-label" class="shrink-0 w-20 opacity-50">LICENSE</dt>
+                    <dd class="opacity-80 leading-relaxed">
+                        本文采用
+                        <a
+                            href={copyright.licenseUrl}
+                            target="_blank"
+                            rel="license noopener noreferrer"
+                            class="no-underline hover:text-accent transition-colors font-bold"
+                        >
+                            {copyright.license}
+                        </a>
+                        许可协议。{copyright.notice}
+                    </dd>
+                </div>
+            </dl>
+        </aside>
+    )
+}
+
+<script>
+    /**
+     * 复制本文链接。事件委托在 document 上，脚本只执行一次，ClientRouter 换页后无需重新绑定。
+     */
+    const RESET_DELAY = 1600;
+    const timers = new WeakMap<HTMLElement, number>();
+
+    async function copyText(text: string): Promise<boolean> {
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch {
+            // 非安全上下文或权限被拒：退回到 execCommand
+            const textarea = document.createElement("textarea");
+            textarea.value = text;
+            textarea.setAttribute("readonly", "");
+            textarea.style.position = "fixed";
+            textarea.style.opacity = "0";
+            document.body.append(textarea);
+            textarea.select();
+            const ok = document.execCommand("copy");
+            textarea.remove();
+            return ok;
+        }
+    }
+
+    document.addEventListener("click", async (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        const button = target.closest<HTMLElement>('[data-ui="post-copyright-copy"]');
+        if (!button) return;
+
+        const url = button.dataset.url;
+        if (!url) return;
+
+        const ok = await copyText(url);
+        button.textContent = ok ? "已复制" : "复制失败";
+        button.dataset.state = ok ? "active" : "error";
+
+        window.clearTimeout(timers.get(button));
+        timers.set(
+            button,
+            window.setTimeout(() => {
+                button.textContent = "复制链接";
+                delete button.dataset.state;
+            }, RESET_DELAY),
+        );
+    });
+</script>

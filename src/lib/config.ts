@@ -96,6 +96,18 @@ const siteConfigSchema = z.object({
         pageSize: 10,
         reaction: false,
     }),
+    /** 文章末尾的版权声明 */
+    copyright: z.object({
+        enabled: z.boolean().default(true),
+        license: z.string().default('CC BY-NC-SA 4.0'),
+        licenseUrl: z.string().url().default('https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans'),
+        notice: z.string().default('转载请注明出处。'),
+    }).default({
+        enabled: true,
+        license: 'CC BY-NC-SA 4.0',
+        licenseUrl: 'https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans',
+        notice: '转载请注明出处。',
+    }),
     ops: z.object({
         bark: z.object({
             enabled: z.boolean(),

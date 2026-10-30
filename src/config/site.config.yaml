@@ -92,7 +92,14 @@ comment:
   pageSize: 10
   reaction: false
 
-# 8. 运维通知
+# 8. 文章版权声明（文章末尾）
+copyright:
+  enabled: true
+  license: "CC BY-NC-SA 4.0"
+  licenseUrl: "https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans"
+  notice: "转载请注明出处。"
+
+# 9. 运维通知
 ops:
   bark:
     enabled: true

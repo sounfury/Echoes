@@ -54,6 +54,7 @@ const ogImage = `${config.site.url}/covers/og-default.jpg`;
         <ThemeBoot />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <meta name="generator" content={Astro.generator} />
+        <link rel="alternate" type="application/rss+xml" title={config.site.title} href="/rss.xml" />
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -129,6 +130,14 @@ const ogImage = `${config.site.url}/covers/og-default.jpg`;
                         >
                     </div>
                     <span data-ui="worldline" hidden></span>
+                    <a
+                        href="/rss.xml"
+                        data-ui="footer-link"
+                        data-astro-reload
+                        class="hover:text-accent transition-colors"
+                    >
+                        RSS
+                    </a>
                     {
                         config.site.icp && (
                             <a

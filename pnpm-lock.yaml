@@ -50,6 +50,9 @@ importers:
       js-yaml:
         specifier: ^4.1.1
         version: 4.1.1
+      medium-zoom:
+        specifier: ^1.1.2
+        version: 1.1.2
       nanostores:
         specifier: ^1.1.0
         version: 1.1.0
@@ -1952,6 +1955,9 @@ packages:
 
   mdn-data@2.12.2:
     resolution: {integrity: sha512-IEn+pegP1aManZuckezWCO+XZQDplx1366JoVhTpMpBB1sPey/SbveZQUosKiKiGYjg1wH4pMlNgXbCiYgihQA==}
+
+  medium-zoom@1.1.2:
+    resolution: {integrity: sha512-0wTqeCQ4NGzjPghi7i2lMI6RyGj9N60fGvzY9HiNcxDTcvOw7S+ri7K3xVkrIZ+2uzUg4w/KSVMDdZXYMtHkdw==}
 
   micromark-core-commonmark@2.0.3:
     resolution: {integrity: sha512-RDBrHEMSxVFLg6xvnXmb1Ayr2WzLAWjeSATAoxwKYJV94TeNavgoIdA0a9ytzDSVzBy2YKFK+emCPOEibLeCrg==}
@@ -4836,6 +4842,8 @@ snapshots:
   mdn-data@2.0.28: {}
 
   mdn-data@2.12.2: {}
+
+  medium-zoom@1.1.2: {}
 
   micromark-core-commonmark@2.0.3:
     dependencies:
