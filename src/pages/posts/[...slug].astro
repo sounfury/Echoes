@@ -1,25 +1,45 @@
 ---
 import { type CollectionEntry, getCollection, render } from "astro:content";
 import PostLayout from "../../layouts/PostLayout.astro";
+import LegacyRedirect from "../../components/post/LegacyRedirect.astro";
+import { assertUniquePermalinks, getPostPermalink, getPostUrl } from "../../lib/permalink";
+import { getTitleFromId } from "../../lib/utils";
 import "@/styles/article.scss";
 
 export async function getStaticPaths() {
     const posts = await getCollection("blog", ({ data }) => data.published);
-    return posts.map((post) => ({
-        params: { slug: post.id },
-        props: { post },
-    }));
+    assertUniquePermalinks(posts);
+
+    return posts.flatMap((post) => [
+        // 永久链接：/posts/<短哈希>/
+        {
+            params: { slug: getPostPermalink(post) },
+            props: { post, redirectTo: undefined },
+        },
+        // 旧链接：/posts/<分类>/<文件名>/ → 跳转到永久链接
+        {
+            params: { slug: post.id },
+            props: { post, redirectTo: getPostUrl(post) },
+        },
+    ]);
 }
 
 interface Props {
     post: CollectionEntry<"blog">;
+    redirectTo?: string;
 }
 
-const { post } = Astro.props;
-const { Content, headings } = await render(post);
+const { post, redirectTo } = Astro.props;
+const rendered = redirectTo ? null : await render(post);
 const rawContent = post.body ?? "";
 ---
 
-<PostLayout post={post} content={rawContent} headings={headings}>
-    <Content />
-</PostLayout>
+{
+    redirectTo || !rendered ? (
+        <LegacyRedirect to={redirectTo ?? getPostUrl(post)} title={getTitleFromId(post.id)} />
+    ) : (
+        <PostLayout post={post} content={rawContent} headings={rendered.headings}>
+            <rendered.Content />
+        </PostLayout>
+    )
+}

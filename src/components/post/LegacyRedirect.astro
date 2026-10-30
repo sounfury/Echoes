@@ -1,0 +1,32 @@
+---
+/**
+ * 旧文章链接（/posts/<分类>/<文件名>/）的跳转页。
+ * 站点托管在 OSS 上，无法配置服务端 301，用 meta refresh + location.replace 兜底，
+ * canonical 指向新链接，并且不进入 sitemap（见 astro.config.mjs）。
+ */
+interface Props {
+    to: string;
+    title: string;
+}
+
+const { to, title } = Astro.props;
+const target = new URL(to, Astro.site).href;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{title}</title>
+        <link rel="canonical" href={target} />
+        <meta name="robots" content="noindex" />
+        <meta http-equiv="refresh" content={`0; url=${to}`} />
+        <script is:inline define:vars={{ to }}>
+            location.replace(to + location.search + location.hash);
+        </script>
+    </head>
+    <body>
+        <p>文章已迁移到新地址：<a href={to}>{target}</a></p>
+    </body>
+</html>

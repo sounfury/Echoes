@@ -3,6 +3,7 @@ import { getCollection } from 'astro:content';
 import QuickSearch from './QuickSearch';
 import { buildStaticQuickSearchPages } from '../../lib/search';
 import { buildPinyinSearchMeta } from '../../lib/pinyin';
+import { getPostUrl } from '../../lib/permalink';
 import { formatDateFull, getCategoryFromId, getCategoryMeta, getExcerpt, getTitleFromId } from '../../lib/utils';
 import type { QuickSearchItem } from './types';
 
@@ -26,7 +27,7 @@ const searchPosts = posts
             type: 'post' as const,
             id: `post-${post.id}`,
             title,
-            href: `/posts/${post.id}`,
+            href: getPostUrl(post),
             date: date ? formatDateFull(date) : 'UNKNOWN',
             timestamp: date?.valueOf() ?? 0,
             category,

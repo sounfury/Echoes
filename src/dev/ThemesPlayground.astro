@@ -50,6 +50,7 @@ const archivePosts: ArchivePost[] = timelinePosts.map((p) => {
     const category = p.id.split("/")[0];
     return {
         slug: p.id,
+        href: "#",
         title: p.id.split("/")[1],
         category,
         categoryLabel: getCategoryLabel(category),

@@ -7,6 +7,7 @@ import {
     formatDateShort,
     getExcerpt,
 } from "../../lib/utils";
+import { getPostUrl } from "../../lib/permalink";
 
 interface Props {
     post: CollectionEntry<"blog">;
@@ -60,7 +61,7 @@ const excerpt = getExcerpt(post.body ?? "");
     </div>
 
     <!-- Article Content Link (纯净极简排版，无封闭边框方块) -->
-    <a href={`/posts/${post.id}`} data-ui="post-card" class="no-underline block relative">
+    <a href={getPostUrl(post)} data-ui="post-card" class="no-underline block relative">
         <!-- Cover Wipe Effect (完全覆盖文章整体区域) -->
         {
             cover && (

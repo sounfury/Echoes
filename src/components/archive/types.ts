@@ -1,6 +1,8 @@
 /** Astro 端序列化后的文章条目 */
 export interface ArchivePost {
     slug: string;
+    /** 文章链接（永久链接，见 lib/permalink.ts） */
+    href: string;
     title: string;
     category: string;
     categoryLabel: string;

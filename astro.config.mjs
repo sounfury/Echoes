@@ -13,7 +13,14 @@ import themeContract from './integrations/themeContract';
 // https://astro.build/config
 export default defineConfig({
 	site: 'https://blog.sounfury.top',
-	integrations: [themeContract(), mdx(), sitemap(), react(), robotsTxt()],
+	integrations: [
+		themeContract(),
+		mdx(),
+		// 旧文章链接 /posts/<分类>/<文件名>/ 只是跳转页，不进 sitemap（永久链接见 src/lib/permalink.ts）
+		sitemap({ filter: (page) => !/^\/posts\/[^/]+\/[^/]+\/?$/.test(new URL(page).pathname) }),
+		react(),
+		robotsTxt(),
+	],
 	vite: {
 		plugins: [tailwindcss()],
 		server: {

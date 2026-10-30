@@ -350,7 +350,7 @@ export default function ArchiveApp({
 function PostRow({ post }: { post: ArchivePost }) {
     return (
         <a
-            href={`/posts/${post.slug}`}
+            href={post.href}
             data-ui="archive-item"
             data-category={post.category}
             className="archive-item group flex flex-col md:flex-row md:items-center py-3 cursor-pointer transition-all px-2 -mx-2 relative overflow-hidden no-underline"

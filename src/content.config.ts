@@ -12,6 +12,29 @@ function normalizeOptionalValue(value: unknown): unknown {
 	return value;
 }
 
+/** 不带时区的日期时间字符串，例如 "2023-09-08T18:44"、"2025-05-24 16:31:10" */
+const NAIVE_DATETIME = /^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?))?$/;
+
+/**
+ * 日期字段：空值视为缺失；不带时区的字符串统一按 UTC 解释。
+ * YAML 会把带秒的 "2025-05-24 16:31:10" 直接解析成 UTC 的 Date，而 "2023-09-08T18:44" 只是字符串，
+ * 若交给 new Date() 会按构建机本地时区解析。两者统一成 UTC，日期显示和永久链接哈希才不受时区影响。
+ */
+function normalizeDateValue(value: unknown): unknown {
+	const normalized = normalizeOptionalValue(value);
+	if (typeof normalized !== 'string') {
+		return normalized;
+	}
+
+	const match = NAIVE_DATETIME.exec(normalized.trim());
+	if (!match) {
+		return normalized;
+	}
+
+	const [, datePart, timePart = '00:00'] = match;
+	return `${datePart}T${timePart}Z`;
+}
+
 /**
  * 解析文章发布状态；缺失、null 或空字符串时默认不发布。
  */
@@ -67,8 +90,8 @@ const blog = defineCollection({
 		},
 	}),
 	schema: z.object({
-		创建时间: z.preprocess(normalizeOptionalValue, z.coerce.date().optional()),
-		更新时间: z.preprocess(normalizeOptionalValue, z.coerce.date().optional()),
+		创建时间: z.preprocess(normalizeDateValue, z.coerce.date().optional()),
+		更新时间: z.preprocess(normalizeDateValue, z.coerce.date().optional()),
 		tags: z.preprocess(normalizeArrayValue, z.array(z.string()).default([])),
 		mediaRefs: z.preprocess(normalizeArrayValue, z.array(z.string().url()).default([])),
 		music: z.preprocess(normalizeOptionalValue, z.string().url().optional()),
