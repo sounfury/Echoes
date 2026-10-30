@@ -58,6 +58,25 @@ function writeTimelineState(state: TimelineState) {
     }
 }
 
+/**
+ * 在 ClientRouter 换页前，把已加载的条目提前在新文档里显示出来。
+ * 后退/前进时 Astro 会在 astro:page-load 之前按 history.state 恢复滚动；
+ * 若此时页面只有首批条目，滚动位置会被截断到页面中部。
+ */
+export function revealRestoredEntries(doc: Document, pathname: string) {
+    const container = doc.getElementById('timeline-container');
+    if (!container) return;
+
+    const state = readTimelineState(pathname);
+    if (!state) return;
+
+    const entries = container.querySelectorAll<HTMLElement>('.timeline-entry');
+    const count = clamp(state.visibleCount, 0, entries.length);
+    for (let index = 0; index < count; index += 1) {
+        entries[index].classList.remove('hidden');
+    }
+}
+
 export function initTimeline(): Cleanup {
     const container = document.getElementById('timeline-container');
     const sentinel = document.getElementById('scroll-sentinel');

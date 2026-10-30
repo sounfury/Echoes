@@ -100,7 +100,8 @@ const PAGE_SIZE = getSiteConfig().timeline.pageSize;
 	/**
 	 * 初始化 Timeline
 	 */
-	import { initTimeline } from "../lib/client/timeline";
+	import type { TransitionBeforeSwapEvent } from "astro:transitions/client";
+	import { initTimeline, revealRestoredEntries } from "../lib/client/timeline";
 
 	type TimelineRuntime = {
 		mount: () => void;
@@ -125,9 +126,15 @@ const PAGE_SIZE = getSiteConfig().timeline.pageSize;
 		};
 
 		const onPageLoad = () => mount();
-		const onBeforeSwap = () => {
+		const onBeforeSwap = (event: Event) => {
 			destroyTimeline();
 			destroyTimeline = () => {};
+
+			// 后退/前进回首页：滚动恢复发生在 page-load 之前，先展开已加载条目
+			const swapEvent = event as TransitionBeforeSwapEvent;
+			if (swapEvent.navigationType === "traverse") {
+				revealRestoredEntries(swapEvent.newDocument, swapEvent.to.pathname);
+			}
 		};
 
 		document.addEventListener("astro:page-load", onPageLoad);
